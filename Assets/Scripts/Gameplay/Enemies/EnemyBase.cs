@@ -112,11 +112,12 @@ namespace RogueDrive.Gameplay
                     slowFactor = 0f;
             }
 
-            // Автоматический возврат в пул, если машина уехала далеко вперед
+            // Автоматический возврат в пул, если машина уехала далеко вперед с учетом направления
             if (playerTarget != null)
             {
-                float zDiff = transform.position.z - playerTarget.position.z;
-                if (zDiff < -40f && Vector3.Distance(transform.position, playerTarget.position) > 45f)
+                Vector3 toEnemy = transform.position - playerTarget.position;
+                float behindDist = -Vector3.Dot(toEnemy, playerTarget.forward);
+                if (behindDist > 45f && toEnemy.sqrMagnitude > 50f * 50f)
                 {
                     Despawn();
                     return;

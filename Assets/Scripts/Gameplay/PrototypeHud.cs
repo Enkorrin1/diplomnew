@@ -2,9 +2,11 @@ using UnityEngine;
 
 namespace RogueDrive.Gameplay
 {
-    /// <summary>HUD прототипа заезда с индикаторами здоровья, топлива, нитро, спидометром и подсказками управления.</summary>
+    /// <summary>HUD прототипа заезда с индикаторами здоровья, топлива, нитро, спидометром, биомом и оповещениями.</summary>
     public sealed class PrototypeHud : MonoBehaviour
     {
+        public static PrototypeHud Instance { get; private set; }
+
         [SerializeField] private GameRunController run;
         [SerializeField] private ArcadeCarController car;
 
@@ -13,11 +15,22 @@ namespace RogueDrive.Gameplay
         GUIStyle warningStyle;
         GUIStyle endStyle;
         GUIStyle speedStyle;
+        GUIStyle bannerTitleStyle;
+        GUIStyle bannerSubStyle;
 
         Texture2D barBgTex;
         Texture2D healthTex;
         Texture2D fuelTex;
         Texture2D nitroTex;
+        Texture2D bannerBgTex;
+        Texture2D bannerAccentTex;
+
+        string currentBiomeTitle = "ШОССЕ: ПРИГОРОД";
+        Color currentBiomeColor = new Color(0.35f, 0.9f, 1f);
+
+        float bannerTimer;
+        string bannerTitle = string.Empty;
+        string bannerSubtitle = string.Empty;
 
         public void Configure(GameRunController controller, ArcadeCarController carController = null)
         {
@@ -25,20 +38,44 @@ namespace RogueDrive.Gameplay
             car = carController;
         }
 
+        public void ShowBiomeNotification(string title, string subtitle, Color color)
+        {
+            currentBiomeTitle = title;
+            currentBiomeColor = color;
+            bannerTitle = title;
+            bannerSubtitle = subtitle;
+            bannerTimer = 4.0f;
+        }
+
         private void Awake()
         {
+            Instance = this;
+
             if (car == null)
                 car = FindFirstObjectByType<ArcadeCarController>();
             if (run == null)
                 run = FindFirstObjectByType<GameRunController>();
         }
 
+        private void Update()
+        {
+            if (bannerTimer > 0f)
+            {
+                bannerTimer -= Time.deltaTime;
+            }
+        }
+
         private void OnDestroy()
         {
+            if (Instance == this)
+                Instance = null;
+
             if (barBgTex != null) Destroy(barBgTex);
             if (healthTex != null) Destroy(healthTex);
             if (fuelTex != null) Destroy(fuelTex);
             if (nitroTex != null) Destroy(nitroTex);
+            if (bannerBgTex != null) Destroy(bannerBgTex);
+            if (bannerAccentTex != null) Destroy(bannerAccentTex);
         }
 
         void OnGUI()
@@ -51,7 +88,7 @@ namespace RogueDrive.Gameplay
 
             // 1. Главная панель приборов слева сверху
             const float panelWidth = 320f;
-            const float panelHeight = 195f;
+            const float panelHeight = 215f;
             GUI.Box(new Rect(18f, 18f, panelWidth, panelHeight), string.Empty);
 
             GUI.Label(new Rect(32f, 24f, 240f, 26f), "ROGUE DRIVE: SURVIVAL", headingStyle);
@@ -73,10 +110,14 @@ namespace RogueDrive.Gameplay
             GUI.Label(new Rect(32f, 122f, 260f, 22f), $"Дистанция: {run.Distance:0} м", valueStyle);
             GUI.Label(new Rect(32f, 144f, 260f, 22f), $"Монеты заезда: <color=#ffd700>+{run.CoinsCollected}</color>", valueStyle);
 
+            // Текущий биом
+            string biomeHex = ColorUtility.ToHtmlStringRGB(currentBiomeColor);
+            GUI.Label(new Rect(32f, 166f, 260f, 22f), $"Локация: <color=#{biomeHex}>{currentBiomeTitle}</color>", valueStyle);
+
             // Предупреждение о накате при 0 топлива
             if (run.IsOutOfFuel && !run.IsGameOver)
             {
-                GUI.Label(new Rect(32f, 168f, 280f, 22f), "⚠ БАК ПУСТ! НАКАТ ПО ИНЕРЦИИ...", warningStyle);
+                GUI.Label(new Rect(32f, 188f, 280f, 22f), "⚠ БАК ПУСТ! НАКАТ ПО ИНЕРЦИИ...", warningStyle);
             }
 
             // 2. Спидометр справа снизу
@@ -94,7 +135,13 @@ namespace RogueDrive.Gameplay
             // 3. Подсказка по управлению слева снизу
             GUI.Label(new Rect(18f, Screen.height - 35f, 600f, 25f), "W / S — Газ/Тормоз | A / D — Руление | Пробел / Shift — НИТРО", valueStyle);
 
-            // 4. Окно завершения заезда
+            // 4. Баннер смены биома по центру сверху
+            if (bannerTimer > 0f)
+            {
+                DrawBiomeBanner();
+            }
+
+            // 5. Окно завершения заезда
             if (!run.IsGameOver)
                 return;
 
@@ -122,6 +169,36 @@ namespace RogueDrive.Gameplay
             }
         }
 
+        void DrawBiomeBanner()
+        {
+            float alpha = 1f;
+            if (bannerTimer > 3.5f)
+                alpha = Mathf.Clamp01((4.0f - bannerTimer) / 0.5f);
+            else if (bannerTimer < 1.0f)
+                alpha = Mathf.Clamp01(bannerTimer / 1.0f);
+
+            Color prevColor = GUI.color;
+            GUI.color = new Color(1f, 1f, 1f, alpha);
+
+            float bannerW = 540f;
+            float bannerH = 76f;
+            float bannerX = (Screen.width - bannerW) * 0.5f;
+            float bannerY = 28f;
+
+            // Фон баннера
+            GUI.DrawTexture(new Rect(bannerX, bannerY, bannerW, bannerH), bannerBgTex);
+
+            // Верхняя и нижняя неоновая акцентная полоска
+            GUI.DrawTexture(new Rect(bannerX, bannerY, bannerW, 3f), bannerAccentTex);
+            GUI.DrawTexture(new Rect(bannerX, bannerY + bannerH - 3f, bannerW, 3f), bannerAccentTex);
+
+            bannerTitleStyle.normal.textColor = currentBiomeColor;
+            GUI.Label(new Rect(bannerX, bannerY + 10f, bannerW, 32f), $"▶  {bannerTitle}  ◀", bannerTitleStyle);
+            GUI.Label(new Rect(bannerX, bannerY + 44f, bannerW, 22f), bannerSubtitle, bannerSubStyle);
+
+            GUI.color = prevColor;
+        }
+
         void DrawStatBar(float x, float y, float w, float h, float current, float max, Texture2D fillTex)
         {
             float fillPct = max > 0f ? Mathf.Clamp01(current / max) : 0f;
@@ -147,6 +224,7 @@ namespace RogueDrive.Gameplay
             valueStyle = new GUIStyle(GUI.skin.label)
             {
                 fontSize = 14,
+                richText = true,
                 normal = { textColor = Color.white }
             };
 
@@ -173,6 +251,21 @@ namespace RogueDrive.Gameplay
                 richText = true,
                 normal = { textColor = new Color(0.35f, 0.9f, 1f) }
             };
+
+            bannerTitleStyle = new GUIStyle(GUI.skin.label)
+            {
+                alignment = TextAnchor.MiddleCenter,
+                fontSize = 20,
+                fontStyle = FontStyle.Bold
+            };
+
+            bannerSubStyle = new GUIStyle(GUI.skin.label)
+            {
+                alignment = TextAnchor.MiddleCenter,
+                fontSize = 13,
+                fontStyle = FontStyle.Bold,
+                normal = { textColor = new Color(0.85f, 0.85f, 0.9f) }
+            };
         }
 
         void EnsureTextures()
@@ -184,6 +277,8 @@ namespace RogueDrive.Gameplay
             healthTex = MakeColorTex(new Color(0.2f, 0.85f, 0.35f));
             fuelTex = MakeColorTex(new Color(0.95f, 0.75f, 0.15f));
             nitroTex = MakeColorTex(new Color(0.2f, 0.65f, 1f));
+            bannerBgTex = MakeColorTex(new Color(0.06f, 0.08f, 0.12f, 0.92f));
+            bannerAccentTex = MakeColorTex(new Color(1f, 0.75f, 0.15f));
         }
 
         Texture2D MakeColorTex(Color col)

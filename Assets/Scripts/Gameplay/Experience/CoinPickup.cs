@@ -45,9 +45,10 @@ namespace RogueDrive.Gameplay
                     return;
             }
 
-            // Автодеспавн далеко позади машины
-            float zDiff = transform.position.z - playerCar.position.z;
-            if (zDiff < -40f && Vector3.Distance(transform.position, playerCar.position) > 45f)
+            // Автодеспавн далеко позади машины с учетом направления движения
+            Vector3 toPickup = transform.position - playerCar.position;
+            float behindDist = -Vector3.Dot(toPickup, playerCar.forward);
+            if (behindDist > 40f && toPickup.sqrMagnitude > 45f * 45f)
             {
                 DespawnSelf();
                 return;
