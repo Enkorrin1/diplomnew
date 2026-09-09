@@ -63,6 +63,10 @@ namespace RogueDrive.EditorTools
             // 6. HUD
             PrototypeHud hud = gameRoot.AddComponent<PrototypeHud>();
             hud.Configure(run, car);
+            SerializedObject hudSo = new SerializedObject(hud);
+            hudSo.FindProperty("run").objectReferenceValue = run;
+            hudSo.FindProperty("car").objectReferenceValue = car;
+            hudSo.ApplyModifiedProperties();
 
             EditorSceneManager.SaveScene(scene, ScenePath);
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
@@ -105,6 +109,15 @@ namespace RogueDrive.EditorTools
             collider.size = new Vector3(1.8f, 0.9f, 3.6f);
             collider.center = new Vector3(0f, 0.45f, 0f);
 
+            PhysicsMaterial carPhysMat = new PhysicsMaterial("ArcadeCarPhysMat")
+            {
+                dynamicFriction = 0.05f,
+                staticFriction = 0.05f,
+                frictionCombine = PhysicsMaterialCombine.Minimum,
+                bounciness = 0f
+            };
+            collider.sharedMaterial = carPhysMat;
+
             Rigidbody body = car.AddComponent<Rigidbody>();
             body.mass = 1200f;
             body.isKinematic = false;
@@ -114,6 +127,9 @@ namespace RogueDrive.EditorTools
 
             ArcadeCarController controller = car.AddComponent<ArcadeCarController>();
             controller.Configure(run);
+            SerializedObject carSo = new SerializedObject(controller);
+            carSo.FindProperty("run").objectReferenceValue = run;
+            carSo.ApplyModifiedProperties();
 
             GameObject visualBody = new GameObject("VisualBody");
             visualBody.transform.SetParent(car.transform, false);
@@ -154,14 +170,20 @@ namespace RogueDrive.EditorTools
 
             // База турели
             GameObject baseObj = CreatePrimitive(PrimitiveType.Cylinder, "TurretBase", new Vector3(0f, 0.1f, 0f), new Vector3(0.6f, 0.15f, 0.6f), new Color(0.25f, 0.28f, 0.35f));
+            Collider baseCol = baseObj.GetComponent<Collider>();
+            if (baseCol != null) Object.DestroyImmediate(baseCol);
             baseObj.transform.SetParent(turretObj.transform, false);
 
             // Поворотная голова
             GameObject swivelObj = CreatePrimitive(PrimitiveType.Cube, "TurretSwivel", new Vector3(0f, 0.28f, 0f), new Vector3(0.45f, 0.3f, 0.55f), new Color(0.85f, 0.35f, 0.15f));
+            Collider swivelCol = swivelObj.GetComponent<Collider>();
+            if (swivelCol != null) Object.DestroyImmediate(swivelCol);
             swivelObj.transform.SetParent(turretObj.transform, false);
 
             // Ствол
             GameObject barrelObj = CreatePrimitive(PrimitiveType.Cylinder, "Barrel", new Vector3(0f, 0.28f, 0.45f), new Vector3(0.15f, 0.45f, 0.15f), new Color(0.15f, 0.15f, 0.18f));
+            Collider barrelCol = barrelObj.GetComponent<Collider>();
+            if (barrelCol != null) Object.DestroyImmediate(barrelCol);
             barrelObj.transform.SetParent(swivelObj.transform, false);
             barrelObj.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
 
@@ -236,6 +258,9 @@ namespace RogueDrive.EditorTools
 
             ArcadeCameraFollow follow = cameraObject.AddComponent<ArcadeCameraFollow>();
             follow.Configure(target);
+            SerializedObject so = new SerializedObject(follow);
+            so.FindProperty("target").objectReferenceValue = target;
+            so.ApplyModifiedProperties();
         }
 
         static void CreateInitialObstacles()
@@ -492,6 +517,8 @@ namespace RogueDrive.EditorTools
         static void CreateCarPart(Transform parent, string objectName, Vector3 localPosition, Vector3 localScale, Color color)
         {
             GameObject part = CreatePrimitive(PrimitiveType.Cube, objectName, Vector3.zero, localScale, color);
+            Collider col = part.GetComponent<Collider>();
+            if (col != null) Object.DestroyImmediate(col);
             part.transform.SetParent(parent, false);
             part.transform.localPosition = localPosition;
         }

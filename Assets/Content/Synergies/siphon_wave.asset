@@ -19,11 +19,11 @@ MonoBehaviour:
   - fuel_vampire
   - shockwave
   Effects:
-  - rid: 8383095739457470480
+  - rid: 8383095785616834637
   references:
     version: 2
     RefIds:
-    - rid: 8383095739457470480
+    - rid: 8383095785616834637
       type: {class: ResourceEffect, ns: RogueDrive.Modifiers, asm: Assembly-CSharp}
       data:
         Kind: 0

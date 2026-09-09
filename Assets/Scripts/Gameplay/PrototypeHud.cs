@@ -29,6 +29,8 @@ namespace RogueDrive.Gameplay
         {
             if (car == null)
                 car = FindFirstObjectByType<ArcadeCarController>();
+            if (run == null)
+                run = FindFirstObjectByType<GameRunController>();
         }
 
         void OnGUI()

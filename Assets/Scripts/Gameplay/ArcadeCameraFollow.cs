@@ -45,6 +45,16 @@ namespace RogueDrive.Gameplay
         {
             Instance = this;
             cam = GetComponent<Camera>();
+
+            if (target == null)
+            {
+                ArcadeCarController car = FindFirstObjectByType<ArcadeCarController>();
+                if (car != null)
+                {
+                    Configure(car.transform);
+                }
+            }
+
             if (target != null)
                 currentYaw = target.eulerAngles.y;
         }

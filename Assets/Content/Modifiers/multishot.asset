@@ -23,12 +23,12 @@ MonoBehaviour:
   RequiredSocket: 2
   LevelPrefabs: []
   Effects:
-  - rid: 8383095739457470472
-  - rid: 8383095739457470473
+  - rid: 8383095785616834629
+  - rid: 8383095785616834630
   references:
     version: 2
     RefIds:
-    - rid: 8383095739457470472
+    - rid: 8383095785616834629
       type: {class: StatEffect, ns: RogueDrive.Modifiers, asm: Assembly-CSharp}
       data:
         Target: 0
@@ -80,7 +80,7 @@ MonoBehaviour:
           m_PreInfinity: 2
           m_PostInfinity: 2
           m_RotationOrder: 4
-    - rid: 8383095739457470473
+    - rid: 8383095785616834630
       type: {class: StatEffect, ns: RogueDrive.Modifiers, asm: Assembly-CSharp}
       data:
         Target: 1

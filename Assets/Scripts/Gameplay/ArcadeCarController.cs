@@ -35,14 +35,17 @@ namespace RogueDrive.Gameplay
         [Header("Visual Body (Optional tilt)")]
         [SerializeField] private Transform visualBody;
 
+        [Header("Run Controller Reference")]
+        [SerializeField] private GameRunController run;
+
         Rigidbody body;
-        GameRunController run;
         SocketRegistry sockets;
 
         float throttleInput;
         float steerInput;
         bool isNitroRequested;
         bool isGrounded;
+        float lastGroundedTime;
         Vector3 lastPosition;
 
         public float SpeedMps { get; private set; }
@@ -62,19 +65,66 @@ namespace RogueDrive.Gameplay
             body = GetComponent<Rigidbody>();
             sockets = GetComponent<SocketRegistry>();
 
+            if (run == null)
+            {
+                run = FindFirstObjectByType<GameRunController>();
+            }
+
+            if (visualBody == null)
+            {
+                visualBody = transform.Find("VisualBody");
+            }
+
             body.isKinematic = false;
             body.useGravity = true;
             body.interpolation = RigidbodyInterpolation.Interpolate;
             body.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
-            body.linearDamping = 0.4f;
+            body.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+            body.linearDamping = 0.35f;
             body.angularDamping = 2.5f;
+            body.centerOfMass = new Vector3(0f, -0.2f, 0f);
+
+            // Обеспечиваем скользящий аркадный физический контакт для основного коллайдера
+            Collider rootCol = GetComponent<Collider>();
+            if (rootCol != null)
+            {
+                PhysicsMaterial frictionlessMat = new PhysicsMaterial("ArcadeCarFrictionless")
+                {
+                    dynamicFriction = 0.05f,
+                    staticFriction = 0.05f,
+                    frictionCombine = PhysicsMaterialCombine.Minimum,
+                    bounciness = 0f
+                };
+                rootCol.sharedMaterial = frictionlessMat;
+            }
+
+            // Удаляем паразитные коллайдеры с декоративных дочерних деталей (колеса, бампер, кузов, турель),
+            // чтобы они не тормозили автомобиль и не мешали лучам
+            CleanChildColliders();
 
             lastPosition = transform.position;
         }
 
+        void CleanChildColliders()
+        {
+            Collider rootCol = GetComponent<Collider>();
+            Collider[] allColliders = GetComponentsInChildren<Collider>(true);
+            for (int i = 0; i < allColliders.Length; i++)
+            {
+                if (allColliders[i] != rootCol)
+                {
+                    allColliders[i].enabled = false;
+                    if (Application.isPlaying)
+                    {
+                        Destroy(allColliders[i]);
+                    }
+                }
+            }
+        }
+
         private void Update()
         {
-            if (run == null || run.IsGameOver)
+            if (run != null && run.IsGameOver)
             {
                 throttleInput = 0f;
                 steerInput = 0f;
@@ -83,15 +133,31 @@ namespace RogueDrive.Gameplay
                 return;
             }
 
-            // Клавиатурный / экранный ввод
-            throttleInput = Input.GetAxisRaw("Vertical");
-            steerInput = Input.GetAxisRaw("Horizontal");
+            // Чтение осей InputManager
+            float v = Input.GetAxisRaw("Vertical");
+            float h = Input.GetAxisRaw("Horizontal");
+
+            // Прямой опрос клавиш (гарантирует отклик в любых настройках проекта)
+            if (Mathf.Abs(v) < 0.01f)
+            {
+                if (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow)) v += 1f;
+                if (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow)) v -= 1f;
+            }
+            if (Mathf.Abs(h) < 0.01f)
+            {
+                if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow)) h += 1f;
+                if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow)) h -= 1f;
+            }
+
+            throttleInput = Mathf.Clamp(v, -1f, 1f);
+            steerInput = Mathf.Clamp(h, -1f, 1f);
             isNitroRequested = Input.GetKey(KeyCode.Space) || Input.GetKey(KeyCode.LeftShift);
 
             // Обработка расхода нитро
-            if (isNitroRequested && throttleInput > 0f && !run.IsOutOfFuel)
+            bool hasFuel = run == null || !run.IsOutOfFuel;
+            if (isNitroRequested && throttleInput > 0f && hasFuel)
             {
-                IsNitroActive = run.TryConsumeNitro(nitroPerSecond * Time.deltaTime);
+                IsNitroActive = run == null || run.TryConsumeNitro(nitroPerSecond * Time.deltaTime);
             }
             else
             {
@@ -99,7 +165,7 @@ namespace RogueDrive.Gameplay
             }
 
             // Расход топлива при нажатой педали газа
-            if (throttleInput > 0f && !run.IsOutOfFuel)
+            if (run != null && throttleInput > 0f && !run.IsOutOfFuel)
             {
                 float fuelCost = fuelPerSecond * (IsNitroActive ? 1.5f : 1.0f) * Time.deltaTime;
                 run.ConsumeFuel(fuelCost);
@@ -107,14 +173,14 @@ namespace RogueDrive.Gameplay
 
             // Расчёт пройденной дистанции
             float distanceDelta = Vector3.Distance(transform.position, lastPosition);
-            if (distanceDelta > 0f && Vector3.Dot(body.linearVelocity, transform.forward) > 0f)
+            if (run != null && distanceDelta > 0f && Vector3.Dot(body.linearVelocity, transform.forward) > 0f)
             {
                 run.ReportTravelled(distanceDelta);
             }
             lastPosition = transform.position;
 
             // Проверка остановки при пустом баке (инерционный накат окончен)
-            if (run.IsOutOfFuel && Mathf.Abs(SpeedMps) < 0.25f)
+            if (run != null && run.IsOutOfFuel && Mathf.Abs(SpeedMps) < 0.25f)
             {
                 run.ReportCarStopped();
             }
@@ -128,25 +194,29 @@ namespace RogueDrive.Gameplay
             CheckGrounded();
             SpeedMps = Vector3.Dot(body.linearVelocity, transform.forward);
 
-            if (!isGrounded)
-            {
-                // В воздухе прижимаем автомобиль вниз для стабильности
-                body.AddForce(Vector3.down * (downforce * 2f), ForceMode.Acceleration);
-                return;
-            }
-
             // 1. Прижимная сила (Downforce) пропорциональна скорости
             float currentDownforce = downforce * (1f + Mathf.Abs(SpeedMps) / topSpeedMps);
             body.AddForce(Vector3.down * currentDownforce, ForceMode.Acceleration);
 
-            // 2. Продольная тяга и торможение
-            ApplyDriveForces();
+            bool canDrive = isGrounded || (Time.time - lastGroundedTime < 0.35f);
 
-            // 3. Руление (поворот машины вокруг оси Y)
-            ApplySteering();
+            if (canDrive)
+            {
+                // 2. Продольная тяга и торможение
+                ApplyDriveForces();
 
-            // 4. Боковое сцепление (подавление бокового скольжения)
-            ApplyLateralGrip();
+                // 3. Руление (поворот машины вокруг оси Y)
+                ApplySteering();
+
+                // 4. Боковое сцепление (подавление бокового скольжения)
+                ApplyLateralGrip();
+            }
+            else
+            {
+                // В воздухе: дополнительная стабилизация и возможность подруливания
+                body.AddForce(Vector3.down * downforce, ForceMode.Acceleration);
+                ApplySteeringAirborne();
+            }
         }
 
         void ApplyDriveForces()
@@ -173,7 +243,7 @@ namespace RogueDrive.Gameplay
             }
             else if (throttleInput < -0.05f)
             {
-                if (SpeedMps > 1f)
+                if (SpeedMps > 0.5f)
                 {
                     // Тормоз при движении вперед
                     body.AddForce(-transform.forward * (brakeForce * Mathf.Abs(throttleInput)), ForceMode.Acceleration);
@@ -181,7 +251,7 @@ namespace RogueDrive.Gameplay
                 else if (SpeedMps > -reverseSpeedMps)
                 {
                     // Задний ход
-                    body.AddForce(-transform.forward * (acceleration * 0.6f * Mathf.Abs(throttleInput)), ForceMode.Acceleration);
+                    body.AddForce(-transform.forward * (acceleration * 0.7f * Mathf.Abs(throttleInput)), ForceMode.Acceleration);
                 }
             }
         }
@@ -191,14 +261,25 @@ namespace RogueDrive.Gameplay
             if (Mathf.Abs(steerInput) < 0.05f)
                 return;
 
-            // На месте или очень низкой скорости руление приглушается
-            float speedFactor = Mathf.Clamp01(Mathf.Abs(SpeedMps) / 4f);
+            // На месте или очень низкой скорости руление сохраняет чувствительность для маневрирования
+            float speedRatio = Mathf.Clamp01(Mathf.Abs(SpeedMps) / 5f);
+            float speedFactor = Mathf.Lerp(0.45f, 1f, speedRatio);
             float turnAmount = steerInput * steerSpeed * speedFactor * Time.fixedDeltaTime;
 
             // Инвертируем поворот при движении назад
-            if (SpeedMps < -0.5f)
+            if (SpeedMps < -0.2f)
                 turnAmount = -turnAmount;
 
+            Quaternion turnRotation = Quaternion.Euler(0f, turnAmount, 0f);
+            body.MoveRotation(body.rotation * turnRotation);
+        }
+
+        void ApplySteeringAirborne()
+        {
+            if (Mathf.Abs(steerInput) < 0.05f)
+                return;
+
+            float turnAmount = steerInput * (steerSpeed * 0.45f) * Time.fixedDeltaTime;
             Quaternion turnRotation = Quaternion.Euler(0f, turnAmount, 0f);
             body.MoveRotation(body.rotation * turnRotation);
         }
@@ -213,8 +294,24 @@ namespace RogueDrive.Gameplay
 
         void CheckGrounded()
         {
-            Ray ray = new Ray(transform.position + Vector3.up * 0.5f, Vector3.down);
-            isGrounded = Physics.Raycast(ray, 0.9f);
+            Vector3 origin = transform.position + Vector3.up * 0.4f;
+            RaycastHit[] hits = Physics.RaycastAll(origin, Vector3.down, 1.8f, ~0, QueryTriggerInteraction.Ignore);
+            bool hitGround = false;
+
+            for (int i = 0; i < hits.Length; i++)
+            {
+                if (hits[i].collider != null && hits[i].collider.transform.root != transform.root)
+                {
+                    hitGround = true;
+                    break;
+                }
+            }
+
+            isGrounded = hitGround;
+            if (isGrounded)
+            {
+                lastGroundedTime = Time.time;
+            }
         }
 
         void UpdateVisualRoll(float dt)

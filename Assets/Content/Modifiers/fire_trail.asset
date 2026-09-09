@@ -23,11 +23,11 @@ MonoBehaviour:
   RequiredSocket: 4
   LevelPrefabs: []
   Effects:
-  - rid: 8383095739457470465
+  - rid: 8383095785616834622
   references:
     version: 2
     RefIds:
-    - rid: 8383095739457470465
+    - rid: 8383095785616834622
       type: {class: AuraEffect, ns: RogueDrive.Modifiers, asm: Assembly-CSharp}
       data:
         BehaviourId: fire_trail
