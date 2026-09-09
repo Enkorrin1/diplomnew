@@ -1,0 +1,179 @@
+using System.Collections.Generic;
+using UnityEngine;
+using RogueDrive.Modifiers;
+
+namespace RogueDrive.Gameplay
+{
+    /// <summary>
+    /// Главный координатор сессии заезда.
+    /// Связывает данные модификаторов, физический автомобиль, авто-турель,
+    /// систему опыта, генератор предложений и интерфейс повышения уровня.
+    /// </summary>
+    public sealed class GameSessionCoordinator : MonoBehaviour
+    {
+        [Header("Data Configurations")]
+        [SerializeField] private CarDefinition carDefinition;
+        [SerializeField] private ModifierCatalog modifierCatalog;
+        [SerializeField] private WeightingConfig weightingConfig;
+
+        [Header("Scene References")]
+        [SerializeField] private ArcadeCarController carController;
+        [SerializeField] private AutoTurret turret;
+        [SerializeField] private GameRunController runController;
+        [SerializeField] private RunExperienceManager experienceManager;
+        [SerializeField] private LevelUpView levelUpView;
+
+        ModifierSession session;
+        int killCounter;
+
+        public ModifierSession Session => session;
+
+        private void Awake()
+        {
+            FindSceneReferences();
+            InitializeModifierSession();
+            BindCombatAndProgression();
+        }
+
+        private void OnEnable()
+        {
+            EnemyBase.AnyEnemyKilled += HandleEnemyKilled;
+
+            if (experienceManager != null)
+                experienceManager.LevelUp += HandleLevelUp;
+
+            if (levelUpView != null)
+            {
+                levelUpView.OfferSelected += HandleOfferSelected;
+                levelUpView.RerollRequested += HandleRerollRequested;
+            }
+        }
+
+        private void OnDisable()
+        {
+            EnemyBase.AnyEnemyKilled -= HandleEnemyKilled;
+
+            if (experienceManager != null)
+                experienceManager.LevelUp -= HandleLevelUp;
+
+            if (levelUpView != null)
+            {
+                levelUpView.OfferSelected -= HandleOfferSelected;
+                levelUpView.RerollRequested -= HandleRerollRequested;
+            }
+        }
+
+        void FindSceneReferences()
+        {
+            if (carController == null)
+                carController = FindFirstObjectByType<ArcadeCarController>();
+            if (turret == null)
+                turret = FindFirstObjectByType<AutoTurret>();
+            if (runController == null)
+                runController = FindFirstObjectByType<GameRunController>();
+            if (experienceManager == null)
+                experienceManager = FindFirstObjectByType<RunExperienceManager>();
+            if (levelUpView == null)
+                levelUpView = FindFirstObjectByType<LevelUpView>();
+        }
+
+        void InitializeModifierSession()
+        {
+            ISocketProvider sockets = carController != null && carController.Sockets != null
+                ? (ISocketProvider)carController.Sockets
+                : new HeadlessSocketProvider(carDefinition);
+
+            IBaseStatsProvider baseStats = new CarBaseStats(carDefinition);
+            IUnlockProvider unlocks = new AllUnlocked();
+            int seed = Random.Range(1, 1000000);
+
+            session = ModifierSession.Create(modifierCatalog, baseStats, sockets, unlocks, seed, weightingConfig);
+        }
+
+        void BindCombatAndProgression()
+        {
+            if (session == null)
+                return;
+
+            if (turret != null)
+            {
+                turret.BindStats(session.Effects.Stats, session.Effects.Projectiles);
+            }
+
+            session.Service.Applied += (def, level) =>
+            {
+                Debug.Log($"[Modifier Applied] {def.DisplayName} (Уровень {level})");
+            };
+
+            session.Service.SynergyActivated += (syn) =>
+            {
+                Debug.Log($"[Synergy Activated] {syn.DisplayName}!");
+                ArcadeCameraFollow.Instance?.TriggerShake(0.8f, 0.4f);
+            };
+        }
+
+        void HandleLevelUp(int newLevel)
+        {
+            if (session == null || levelUpView == null)
+                return;
+
+            IReadOnlyList<ModifierDefinition> offers = session.OfferGenerator.Generate(
+                session.Build, session.Context, 3);
+
+            levelUpView.Show(offers, session.Build, session.Synergies);
+        }
+
+        void HandleOfferSelected(ModifierDefinition def)
+        {
+            if (session == null || def == null)
+                return;
+
+            session.Service.Apply(def);
+        }
+
+        void HandleRerollRequested()
+        {
+            if (session == null || levelUpView == null)
+                return;
+
+            IReadOnlyList<ModifierDefinition> offers = session.OfferGenerator.Generate(
+                session.Build, session.Context, 3);
+
+            levelUpView.Show(offers, session.Build, session.Synergies);
+        }
+
+        void HandleEnemyKilled(EnemyBase enemy)
+        {
+            killCounter++;
+
+            // Бонус нитро за убийство
+            if (runController != null)
+            {
+                runController.AddNitro(4f);
+            }
+
+            // Обработка триггеров ResourceRegistry (вампиризм и ремонт)
+            if (session != null && session.Effects.Resources != null)
+            {
+                IReadOnlyList<ResourceTrigger> triggers = session.Effects.Resources.Triggers;
+                for (int i = 0; i < triggers.Count; i++)
+                {
+                    ResourceTrigger t = triggers[i];
+                    if (killCounter % t.KillsPerTrigger == 0)
+                    {
+                        if (t.Kind == ResourceKind.Fuel && runController != null)
+                        {
+                            // Топливный вампиризм
+                            Debug.Log($"[Resource Trigger] Восстановлено топливо: +{t.Amount}");
+                        }
+                        else if (t.Kind == ResourceKind.Health && runController != null)
+                        {
+                            // Ремонтный комплект
+                            Debug.Log($"[Resource Trigger] Ремонт кузова: +{t.Amount}");
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

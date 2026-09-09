@@ -1,4 +1,5 @@
 #if UNITY_EDITOR
+using System.IO;
 using RogueDrive.Gameplay;
 using RogueDrive.Modifiers;
 using UnityEditor;
@@ -8,28 +9,58 @@ using UnityEngine.SceneManagement;
 
 namespace RogueDrive.EditorTools
 {
-    /// <summary>Создает первый играбельный срез с аркадной физикой, широкой дорогой, динамической камерой и сокетами.</summary>
+    /// <summary>
+    /// Создает полноценную готовую рабочую сцену со всеми подсистемами:
+    /// физический автомобиль, 360° авто-турель, префабы врагов, опыт,
+    /// экран выбора 1 из 3 бафов и процедурный генератор трассы.
+    /// </summary>
     public static class PrototypeSceneBuilder
     {
         const string SceneFolder = "Assets/Scenes";
+        const string PrefabFolder = "Assets/Prefabs";
         const string ScenePath = SceneFolder + "/RogueDrivePrototype.unity";
 
         [MenuItem("RogueDrive/Создать прототип заезда")]
         public static void CreatePrototype()
         {
-            EnsureSceneFolder();
+            EnsureFolders();
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-            RenderSettings.ambientLight = new Color(0.2f, 0.22f, 0.3f);
+            RenderSettings.ambientLight = new Color(0.22f, 0.24f, 0.32f);
 
+            // 1. Создаем необходимые базовые префабы
+            GameObject projectilePrefab = CreateProjectilePrefab();
+            GameObject acidProjectilePrefab = CreateAcidProjectilePrefab();
+            GameObject xpGemPrefab = CreateExperienceGemPrefab();
+            GameObject walkerPrefab = CreateWalkerPrefab(xpGemPrefab);
+            GameObject runnerPrefab = CreateRunnerPrefab(xpGemPrefab);
+            GameObject brutePrefab = CreateBrutePrefab(xpGemPrefab);
+            GameObject spitterPrefab = CreateSpitterPrefab(xpGemPrefab, acidProjectilePrefab);
+
+            // 2. Игровой корень
             GameObject gameRoot = new GameObject("RogueDrivePrototype");
+            GameplayPool pool = gameRoot.AddComponent<GameplayPool>();
             GameRunController run = gameRoot.AddComponent<GameRunController>();
+            RunExperienceManager exp = gameRoot.AddComponent<RunExperienceManager>();
+            LevelUpView levelUp = gameRoot.AddComponent<LevelUpView>();
 
             CreateLight();
-            CreateRoad();
-            ArcadeCarController car = CreateArcadeCar(run);
-            CreateCamera(car.transform);
-            CreateObstacles();
+            CreateInitialRoad();
 
+            // 3. Автомобиль игрока и турель
+            ArcadeCarController car = CreateArcadeCar(run);
+            AutoTurret turret = CreateRoofTurret(car, projectilePrefab);
+            CreateCamera(car.transform);
+            CreateInitialObstacles();
+
+            // 4. Процедурный генератор трассы и врагов
+            ProceduralTrackGenerator trackGen = gameRoot.AddComponent<ProceduralTrackGenerator>();
+            ConfigureTrackGenerator(trackGen, car.transform, new[] { walkerPrefab, runnerPrefab, brutePrefab, spitterPrefab });
+
+            // 5. Координатор сессии модификаторов
+            GameSessionCoordinator coordinator = gameRoot.AddComponent<GameSessionCoordinator>();
+            ConfigureSessionCoordinator(coordinator, car, turret, run, exp, levelUp);
+
+            // 6. HUD
             PrototypeHud hud = gameRoot.AddComponent<PrototypeHud>();
             hud.Configure(run, car);
 
@@ -37,7 +68,7 @@ namespace RogueDrive.EditorTools
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
             AssetDatabase.SaveAssets();
             Selection.activeObject = AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath);
-            Debug.Log($"Прототип аркадного заезда успешно создан: {ScenePath}");
+            Debug.Log($"Полноценный прототип заезда успешно создан и сохранён: {ScenePath}");
         }
 
         static void CreateLight()
@@ -49,28 +80,18 @@ namespace RogueDrive.EditorTools
             lightObject.transform.rotation = Quaternion.Euler(48f, -32f, 0f);
         }
 
-        static void CreateRoad()
+        static void CreateInitialRoad()
         {
             const float roadWidth = 24f;
-            const float roadLength = 500f;
+            const float roadLength = 150f;
             const float roadZ = roadLength * 0.5f;
 
-            // Дорожное полотно (широкая трасса)
-            GameObject road = CreatePrimitive(PrimitiveType.Cube, "Road", new Vector3(0f, -0.2f, roadZ), new Vector3(roadWidth, 0.4f, roadLength), new Color(0.13f, 0.14f, 0.18f));
+            GameObject road = CreatePrimitive(PrimitiveType.Cube, "Initial_Road", new Vector3(0f, -0.2f, roadZ), new Vector3(roadWidth, 0.4f, roadLength), new Color(0.13f, 0.14f, 0.18f));
             road.isStatic = true;
 
-            // Разделительные полосы (4 полосы движения)
-            float[] markerX = { -6f, -2f, 2f, 6f };
-            for (int i = 0; i < markerX.Length; i++)
-            {
-                GameObject marker = CreatePrimitive(PrimitiveType.Cube, $"Lane Marker {i + 1}", new Vector3(markerX[i], 0.03f, roadZ), new Vector3(0.12f, 0.03f, roadLength), new Color(0.92f, 0.72f, 0.15f));
-                marker.isStatic = true;
-            }
-
-            // Отбойники по краям широкой дороги
             float guardrailX = (roadWidth * 0.5f) + 0.3f;
-            GameObject leftWall = CreatePrimitive(PrimitiveType.Cube, "Left Guardrail", new Vector3(-guardrailX, 0.6f, roadZ), new Vector3(0.35f, 1.2f, roadLength), new Color(0.36f, 0.4f, 0.46f));
-            GameObject rightWall = CreatePrimitive(PrimitiveType.Cube, "Right Guardrail", new Vector3(guardrailX, 0.6f, roadZ), new Vector3(0.35f, 1.2f, roadLength), new Color(0.36f, 0.4f, 0.46f));
+            GameObject leftWall = CreatePrimitive(PrimitiveType.Cube, "Left_Guardrail", new Vector3(-guardrailX, 0.6f, roadZ), new Vector3(0.35f, 1.2f, roadLength), new Color(0.36f, 0.4f, 0.46f));
+            GameObject rightWall = CreatePrimitive(PrimitiveType.Cube, "Right_Guardrail", new Vector3(guardrailX, 0.6f, roadZ), new Vector3(0.35f, 1.2f, roadLength), new Color(0.36f, 0.4f, 0.46f));
             leftWall.isStatic = true;
             rightWall.isStatic = true;
         }
@@ -94,7 +115,6 @@ namespace RogueDrive.EditorTools
             ArcadeCarController controller = car.AddComponent<ArcadeCarController>();
             controller.Configure(run);
 
-            // Визуальный кузов (Visual Body) для наклона при рулении
             GameObject visualBody = new GameObject("VisualBody");
             visualBody.transform.SetParent(car.transform, false);
 
@@ -102,11 +122,10 @@ namespace RogueDrive.EditorTools
             CreateCarPart(visualBody.transform, "Cabin", new Vector3(0f, 0.85f, -0.2f), new Vector3(1.35f, 0.55f, 1.6f), new Color(0.68f, 0.88f, 1f));
             CreateCarPart(visualBody.transform, "FrontBumper", new Vector3(0f, 0.25f, 1.75f), new Vector3(1.82f, 0.35f, 0.25f), new Color(0.2f, 0.2f, 0.25f));
 
-            // Фары
+            // Фары и колеса
             CreateCarPart(visualBody.transform, "Headlight_L", new Vector3(-0.65f, 0.35f, 1.78f), new Vector3(0.3f, 0.18f, 0.1f), Color.yellow);
             CreateCarPart(visualBody.transform, "Headlight_R", new Vector3(0.65f, 0.35f, 1.78f), new Vector3(0.3f, 0.18f, 0.1f), Color.yellow);
 
-            // Колёса (визуальные)
             Vector3[] wheelOffsets =
             {
                 new Vector3(-0.92f, 0.25f, 1.15f),
@@ -119,11 +138,49 @@ namespace RogueDrive.EditorTools
                 CreateCarPart(visualBody.transform, $"Wheel_{i + 1}", wheelOffsets[i], new Vector3(0.22f, 0.55f, 0.55f), new Color(0.1f, 0.1f, 0.12f));
             }
 
-            // Настройка физических сокетов на кузове (SocketRegistry)
+            // Настройка SocketRegistry
             SocketRegistry socketRegistry = car.AddComponent<SocketRegistry>();
             SetupCarSockets(car.transform, socketRegistry);
 
             return controller;
+        }
+
+        static AutoTurret CreateRoofTurret(ArcadeCarController car, GameObject projPrefab)
+        {
+            Transform socketRoof = car.transform.Find("Socket_Roof");
+            GameObject turretObj = new GameObject("AutoTurret_Roof");
+            turretObj.transform.SetParent(socketRoof != null ? socketRoof : car.transform, false);
+            turretObj.transform.localPosition = Vector3.zero;
+
+            // База турели
+            GameObject baseObj = CreatePrimitive(PrimitiveType.Cylinder, "TurretBase", new Vector3(0f, 0.1f, 0f), new Vector3(0.6f, 0.15f, 0.6f), new Color(0.25f, 0.28f, 0.35f));
+            baseObj.transform.SetParent(turretObj.transform, false);
+
+            // Поворотная голова
+            GameObject swivelObj = CreatePrimitive(PrimitiveType.Cube, "TurretSwivel", new Vector3(0f, 0.28f, 0f), new Vector3(0.45f, 0.3f, 0.55f), new Color(0.85f, 0.35f, 0.15f));
+            swivelObj.transform.SetParent(turretObj.transform, false);
+
+            // Ствол
+            GameObject barrelObj = CreatePrimitive(PrimitiveType.Cylinder, "Barrel", new Vector3(0f, 0.28f, 0.45f), new Vector3(0.15f, 0.45f, 0.15f), new Color(0.15f, 0.15f, 0.18f));
+            barrelObj.transform.SetParent(swivelObj.transform, false);
+            barrelObj.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+
+            // Точка вылета
+            GameObject muzzleObj = new GameObject("Muzzle");
+            muzzleObj.transform.SetParent(swivelObj.transform, false);
+            muzzleObj.transform.localPosition = new Vector3(0f, 0.28f, 0.72f);
+
+            AutoTurret turret = turretObj.AddComponent<AutoTurret>();
+
+            SerializedObject so = new SerializedObject(turret);
+            so.FindProperty("swivelTransform").objectReferenceValue = swivelObj.transform;
+            SerializedProperty muzzlesProp = so.FindProperty("muzzleTransforms");
+            muzzlesProp.arraySize = 1;
+            muzzlesProp.GetArrayElementAtIndex(0).objectReferenceValue = muzzleObj.transform;
+            so.FindProperty("projectilePrefab").objectReferenceValue = projPrefab;
+            so.ApplyModifiedProperties();
+
+            return turret;
         }
 
         static void SetupCarSockets(Transform carTransform, SocketRegistry registry)
@@ -181,16 +238,13 @@ namespace RogueDrive.EditorTools
             follow.Configure(target);
         }
 
-        static void CreateObstacles()
+        static void CreateInitialObstacles()
         {
-            // Размещение препятствий по всей ширине трассы для свободного маневрирования
-            float[] obstacleX = { -7f, 5f, 0f, -4f, 6f, -6f, 3f, -2f, 7f, -5f, 1f, -7f, 4f, -1f, 6f };
-
+            float[] obstacleX = { -6f, 4f, -1f, 5f, -5f, 2f };
             for (int i = 0; i < obstacleX.Length; i++)
             {
-                float z = 35f + i * 26f;
-                // Чередуем: красные баррикады и оранжевые взрывные бочки
-                bool isBarrel = (i % 3 == 0);
+                float z = 30f + i * 20f;
+                bool isBarrel = (i % 2 == 0);
                 Color color = isBarrel ? new Color(1f, 0.45f, 0.1f) : new Color(0.92f, 0.22f, 0.18f);
                 string name = isBarrel ? $"Explosive_Barrel_{i + 1}" : $"Barrier_{i + 1}";
                 Vector3 scale = isBarrel ? new Vector3(1.3f, 1.6f, 1.3f) : new Vector3(2.4f, 1.4f, 1.4f);
@@ -200,6 +254,221 @@ namespace RogueDrive.EditorTools
                 collider.isTrigger = true;
                 obstacle.AddComponent<TrackObstacle>();
             }
+        }
+
+        static void ConfigureTrackGenerator(ProceduralTrackGenerator gen, Transform car, GameObject[] enemies)
+        {
+            SerializedObject so = new SerializedObject(gen);
+            so.FindProperty("targetCar").objectReferenceValue = car;
+            SerializedProperty enemyProp = so.FindProperty("enemyPrefabs");
+            enemyProp.arraySize = enemies.Length;
+            for (int i = 0; i < enemies.Length; i++)
+            {
+                enemyProp.GetArrayElementAtIndex(i).objectReferenceValue = enemies[i];
+            }
+            so.ApplyModifiedProperties();
+        }
+
+        static void ConfigureSessionCoordinator(GameSessionCoordinator coord, ArcadeCarController car, AutoTurret turret, GameRunController run, RunExperienceManager exp, LevelUpView levelUp)
+        {
+            SerializedObject so = new SerializedObject(coord);
+            so.FindProperty("carController").objectReferenceValue = car;
+            so.FindProperty("turret").objectReferenceValue = turret;
+            so.FindProperty("runController").objectReferenceValue = run;
+            so.FindProperty("experienceManager").objectReferenceValue = exp;
+            so.FindProperty("levelUpView").objectReferenceValue = levelUp;
+
+            ModifierCatalog catalog = AssetDatabase.LoadAssetAtPath<ModifierCatalog>("Assets/Content/ModifierCatalog.asset");
+            CarDefinition carDef = AssetDatabase.LoadAssetAtPath<CarDefinition>("Assets/Content/Cars/light.asset");
+            WeightingConfig weighting = AssetDatabase.LoadAssetAtPath<WeightingConfig>("Assets/Content/Simulation/Weighting_Moderate.asset");
+
+            if (catalog != null) so.FindProperty("modifierCatalog").objectReferenceValue = catalog;
+            if (carDef != null) so.FindProperty("carDefinition").objectReferenceValue = carDef;
+            if (weighting != null) so.FindProperty("weightingConfig").objectReferenceValue = weighting;
+
+            so.ApplyModifiedProperties();
+        }
+
+        // --- Создание базовых префабов ---------------------------------------
+
+        static GameObject CreateProjectilePrefab()
+        {
+            string path = $"{PrefabFolder}/BulletProjectile.prefab";
+            GameObject existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (existing != null) return existing;
+
+            GameObject go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            go.name = "BulletProjectile";
+            go.transform.localScale = new Vector3(0.35f, 0.35f, 0.35f);
+            SphereCollider sc = go.GetComponent<SphereCollider>();
+            sc.isTrigger = true;
+
+            Renderer r = go.GetComponent<Renderer>();
+            Material mat = new Material(Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Unlit/Color") ?? Shader.Find("Standard"));
+            mat.color = new Color(1f, 0.85f, 0.2f);
+            r.sharedMaterial = mat;
+
+            go.AddComponent<Projectile>();
+            GameObject prefab = PrefabUtility.SaveAsPrefabAsset(go, path);
+            Object.DestroyImmediate(go);
+            return prefab;
+        }
+
+        static GameObject CreateAcidProjectilePrefab()
+        {
+            string path = $"{PrefabFolder}/AcidProjectile.prefab";
+            GameObject existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (existing != null) return existing;
+
+            GameObject go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            go.name = "AcidProjectile";
+            go.transform.localScale = new Vector3(0.55f, 0.55f, 0.55f);
+            SphereCollider sc = go.GetComponent<SphereCollider>();
+            sc.isTrigger = true;
+
+            Renderer r = go.GetComponent<Renderer>();
+            Material mat = new Material(Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Unlit/Color") ?? Shader.Find("Standard"));
+            mat.color = new Color(0.2f, 0.95f, 0.1f);
+            r.sharedMaterial = mat;
+
+            go.AddComponent<AcidProjectile>();
+            GameObject prefab = PrefabUtility.SaveAsPrefabAsset(go, path);
+            Object.DestroyImmediate(go);
+            return prefab;
+        }
+
+        static GameObject CreateExperienceGemPrefab()
+        {
+            string path = $"{PrefabFolder}/ExperienceGem.prefab";
+            GameObject existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (existing != null) return existing;
+
+            GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            go.name = "ExperienceGem";
+            go.transform.localScale = new Vector3(0.45f, 0.45f, 0.45f);
+            BoxCollider bc = go.GetComponent<BoxCollider>();
+            bc.isTrigger = true;
+
+            Renderer r = go.GetComponent<Renderer>();
+            Material mat = new Material(Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Unlit/Color") ?? Shader.Find("Standard"));
+            mat.color = new Color(0.15f, 0.95f, 1f);
+            r.sharedMaterial = mat;
+
+            go.AddComponent<ExperienceGem>();
+            GameObject prefab = PrefabUtility.SaveAsPrefabAsset(go, path);
+            Object.DestroyImmediate(go);
+            return prefab;
+        }
+
+        static GameObject CreateWalkerPrefab(GameObject xpGem)
+        {
+            string path = $"{PrefabFolder}/WalkerZombie.prefab";
+            GameObject existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (existing != null) return existing;
+
+            GameObject go = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+            go.name = "WalkerZombie";
+            go.transform.localScale = new Vector3(0.9f, 1.3f, 0.9f);
+            CapsuleCollider cc = go.GetComponent<CapsuleCollider>();
+            cc.isTrigger = true;
+
+            Renderer r = go.GetComponent<Renderer>();
+            Material mat = new Material(Shader.Find("Standard"));
+            mat.color = new Color(0.28f, 0.6f, 0.32f);
+            r.sharedMaterial = mat;
+
+            WalkerZombie walker = go.AddComponent<WalkerZombie>();
+            SetXpGemOnEnemy(walker, xpGem);
+
+            GameObject prefab = PrefabUtility.SaveAsPrefabAsset(go, path);
+            Object.DestroyImmediate(go);
+            return prefab;
+        }
+
+        static GameObject CreateRunnerPrefab(GameObject xpGem)
+        {
+            string path = $"{PrefabFolder}/RunnerMutant.prefab";
+            GameObject existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (existing != null) return existing;
+
+            GameObject go = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+            go.name = "RunnerMutant";
+            go.transform.localScale = new Vector3(0.75f, 1.1f, 0.75f);
+            CapsuleCollider cc = go.GetComponent<CapsuleCollider>();
+            cc.isTrigger = true;
+
+            Renderer r = go.GetComponent<Renderer>();
+            Material mat = new Material(Shader.Find("Standard"));
+            mat.color = new Color(0.95f, 0.48f, 0.12f);
+            r.sharedMaterial = mat;
+
+            RunnerMutant runner = go.AddComponent<RunnerMutant>();
+            SetXpGemOnEnemy(runner, xpGem);
+
+            GameObject prefab = PrefabUtility.SaveAsPrefabAsset(go, path);
+            Object.DestroyImmediate(go);
+            return prefab;
+        }
+
+        static GameObject CreateBrutePrefab(GameObject xpGem)
+        {
+            string path = $"{PrefabFolder}/ArmoredBrute.prefab";
+            GameObject existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (existing != null) return existing;
+
+            GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            go.name = "ArmoredBrute";
+            go.transform.localScale = new Vector3(1.8f, 2.2f, 1.6f);
+            BoxCollider bc = go.GetComponent<BoxCollider>();
+            bc.isTrigger = true;
+
+            Renderer r = go.GetComponent<Renderer>();
+            Material mat = new Material(Shader.Find("Standard"));
+            mat.color = new Color(0.55f, 0.15f, 0.18f);
+            r.sharedMaterial = mat;
+
+            ArmoredBrute brute = go.AddComponent<ArmoredBrute>();
+            SetXpGemOnEnemy(brute, xpGem);
+
+            GameObject prefab = PrefabUtility.SaveAsPrefabAsset(go, path);
+            Object.DestroyImmediate(go);
+            return prefab;
+        }
+
+        static GameObject CreateSpitterPrefab(GameObject xpGem, GameObject acidProj)
+        {
+            string path = $"{PrefabFolder}/AcidSpitter.prefab";
+            GameObject existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (existing != null) return existing;
+
+            GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            go.name = "AcidSpitter";
+            go.transform.localScale = new Vector3(1.0f, 1.2f, 1.0f);
+            CapsuleCollider cc = go.GetComponent<CapsuleCollider>();
+            if (cc != null) cc.isTrigger = true;
+
+            Renderer r = go.GetComponent<Renderer>();
+            Material mat = new Material(Shader.Find("Standard"));
+            mat.color = new Color(0.6f, 0.2f, 0.8f);
+            r.sharedMaterial = mat;
+
+            AcidSpitter spitter = go.AddComponent<AcidSpitter>();
+            SetXpGemOnEnemy(spitter, xpGem);
+
+            SerializedObject so = new SerializedObject(spitter);
+            so.FindProperty("acidProjectilePrefab").objectReferenceValue = acidProj;
+            so.ApplyModifiedProperties();
+
+            GameObject prefab = PrefabUtility.SaveAsPrefabAsset(go, path);
+            Object.DestroyImmediate(go);
+            return prefab;
+        }
+
+        static void SetXpGemOnEnemy(EnemyBase enemy, GameObject gem)
+        {
+            SerializedObject so = new SerializedObject(enemy);
+            so.FindProperty("xpGemPrefab").objectReferenceValue = gem;
+            so.ApplyModifiedProperties();
         }
 
         static GameObject CreatePrimitive(PrimitiveType type, string objectName, Vector3 position, Vector3 scale, Color color)
@@ -227,10 +496,12 @@ namespace RogueDrive.EditorTools
             part.transform.localPosition = localPosition;
         }
 
-        static void EnsureSceneFolder()
+        static void EnsureFolders()
         {
             if (!AssetDatabase.IsValidFolder(SceneFolder))
                 AssetDatabase.CreateFolder("Assets", "Scenes");
+            if (!AssetDatabase.IsValidFolder(PrefabFolder))
+                AssetDatabase.CreateFolder("Assets", "Prefabs");
         }
     }
 }

@@ -28,8 +28,8 @@ namespace RogueDrive.Gameplay
         ProjectilePipeline activeProjectiles;
 
         public float Range => range;
-        public float Damage => activeStats != null ? activeStats.Get(StatId.Damage, baseDamage) : baseDamage;
-        public float FireRate => activeStats != null ? activeStats.Get(StatId.FireRate, baseFireRate) : baseFireRate;
+        public float Damage => activeStats != null && activeStats.Get(StatId.Damage) > 0f ? activeStats.Get(StatId.Damage) : baseDamage;
+        public float FireRate => activeStats != null && activeStats.Get(StatId.FireRate) > 0f ? activeStats.Get(StatId.FireRate) : baseFireRate;
 
         public void BindStats(StatBlock stats, ProjectilePipeline projectiles)
         {

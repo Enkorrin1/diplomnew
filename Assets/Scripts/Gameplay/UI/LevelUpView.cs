@@ -166,7 +166,7 @@ namespace RogueDrive.Gameplay
             if (candidate == null || currentBuild == null || synergyResolver == null)
                 return false;
 
-            return synergyResolver.ClosesAnySynergy(currentBuild, candidate.Id);
+            return synergyResolver.WouldActivate(currentBuild, candidate.Id);
         }
 
         void SelectOffer(ModifierDefinition def)
