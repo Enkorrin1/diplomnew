@@ -27,6 +27,32 @@ namespace RogueDrive.UI
                 return;
             }
 
+            // Защита: если SceneTransitionManager по ошибке повешен на GameObject с другими логическими
+            // компонентами (например, MainMenuController), отсоединяем его в отдельный чистый объект,
+            // чтобы DontDestroyOnLoad не сделал бессмертным весь контроллер сцены.
+            Component[] components = gameObject.GetComponents<Component>();
+            bool hasSharedScripts = false;
+            for (int i = 0; i < components.Length; i++)
+            {
+                Component comp = components[i];
+                if (comp != null && !(comp is Transform) && !(comp is SceneTransitionManager))
+                {
+                    hasSharedScripts = true;
+                    break;
+                }
+            }
+
+            if (hasSharedScripts)
+            {
+                Debug.LogWarning("[SceneTransitionManager] Обнаружено совместное размещение с другими компонентами. Миграция на отдельный GameObject.");
+                GameObject dedicatedObj = new GameObject("SceneTransitionManager");
+                SceneTransitionManager dedicatedManager = dedicatedObj.AddComponent<SceneTransitionManager>();
+                dedicatedManager.fadeDuration = this.fadeDuration;
+                Instance = dedicatedManager;
+                Destroy(this);
+                return;
+            }
+
             Instance = this;
             DontDestroyOnLoad(gameObject);
 
@@ -41,14 +67,21 @@ namespace RogueDrive.UI
 
         public static void SwitchScene(string sceneName)
         {
-            if (Instance != null)
+            if (Instance == null)
             {
-                Instance.TransitionToScene(sceneName);
+                var existing = FindFirstObjectByType<SceneTransitionManager>();
+                if (existing != null)
+                {
+                    Instance = existing;
+                }
+                else
+                {
+                    GameObject go = new GameObject("SceneTransitionManager");
+                    Instance = go.AddComponent<SceneTransitionManager>();
+                }
             }
-            else
-            {
-                SceneManager.LoadScene(sceneName);
-            }
+
+            Instance.TransitionToScene(sceneName);
         }
 
         public void TransitionToScene(string sceneName)

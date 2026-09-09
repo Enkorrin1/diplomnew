@@ -90,10 +90,13 @@ namespace RogueDrive.EditorTools
             GameObject anchor = new GameObject("PodiumAnchor");
             anchor.transform.position = new Vector3(0f, 0.2f, 0f);
 
-            // 5. Корневой объект меню
+            // 5. Менеджер переходов между сценами (отдельный постоянный объект)
+            GameObject transitionRoot = new GameObject("SceneTransitionManager");
+            transitionRoot.AddComponent<SceneTransitionManager>();
+
+            // 6. Корневой объект меню (уничтожается при смене сцены)
             GameObject menuRoot = new GameObject("MainMenuController");
             MainMenuController menuController = menuRoot.AddComponent<MainMenuController>();
-            menuRoot.AddComponent<SceneTransitionManager>();
 
             // Настройка связей
             SerializedObject so = new SerializedObject(menuController);

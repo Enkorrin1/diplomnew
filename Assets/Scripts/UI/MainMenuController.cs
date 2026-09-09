@@ -47,6 +47,13 @@ namespace RogueDrive.UI
 
         private void Awake()
         {
+            // Защита: MainMenuController должен работать ТОЛЬКО на сцене главного меню
+            if (!SceneManager.GetActiveScene().name.Contains("MainMenu"))
+            {
+                Destroy(gameObject);
+                return;
+            }
+
             Time.timeScale = 1f;
             EnsureEnvironment();
 
@@ -116,6 +123,27 @@ namespace RogueDrive.UI
             }
         }
 
+        private void OnEnable()
+        {
+            SceneManager.sceneLoaded += HandleSceneLoaded;
+        }
+
+        private void OnDisable()
+        {
+            SceneManager.sceneLoaded -= HandleSceneLoaded;
+        }
+
+        private void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            if (!scene.name.Contains("MainMenu"))
+            {
+                if (gameObject != null)
+                {
+                    Destroy(gameObject);
+                }
+            }
+        }
+
         private void Update()
         {
             if (podiumAnchor != null)
@@ -127,6 +155,11 @@ namespace RogueDrive.UI
 
         private void OnGUI()
         {
+            if (!SceneManager.GetActiveScene().name.Contains("MainMenu"))
+            {
+                return;
+            }
+
             EnsureStyles();
 
             float scale = Mathf.Clamp(Screen.height / 720f, 0.85f, 1.5f);
@@ -455,6 +488,10 @@ namespace RogueDrive.UI
 
         private void OnDestroy()
         {
+            if (currentCarModel != null)
+            {
+                Destroy(currentCarModel);
+            }
             if (panelBgTex != null) Destroy(panelBgTex);
             if (btnMainTex != null) Destroy(btnMainTex);
             if (btnSecondaryTex != null) Destroy(btnSecondaryTex);
