@@ -24,6 +24,11 @@ namespace RogueDrive.Gameplay
             coinValue = Mathf.Max(1, value);
         }
 
+        private void Awake()
+        {
+            Ensure3DVisual();
+        }
+
         private void OnEnable()
         {
             isMagnetized = false;
@@ -118,6 +123,43 @@ namespace RogueDrive.Gameplay
             {
                 runController = FindFirstObjectByType<GameRunController>();
             }
+        }
+
+        void Ensure3DVisual()
+        {
+            Transform existing = transform.Find("VisualModel");
+            if (existing != null)
+            {
+                HideRootRenderer();
+                return;
+            }
+
+            GameObject boltPrefab = null;
+#if UNITY_EDITOR
+            boltPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/GarageAssetPack/Prefabs/Bolt.prefab");
+#endif
+            if (boltPrefab != null)
+            {
+                GameObject bolt = Instantiate(boltPrefab, transform);
+                bolt.name = "VisualModel";
+                bolt.transform.localPosition = Vector3.zero;
+                bolt.transform.localRotation = Quaternion.Euler(0f, 0f, 0f);
+                bolt.transform.localScale = Vector3.one * 1.5f;
+
+                Collider[] cols = bolt.GetComponentsInChildren<Collider>(true);
+                for (int i = 0; i < cols.Length; i++)
+                {
+                    Destroy(cols[i]);
+                }
+            }
+
+            HideRootRenderer();
+        }
+
+        void HideRootRenderer()
+        {
+            MeshRenderer mr = GetComponent<MeshRenderer>();
+            if (mr != null) mr.enabled = false;
         }
     }
 }
