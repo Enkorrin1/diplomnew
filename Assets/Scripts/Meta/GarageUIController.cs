@@ -162,10 +162,15 @@ namespace RogueDrive.Meta
         {
             GUI.Box(new Rect(0, 0, Screen.width, 54), string.Empty);
 
-            GUI.Label(new Rect(25, 12, 350, 32), "ГАРАЖ ВЫЖИВШИХ", _titleStyle);
+            if (GUI.Button(new Rect(15, 10, 110, 34), "◀ В МЕНЮ"))
+            {
+                RogueDrive.UI.SceneTransitionManager.SwitchScene("MainMenuScene");
+            }
+
+            GUI.Label(new Rect(140, 12, 280, 32), "ГАРАЖ ВЫЖИВШИХ", _titleStyle);
 
             string statsText = $"Рекорд: {_meta.Data.BestEndlessDistance:0} м  |  Заездов: {_meta.Data.TotalRuns}";
-            GUI.Label(new Rect(320, 16, 400, 26), statsText, _textStyle);
+            GUI.Label(new Rect(430, 16, 350, 26), statsText, _textStyle);
 
             string coinsStr = $"💰 {_meta.Coins} МОНЕТ";
             GUI.Label(new Rect(Screen.width - 260, 10, 240, 36), coinsStr, _coinsStyle);
