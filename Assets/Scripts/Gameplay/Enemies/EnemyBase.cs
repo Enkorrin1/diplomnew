@@ -226,6 +226,9 @@ namespace RogueDrive.Gameplay
             currentHealth = 0f;
             AnyEnemyKilled?.Invoke(this);
 
+            // Регистрация в аркадной комбо-системе
+            RogueDrive.Gameplay.Combat.ComboScoreSystem.Instance?.RegisterKill(transform.position, xpReward);
+
             // Сочный визуальный и звуковой эффект ликвидации врага
             SpawnDeathEffect(transform.position);
 

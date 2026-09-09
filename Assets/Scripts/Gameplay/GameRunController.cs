@@ -52,6 +52,11 @@ namespace RogueDrive.Gameplay
                 gameObject.AddComponent<RogueDrive.UI.PauseMenuUI>();
             }
 
+            if (FindFirstObjectByType<RogueDrive.Gameplay.Combat.ComboScoreSystem>() == null)
+            {
+                gameObject.AddComponent<RogueDrive.Gameplay.Combat.ComboScoreSystem>();
+            }
+
             ResetRun();
         }
 
