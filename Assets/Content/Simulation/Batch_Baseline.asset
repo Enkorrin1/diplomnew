@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a5ec46fe8817a574a93119951c3f6825, type: 3}
+  m_Name: Batch_Baseline
+  m_EditorClassIdentifier: 
+  Catalog: {fileID: 11400000, guid: a33969816c8f4244aadaf55bfafe3ad1, type: 2}
+  Car: {fileID: 11400000, guid: fd78a758e838cf741a979c701d88a0fc, type: 2}
+  Difficulty: {fileID: 11400000, guid: 935c6da882946d34788201056b104ef2, type: 2}
+  Variants:
+  - Name: uniform
+    Config: {fileID: 0}
+  - Name: Neutral
+    Config: {fileID: 11400000, guid: ced417d92db80c14486be6397ecf06fb, type: 2}
+  - Name: Moderate
+    Config: {fileID: 11400000, guid: 3c3002a19721fc948a63cb754649aba3, type: 2}
+  - Name: Strong
+    Config: {fileID: 11400000, guid: a0329a219404e8b409df0ad56054a524, type: 2}
+  Agents: 000000000100000002000000
+  RunsPerVariant: 1000
+  BaseSeed: 20260907
+  StepSeconds: 0.25
+  MaxRunSeconds: 600
+  OffersPerLevel: 3
+  OutputDirectory: Simulation/Output

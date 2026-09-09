@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe81e5d58ffa63748bd925002d3cab9a, type: 3}
+  m_Name: tank
+  m_EditorClassIdentifier: 
+  Id: tank
+  DisplayName: "\u041E\u0431\u044A\u0451\u043C \u0431\u0430\u043A\u0430"
+  Description: 
+  Target: 3
+  ValuePerLevel: 20
+  MaxLevel: 5
+  BaseCost: 280
+  CostGrowth: 1.45

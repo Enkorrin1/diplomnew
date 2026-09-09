@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4189ac25b4bebe347b611d81db97c4c6, type: 3}
+  m_Name: ricochet
+  m_EditorClassIdentifier: 
+  Id: ricochet
+  DisplayName: "\u0420\u0438\u043A\u043E\u0448\u0435\u0442"
+  Description: 
+  Icon: {fileID: 0}
+  Category: 0
+  Rarity: 1
+  MaxLevel: 3
+  Tags: 05000000
+  RequiredSocket: 0
+  LevelPrefabs: []
+  Effects:
+  - rid: 8383095739457470474
+  references:
+    version: 2
+    RefIds:
+    - rid: 8383095739457470474
+      type: {class: ProjectileEffect, ns: RogueDrive.Modifiers, asm: Assembly-CSharp}
+      data:
+        BouncesPerLevel: 1
+        SlowPerLevel: 0
+        BurnPerLevel: 0
