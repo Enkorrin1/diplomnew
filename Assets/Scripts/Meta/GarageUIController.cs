@@ -454,9 +454,10 @@ namespace RogueDrive.Meta
 
             if (car == null) return;
 
-            if (car.Prefab != null)
+            GameObject carPrefab = car.EffectivePrefab;
+            if (carPrefab != null)
             {
-                _currentCarModel = Instantiate(car.Prefab, podiumAnchor);
+                _currentCarModel = Instantiate(carPrefab, podiumAnchor);
                 _currentCarModel.transform.localPosition = Vector3.zero;
                 _currentCarModel.transform.localRotation = Quaternion.identity;
 

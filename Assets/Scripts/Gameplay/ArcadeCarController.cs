@@ -2,6 +2,7 @@ using UnityEngine;
 using RogueDrive.Modifiers;
 using RogueDrive.Audio;
 using RogueDrive.Gameplay.VFX;
+using RogueDrive.Meta;
 
 namespace RogueDrive.Gameplay
 {
@@ -149,6 +150,9 @@ namespace RogueDrive.Gameplay
                 rootCol.sharedMaterial = frictionlessMat;
             }
 
+            // Интеграция реальной 3D-модели выбранного автомобиля
+            ApplySelectedCarVisualModel();
+
             // Удаляем паразитные коллайдеры с декоративных дочерних деталей (колеса, бампер, кузов, турель),
             // чтобы они не тормозили автомобиль и не мешали лучам
             CleanChildColliders();
@@ -188,6 +192,56 @@ namespace RogueDrive.Gameplay
                     {
                         Destroy(allColliders[i]);
                     }
+                }
+            }
+        }
+
+        private void ApplySelectedCarVisualModel()
+        {
+            CarDefinition selectedDef = null;
+            GarageCatalog catalog = Resources.Load<GarageCatalog>("GarageCatalog");
+#if UNITY_EDITOR
+            if (catalog == null)
+            {
+                catalog = UnityEditor.AssetDatabase.LoadAssetAtPath<GarageCatalog>("Assets/Content/GarageCatalog.asset");
+            }
+#endif
+            if (catalog != null)
+            {
+                var meta = RogueDrive.Meta.SaveService.GetActiveProgress(catalog.Upgrades, catalog.Cars);
+                selectedDef = meta?.SelectedCar;
+                if (selectedDef == null && catalog.Cars != null && catalog.Cars.Count > 0)
+                {
+                    selectedDef = catalog.Cars[0];
+                }
+            }
+
+            GameObject prefab = selectedDef != null ? selectedDef.EffectivePrefab : null;
+            if (prefab != null)
+            {
+                // Скрываем старые примитивные детали кузова
+                if (visualBody != null)
+                {
+                    Renderer[] oldRenderers = visualBody.GetComponentsInChildren<Renderer>(true);
+                    for (int i = 0; i < oldRenderers.Length; i++)
+                    {
+                        oldRenderers[i].enabled = false;
+                    }
+                }
+
+                GameObject modelObj = Instantiate(prefab, transform);
+                modelObj.name = "RealCarModel_3D";
+                modelObj.transform.localPosition = Vector3.zero;
+                modelObj.transform.localRotation = Quaternion.identity;
+
+                // Переназначаем visualBody на реальную модель для красивого динамического крена при дрифте
+                visualBody = modelObj.transform;
+
+                // Точно позиционируем сокет крыши под модель
+                Transform roofSocket = transform.Find("Socket_Roof");
+                if (roofSocket != null)
+                {
+                    roofSocket.localPosition = new Vector3(0f, 1.25f, -0.1f);
                 }
             }
         }

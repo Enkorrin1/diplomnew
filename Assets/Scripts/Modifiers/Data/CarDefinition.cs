@@ -34,6 +34,36 @@ namespace RogueDrive.Modifiers
         public string DisplayName;
         [TextArea] public string Description;
         public GameObject Prefab;
+
+        /// <summary>
+        /// Возвращает назначенный префаб или автоматически разрешает 3D-модель из ассетов по Id автомобиля.
+        /// </summary>
+        public GameObject EffectivePrefab
+        {
+            get
+            {
+                if (Prefab != null) return Prefab;
+#if UNITY_EDITOR
+                string path = Id switch
+                {
+                    "light" => "Assets/Awbmecreations/Mobile Optimize-Free Low Poly Cars/Prefabs/Classic Car_9.prefab",
+                    "truck" => "Assets/Awbmecreations/Mobile Optimize-Free Low Poly Cars/Prefabs/N Van_10.prefab",
+                    "suv" => "Assets/Awbmecreations/Mobile Optimize-Free Low Poly Cars/Prefabs/Pick Up_11.prefab",
+                    "armored" => "Assets/Awbmecreations/Mobile Optimize-Free Low Poly Cars/Prefabs/Military Vehicle_3.prefab",
+                    "sport" => "Assets/Awbmecreations/Mobile Optimize-Free Low Poly Cars/Prefabs/Sport Car_39.prefab",
+                    "police" => "Assets/Awbmecreations/Mobile Optimize-Free Low Poly Cars/Prefabs/Police Car N_4.prefab",
+                    _ => null
+                };
+                if (!string.IsNullOrEmpty(path))
+                {
+                    Prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                    return Prefab;
+                }
+#endif
+                return null;
+            }
+        }
+
         [Min(0)] public int Price = 0;
         public Color BodyColor = new Color(0.08f, 0.55f, 0.95f);
 

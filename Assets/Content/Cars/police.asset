@@ -1,0 +1,43 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0bdd3c47f17ab4f4db0d5c3b78bb64b5, type: 3}
+  m_Name: police
+  m_EditorClassIdentifier: 
+  Id: police
+  DisplayName: "\u0428\u0435\u0440\u0438\u0444 (\u041F\u0435\u0440\u0435\u0445\u0432\u0430\u0442\u0447\u0438\u043A)"
+  Description: "\u041F\u043E\u043B\u0438\u0446\u0435\u0439\u0441\u043A\u0438\u0439
+    \u043F\u0435\u0440\u0435\u0445\u0432\u0430\u0442\u0447\u0438\u043A \u0441 \u0443\u0441\u0438\u043B\u0435\u043D\u043D\u044B\u043C
+    \u0442\u0430\u0440\u0430\u043D\u043E\u043C \u0438 \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u0440\u0435\u043B\u044C\u043D\u043E\u0439
+    \u0442\u0443\u0440\u0435\u043B\u044C\u044E."
+  Prefab: {fileID: 2295116759664368373, guid: 69cdbe0692ba4624b9259fb58689f06d, type: 3}
+  Price: 300
+  BodyColor: {r: 0.12, g: 0.25, b: 0.75, a: 1}
+  BaseStats:
+  - Id: 0
+    Value: 14
+  - Id: 1
+    Value: 3
+  - Id: 2
+    Value: 120
+  - Id: 3
+    Value: 110
+  - Id: 4
+    Value: 1.05
+  - Id: 5
+    Value: 27
+  - Id: 6
+    Value: 1400
+  - Id: 7
+    Value: 5
+  Sockets:
+  - Type: 1
+    Count: 1

@@ -183,17 +183,30 @@ namespace RogueDrive.EditorTools
             if (swivelCol != null) Object.DestroyImmediate(swivelCol);
             swivelObj.transform.SetParent(turretObj.transform, false);
 
-            // Ствол
-            GameObject barrelObj = CreatePrimitive(PrimitiveType.Cylinder, "Barrel", new Vector3(0f, 0.28f, 0.45f), new Vector3(0.15f, 0.45f, 0.15f), new Color(0.15f, 0.15f, 0.18f));
-            Collider barrelCol = barrelObj.GetComponent<Collider>();
-            if (barrelCol != null) Object.DestroyImmediate(barrelCol);
-            barrelObj.transform.SetParent(swivelObj.transform, false);
-            barrelObj.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            // 3D Модель штурмовой винтовки на поворотной турели
+            GameObject weaponPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Low Poly AR Weapon Pack 1/Prefabs/Weapons/AR_A_1.prefab");
+            if (weaponPrefab != null)
+            {
+                GameObject gunObj = (GameObject)PrefabUtility.InstantiatePrefab(weaponPrefab, swivelObj.transform);
+                gunObj.name = "AR_Turret_Gun";
+                gunObj.transform.localPosition = new Vector3(0f, 0.05f, 0.15f);
+                gunObj.transform.localRotation = Quaternion.identity;
+                gunObj.transform.localScale = Vector3.one * 1.6f;
+            }
+            else
+            {
+                // Резервный ствол, если ассет не найден
+                GameObject barrelObj = CreatePrimitive(PrimitiveType.Cylinder, "Barrel", new Vector3(0f, 0.28f, 0.45f), new Vector3(0.15f, 0.45f, 0.15f), new Color(0.15f, 0.15f, 0.18f));
+                Collider barrelCol = barrelObj.GetComponent<Collider>();
+                if (barrelCol != null) Object.DestroyImmediate(barrelCol);
+                barrelObj.transform.SetParent(swivelObj.transform, false);
+                barrelObj.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            }
 
             // Точка вылета
             GameObject muzzleObj = new GameObject("Muzzle");
             muzzleObj.transform.SetParent(swivelObj.transform, false);
-            muzzleObj.transform.localPosition = new Vector3(0f, 0.28f, 0.72f);
+            muzzleObj.transform.localPosition = weaponPrefab != null ? new Vector3(0f, 0.12f, 1.4f) : new Vector3(0f, 0.28f, 0.72f);
 
             AutoTurret turret = turretObj.AddComponent<AutoTurret>();
 

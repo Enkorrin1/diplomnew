@@ -40,6 +40,59 @@ namespace RogueDrive.Gameplay
             activeProjectiles = projectiles;
         }
 
+        private void Awake()
+        {
+            UpgradeTurretVisualModel();
+        }
+
+        private void UpgradeTurretVisualModel()
+        {
+            if (swivelTransform == null)
+            {
+                swivelTransform = transform.Find("TurretSwivel");
+            }
+
+            if (swivelTransform != null && swivelTransform.Find("AR_Turret_Gun") == null)
+            {
+                // Скрываем старый примитивный ствол и куб
+                Transform oldBarrel = swivelTransform.Find("Barrel");
+                if (oldBarrel != null)
+                {
+                    Renderer ren = oldBarrel.GetComponent<Renderer>();
+                    if (ren != null) ren.enabled = false;
+                }
+                Renderer swivelRen = swivelTransform.GetComponent<Renderer>();
+                if (swivelRen != null) swivelRen.enabled = false;
+
+                GameObject weaponPrefab = null;
+#if UNITY_EDITOR
+                weaponPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Low Poly AR Weapon Pack 1/Prefabs/Weapons/AR_A_1.prefab");
+#endif
+                if (weaponPrefab != null)
+                {
+                    GameObject gun = Instantiate(weaponPrefab, swivelTransform);
+                    gun.name = "AR_Turret_Gun";
+                    gun.transform.localPosition = new Vector3(0f, 0.05f, 0.15f);
+                    gun.transform.localRotation = Quaternion.Euler(0f, 0f, 0f);
+                    gun.transform.localScale = Vector3.one * 1.6f;
+
+                    // Удаляем лишние коллайдеры
+                    Collider[] cols = gun.GetComponentsInChildren<Collider>(true);
+                    for (int i = 0; i < cols.Length; i++)
+                    {
+                        Destroy(cols[i]);
+                    }
+
+                    // Обновляем позицию дула на срез ствола винтовки
+                    Transform muzzle = swivelTransform.Find("Muzzle");
+                    if (muzzle != null)
+                    {
+                        muzzle.localPosition = new Vector3(0f, 0.12f, 1.4f);
+                    }
+                }
+            }
+        }
+
         private void Update()
         {
             UpdateTarget();

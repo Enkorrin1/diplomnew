@@ -103,9 +103,10 @@ namespace RogueDrive.UI
                 }
 
                 CarDefinition def = catalog.Cars[selectedIndex];
-                if (def != null && def.Prefab != null)
+                GameObject carPrefab = def != null ? def.EffectivePrefab : null;
+                if (carPrefab != null)
                 {
-                    currentCarModel = Instantiate(def.Prefab, podiumAnchor);
+                    currentCarModel = Instantiate(carPrefab, podiumAnchor);
                     currentCarModel.transform.localPosition = Vector3.zero;
                     currentCarModel.transform.localRotation = Quaternion.identity;
 

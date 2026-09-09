@@ -47,6 +47,28 @@ namespace RogueDrive.Gameplay.VFX
 
         private void SetupWheelsIfMissing()
         {
+            // 1. Сначала ищем реальные 3D-колеса среди дочерних объектов модели автомобиля
+            Transform[] allTransforms = GetComponentsInChildren<Transform>(true);
+            for (int i = 0; i < allTransforms.Length; i++)
+            {
+                Transform t = allTransforms[i];
+                if (t == transform) continue;
+                string n = t.name.ToUpperInvariant();
+                if ((n.Contains("TIRE") || n.Contains("WHEEL")) && !n.Equals("WHEELS"))
+                {
+                    if (wheelFL == null && (n.Contains("FL") || n.Contains("FRONT_L") || n.Contains("FORWARD_L"))) wheelFL = t;
+                    else if (wheelFR == null && (n.Contains("FR") || n.Contains("FRONT_R") || n.Contains("FORWARD_R"))) wheelFR = t;
+                    else if (wheelRL == null && (n.Contains("RL") || n.Contains("REAR_L") || n.Contains("BACK_L"))) wheelRL = t;
+                    else if (wheelRR == null && (n.Contains("RR") || n.Contains("REAR_R") || n.Contains("BACK_R"))) wheelRR = t;
+                }
+            }
+
+            if (wheelFL != null && wheelFR != null && wheelRL != null && wheelRR != null)
+            {
+                return; // Колеса 3D-модели успешно найдены и подключены к системе анимации
+            }
+
+            // 2. Резерв: создание процедурных колес, если модель не содержит раздельных колес
             Transform wheelsRoot = transform.Find("Wheels");
             if (wheelsRoot == null)
             {
