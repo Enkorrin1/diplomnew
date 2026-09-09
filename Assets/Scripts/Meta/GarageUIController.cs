@@ -392,7 +392,35 @@ namespace RogueDrive.Meta
             }
             SaveService.SaveActive();
 
-            SceneManager.LoadScene("RogueDrivePrototype");
+            const string runSceneName = "RogueDrivePrototype";
+            const string runScenePath = "Assets/Scenes/RogueDrivePrototype.unity";
+
+            if (Application.CanStreamedLevelBeLoaded(runSceneName))
+            {
+                SceneManager.LoadScene(runSceneName);
+                return;
+            }
+
+            if (Application.CanStreamedLevelBeLoaded(runScenePath))
+            {
+                SceneManager.LoadScene(runScenePath);
+                return;
+            }
+
+#if UNITY_EDITOR
+            try
+            {
+                UnityEditor.SceneManagement.EditorSceneManager.LoadSceneInPlayMode(
+                    runScenePath,
+                    new LoadSceneParameters(LoadSceneMode.Single));
+                return;
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[GarageUIController] Резервная загрузка через EditorSceneManager: {ex.Message}");
+            }
+#endif
+            SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
         }
 
         void Update3DCarVisual()

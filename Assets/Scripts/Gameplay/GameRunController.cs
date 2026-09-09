@@ -182,7 +182,35 @@ namespace RogueDrive.Gameplay
         public void LoadGarage()
         {
             Time.timeScale = 1f;
-            SceneManager.LoadScene("GarageScene");
+            const string garageSceneName = "GarageScene";
+            const string garageScenePath = "Assets/Scenes/GarageScene.unity";
+
+            if (Application.CanStreamedLevelBeLoaded(garageSceneName))
+            {
+                SceneManager.LoadScene(garageSceneName);
+                return;
+            }
+
+            if (Application.CanStreamedLevelBeLoaded(garageScenePath))
+            {
+                SceneManager.LoadScene(garageScenePath);
+                return;
+            }
+
+#if UNITY_EDITOR
+            try
+            {
+                UnityEditor.SceneManagement.EditorSceneManager.LoadSceneInPlayMode(
+                    garageScenePath,
+                    new LoadSceneParameters(LoadSceneMode.Single));
+                return;
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[GameRunController] Резервная загрузка через EditorSceneManager: {ex.Message}");
+            }
+#endif
+            SceneManager.LoadScene(0);
         }
 
         void ResetRun()
