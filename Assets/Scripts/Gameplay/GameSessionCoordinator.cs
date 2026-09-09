@@ -79,12 +79,33 @@ namespace RogueDrive.Gameplay
 
         void InitializeModifierSession()
         {
+            // Подключаем мета-прогресс и автопарк из сохранений
+            GarageCatalog garageCatalog = Resources.Load<GarageCatalog>("GarageCatalog");
+#if UNITY_EDITOR
+            if (garageCatalog == null)
+            {
+                garageCatalog = UnityEditor.AssetDatabase.LoadAssetAtPath<GarageCatalog>("Assets/Content/GarageCatalog.asset");
+            }
+#endif
+            IReadOnlyList<UpgradeTrack> tracks = garageCatalog != null ? garageCatalog.Upgrades : null;
+            IReadOnlyList<CarDefinition> cars = garageCatalog != null ? garageCatalog.Cars : null;
+
+            RogueDrive.Meta.MetaProgress meta = RogueDrive.Meta.SaveService.GetActiveProgress(tracks, cars);
+            if (meta != null && meta.SelectedCar != null)
+            {
+                carDefinition = meta.SelectedCar;
+                if (carController != null)
+                {
+                    carController.SetBodyColor(meta.SelectedCar.BodyColor);
+                }
+            }
+
             ISocketProvider sockets = carController != null && carController.Sockets != null
                 ? (ISocketProvider)carController.Sockets
                 : new HeadlessSocketProvider(carDefinition);
 
-            IBaseStatsProvider baseStats = new CarBaseStats(carDefinition);
-            IUnlockProvider unlocks = new AllUnlocked();
+            IBaseStatsProvider baseStats = (meta != null) ? (IBaseStatsProvider)meta : new CarBaseStats(carDefinition);
+            IUnlockProvider unlocks = (meta != null && meta.Data.UnlockedModifierIds.Count > 0) ? (IUnlockProvider)meta : new AllUnlocked();
             int seed = Random.Range(1, 1000000);
 
             session = ModifierSession.Create(modifierCatalog, baseStats, sockets, unlocks, seed, weightingConfig);

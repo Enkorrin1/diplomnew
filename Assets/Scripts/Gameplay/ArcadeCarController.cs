@@ -67,6 +67,33 @@ namespace RogueDrive.Gameplay
         public void BindStats(StatBlock stats)
         {
             activeStats = stats;
+            if (stats != null && body != null)
+            {
+                float mass = stats.Get(StatId.Mass);
+                if (mass > 100f)
+                {
+                    body.mass = mass;
+                }
+            }
+        }
+
+        public void SetBodyColor(Color color)
+        {
+            if (visualBody == null)
+                visualBody = transform.Find("VisualBody");
+
+            if (visualBody != null)
+            {
+                Transform chassis = visualBody.Find("Chassis");
+                if (chassis != null)
+                {
+                    Renderer r = chassis.GetComponent<Renderer>();
+                    if (r != null)
+                    {
+                        r.material.color = color;
+                    }
+                }
+            }
         }
 
         private void Awake()
