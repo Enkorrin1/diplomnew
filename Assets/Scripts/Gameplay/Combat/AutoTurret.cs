@@ -1,0 +1,155 @@
+using UnityEngine;
+using RogueDrive.Modifiers;
+
+namespace RogueDrive.Gameplay
+{
+    /// <summary>
+    /// Автоматическая турель на крыше машины.
+    /// Вращается на 360°, непрерывно отслеживает ближайшего врага и ведёт огонь
+    /// с учётом характеристик урона, скорострельности и модификаторов снарядов.
+    /// </summary>
+    public sealed class AutoTurret : MonoBehaviour
+    {
+        [Header("Targeting & Range")]
+        [SerializeField, Min(1f)] private float range = 35f;
+        [SerializeField, Min(10f)] private float rotationSpeed = 480f; // градусов в секунду
+        [SerializeField] private Transform swivelTransform;         // вращающаяся часть турели
+        [SerializeField] private Transform[] muzzleTransforms;      // точки вылета снарядов
+
+        [Header("Base Stats")]
+        [SerializeField, Min(1f)] private float baseDamage = 25f;
+        [SerializeField, Min(0.1f)] private float baseFireRate = 3.5f; // выстрелов в секунду
+        [SerializeField] private GameObject projectilePrefab;
+
+        float fireCooldown;
+        Transform currentTarget;
+
+        StatBlock activeStats;
+        ProjectilePipeline activeProjectiles;
+
+        public float Range => range;
+        public float Damage => activeStats != null ? activeStats.Get(StatId.Damage, baseDamage) : baseDamage;
+        public float FireRate => activeStats != null ? activeStats.Get(StatId.FireRate, baseFireRate) : baseFireRate;
+
+        public void BindStats(StatBlock stats, ProjectilePipeline projectiles)
+        {
+            activeStats = stats;
+            activeProjectiles = projectiles;
+        }
+
+        private void Update()
+        {
+            UpdateTarget();
+
+            if (currentTarget != null)
+            {
+                RotateTowardsTarget(currentTarget.position, Time.deltaTime);
+
+                fireCooldown -= Time.deltaTime;
+                if (fireCooldown <= 0f)
+                {
+                    Fire();
+                    fireCooldown = 1f / Mathf.Max(0.1f, FireRate);
+                }
+            }
+            else
+            {
+                // Если врагов в радиусе нет — плавно возвращаем башню прямо по ходу движения
+                if (swivelTransform != null)
+                {
+                    swivelTransform.localRotation = Quaternion.RotateTowards(
+                        swivelTransform.localRotation,
+                        Quaternion.identity,
+                        rotationSpeed * 0.5f * Time.deltaTime);
+                }
+            }
+        }
+
+        void UpdateTarget()
+        {
+            if (currentTarget != null)
+            {
+                IDamageable d = currentTarget.GetComponentInParent<IDamageable>();
+                if (d == null || d.IsDead || Vector3.Distance(transform.position, currentTarget.position) > range * 1.15f)
+                {
+                    currentTarget = null;
+                }
+            }
+
+            if (currentTarget != null)
+                return;
+
+            // Поиск ближайшего врага
+            Collider[] colliders = Physics.OverlapSphere(transform.position, range);
+            float minDistance = float.MaxValue;
+            Transform nearest = null;
+
+            for (int i = 0; i < colliders.Length; i++)
+            {
+                IDamageable damageable = colliders[i].GetComponentInParent<IDamageable>();
+                if (damageable == null || damageable.IsDead)
+                    continue;
+
+                float dist = Vector3.Distance(transform.position, colliders[i].transform.position);
+                if (dist < minDistance)
+                {
+                    minDistance = dist;
+                    nearest = colliders[i].transform;
+                }
+            }
+
+            currentTarget = nearest;
+        }
+
+        void RotateTowardsTarget(Vector3 targetPos, float dt)
+        {
+            if (swivelTransform == null)
+                return;
+
+            Vector3 direction = targetPos - swivelTransform.position;
+            direction.y = 0f; // вращение строго в горизонтальной плоскости
+
+            if (direction.sqrMagnitude > 0.01f)
+            {
+                Quaternion targetRot = Quaternion.LookRotation(direction, Vector3.up);
+                swivelTransform.rotation = Quaternion.RotateTowards(swivelTransform.rotation, targetRot, rotationSpeed * dt);
+            }
+        }
+
+        void Fire()
+        {
+            if (projectilePrefab == null)
+                return;
+
+            int bounces = activeProjectiles != null ? activeProjectiles.Bounces : 0;
+            float slow = activeProjectiles != null ? activeProjectiles.Slow : 0f;
+            float burn = activeProjectiles != null ? activeProjectiles.Burn : 0f;
+            float dmg = Damage;
+
+            Transform[] muzzles = (muzzleTransforms != null && muzzleTransforms.Length > 0)
+                ? muzzleTransforms
+                : new[] { swivelTransform != null ? swivelTransform : transform };
+
+            for (int i = 0; i < muzzles.Length; i++)
+            {
+                Transform muzzle = muzzles[i];
+                Vector3 shootDir = muzzle.forward;
+                if (currentTarget != null)
+                {
+                    shootDir = (currentTarget.position - muzzle.position).normalized;
+                    shootDir.y = 0f;
+                }
+
+                GameObject pObj = GameplayPool.Instance != null
+                    ? GameplayPool.Instance.Spawn(projectilePrefab, muzzle.position, Quaternion.LookRotation(shootDir))
+                    : Instantiate(projectilePrefab, muzzle.position, Quaternion.LookRotation(shootDir));
+
+                Projectile proj = pObj.GetComponent<Projectile>();
+                if (proj != null)
+                {
+                    proj.Launch(shootDir, dmg, bounces, slow, burn);
+                }
+            }
+        }
+    }
+}
