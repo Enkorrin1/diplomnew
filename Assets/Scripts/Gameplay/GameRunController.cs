@@ -38,6 +38,15 @@ namespace RogueDrive.Gameplay
 
         private void Awake()
         {
+            // Мобильная оптимизация частоты кадров и предотвращение засыпания экрана
+            Application.targetFrameRate = 60;
+            Screen.sleepTimeout = SleepTimeout.NeverSleep;
+
+            if (FindFirstObjectByType<RogueDrive.Gameplay.UI.TouchControlsUI>() == null)
+            {
+                gameObject.AddComponent<RogueDrive.Gameplay.UI.TouchControlsUI>();
+            }
+
             ResetRun();
         }
 

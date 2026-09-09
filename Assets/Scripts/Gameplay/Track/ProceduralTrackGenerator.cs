@@ -722,6 +722,7 @@ namespace RogueDrive.Gameplay
             {
                 Material m = new Material(r.sharedMaterial ?? new Material(Shader.Find("Standard")));
                 m.color = col;
+                m.enableInstancing = true;
                 r.sharedMaterial = m;
                 if (tracker != null) tracker.Add(r);
             }
