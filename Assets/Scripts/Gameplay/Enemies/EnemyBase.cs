@@ -28,6 +28,14 @@ namespace RogueDrive.Gameplay
         [SerializeField] protected GameObject coinPrefab;
         [SerializeField, Min(0)] protected int coinReward = 1;
 
+        [Header("3D Visual Representation")]
+        [SerializeField] protected GameObject visualModelPrefab;
+        [SerializeField] protected Vector3 visualModelOffset = new Vector3(0f, -0.5f, 0f);
+        [SerializeField] protected Vector3 visualModelScale = Vector3.one;
+        [SerializeField] protected GameObject weaponPropPrefab;
+
+        protected GameObject spawnedVisualInstance;
+
         protected float currentHealth;
         protected float slowTimer;
         protected float slowFactor;
@@ -54,6 +62,8 @@ namespace RogueDrive.Gameplay
             }
             rb.isKinematic = true;
             rb.useGravity = false;
+
+            EnsureVisualRepresentation();
 
             if (GetComponent<EnemyVisualBobbing>() == null)
             {
@@ -315,6 +325,152 @@ namespace RogueDrive.Gameplay
             {
                 Destroy(gameObject);
             }
+        }
+
+        protected void EnsureVisualRepresentation()
+        {
+            Transform existingVisual = transform.Find("VisualModel");
+            if (existingVisual != null)
+            {
+                spawnedVisualInstance = existingVisual.gameObject;
+                HideRootRenderer();
+                return;
+            }
+
+            GameObject prefabToUse = visualModelPrefab;
+#if UNITY_EDITOR
+            if (prefabToUse == null)
+            {
+                string assetPath = null;
+                if (this is WalkerZombie)
+                {
+                    assetPath = "Assets/AlexMakes3D/Polygon style/Halloween pack/Characters/Prefabs/Zombie.prefab";
+                }
+                else if (this is RunnerMutant)
+                {
+                    assetPath = "Assets/AlexMakes3D/Polygon style/Halloween pack/Characters/Prefabs/Evil_Clown.prefab";
+                }
+                else if (this is ArmoredBrute)
+                {
+                    assetPath = "Assets/AlexMakes3D/Polygon style/Halloween pack/Characters/Prefabs/Pumpkinhead.prefab";
+                }
+                else if (this is AcidSpitter)
+                {
+                    assetPath = "Assets/3D Characters Zombie Hospital Lowpoly Pack - Lite/Prefabs/(P) Characters_Zombie_Pacient_04.prefab";
+                }
+                else if (this is EliteKamikaze)
+                {
+                    assetPath = "Assets/AlexMakes3D/Polygon style/Halloween pack/Characters/Prefabs/Evil_Clown.prefab";
+                }
+                else if (this is EliteJuggernautMinion)
+                {
+                    assetPath = "Assets/AlexMakes3D/Polygon style/Halloween pack/Characters/Prefabs/Pumpkinhead.prefab";
+                }
+                else if (this is ElitePackLeader)
+                {
+                    assetPath = "Assets/3D Characters Zombie City Streets Lowpoly Pack - Lite/Prefabs/(P) Characters_Zombie_SuitMan_1.prefab";
+                }
+
+                if (!string.IsNullOrEmpty(assetPath))
+                {
+                    prefabToUse = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(assetPath);
+                }
+            }
+#endif
+
+            if (prefabToUse != null)
+            {
+                spawnedVisualInstance = Instantiate(prefabToUse, transform);
+                spawnedVisualInstance.name = "VisualModel";
+                spawnedVisualInstance.transform.localPosition = visualModelOffset;
+                spawnedVisualInstance.transform.localRotation = Quaternion.identity;
+                spawnedVisualInstance.transform.localScale = visualModelScale;
+
+                // Отключаем внутренние коллайдеры дочерней 3D-модели, чтобы не дублировать хитбоксы
+                Collider[] childColliders = spawnedVisualInstance.GetComponentsInChildren<Collider>(true);
+                for (int i = 0; i < childColliders.Length; i++)
+                {
+                    childColliders[i].enabled = false;
+                }
+
+                // Отключаем RootMotion на аниматорах, чтобы процедурная физика управляла движением
+                Animator[] animators = spawnedVisualInstance.GetComponentsInChildren<Animator>(true);
+                for (int i = 0; i < animators.Length; i++)
+                {
+                    animators[i].applyRootMotion = false;
+                }
+
+                AttachWeaponProp(spawnedVisualInstance);
+            }
+
+            HideRootRenderer();
+        }
+
+        void HideRootRenderer()
+        {
+            MeshRenderer mr = GetComponent<MeshRenderer>();
+            if (mr != null)
+            {
+                mr.enabled = false;
+            }
+        }
+
+        void AttachWeaponProp(GameObject visualInstance)
+        {
+            if (visualInstance == null) return;
+
+            GameObject propPrefab = weaponPropPrefab;
+#if UNITY_EDITOR
+            if (propPrefab == null)
+            {
+                if (this is ArmoredBrute || this is EliteJuggernautMinion)
+                {
+                    propPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/AlexMakes3D/Polygon style/Halloween pack/Props/Prefabs/Pitchfork.prefab");
+                }
+                else if (this is RunnerMutant || this is EliteKamikaze)
+                {
+                    propPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/AlexMakes3D/Polygon style/Halloween pack/Props/Prefabs/Сlown hammer.prefab");
+                }
+                else if (this is WalkerZombie)
+                {
+                    propPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/AlexMakes3D/Polygon style/Halloween pack/Props/Prefabs/Kitchen cleaver.prefab");
+                }
+            }
+#endif
+            if (propPrefab == null) return;
+
+            Transform hand = FindDeepChild(visualInstance.transform, "hand.r")
+                          ?? FindDeepChild(visualInstance.transform, "hand_r")
+                          ?? FindDeepChild(visualInstance.transform, "c_hand.r")
+                          ?? FindDeepChild(visualInstance.transform, "Hand.R");
+
+            if (hand != null)
+            {
+                GameObject weapon = Instantiate(propPrefab, hand);
+                weapon.name = "HeldWeapon";
+                weapon.transform.localPosition = new Vector3(0.04f, 0.05f, 0.02f);
+                weapon.transform.localRotation = Quaternion.Euler(15f, 90f, 0f);
+                weapon.transform.localScale = Vector3.one * 0.85f;
+
+                Collider[] cols = weapon.GetComponentsInChildren<Collider>(true);
+                for (int i = 0; i < cols.Length; i++)
+                {
+                    cols[i].enabled = false;
+                }
+            }
+        }
+
+        Transform FindDeepChild(Transform parent, string childName)
+        {
+            foreach (Transform child in parent)
+            {
+                if (child.name.Equals(childName, StringComparison.OrdinalIgnoreCase))
+                    return child;
+                Transform found = FindDeepChild(child, childName);
+                if (found != null)
+                    return found;
+            }
+            return null;
         }
 
         void FindPlayer()

@@ -20,7 +20,7 @@ MonoBehaviour:
     \u0438 \u043C\u0430\u043D\u0435\u0432\u0440\u0435\u043D\u043D\u043E\u0441\u0442\u044C."
   Prefab: {fileID: 3786326439804512758, guid: f4e73d783d681e04ca355f6c8a50af8e, type: 3}
   Price: 0
-  BodyColor: {r: 0.1215686, g: 0.9490196, b: 0.1655531, a: 1}
+  BodyColor: {r: 0.12, g: 0.58, b: 0.95, a: 1}
   BaseStats:
   - Id: 0
     Value: 10

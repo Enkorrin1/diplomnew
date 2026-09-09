@@ -407,7 +407,12 @@ namespace RogueDrive.EditorTools
             GameObject existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
             if (existing != null)
             {
-                SetDropsOnEnemy(existing.GetComponent<WalkerZombie>(), xpGem, coinPrefab, 1);
+                SetEnemyVisualAndDrops(
+                    existing.GetComponent<WalkerZombie>(), xpGem, coinPrefab, 1,
+                    "Assets/AlexMakes3D/Polygon style/Halloween pack/Characters/Prefabs/Zombie.prefab",
+                    "Assets/AlexMakes3D/Polygon style/Halloween pack/Props/Prefabs/Kitchen cleaver.prefab",
+                    new Vector3(0f, -0.5f, 0f), Vector3.one
+                );
                 return existing;
             }
 
@@ -418,12 +423,15 @@ namespace RogueDrive.EditorTools
             cc.isTrigger = true;
 
             Renderer r = go.GetComponent<Renderer>();
-            Material mat = new Material(Shader.Find("Standard"));
-            mat.color = new Color(0.28f, 0.6f, 0.32f);
-            r.sharedMaterial = mat;
+            if (r != null) r.enabled = false;
 
             WalkerZombie walker = go.AddComponent<WalkerZombie>();
-            SetDropsOnEnemy(walker, xpGem, coinPrefab, 1);
+            SetEnemyVisualAndDrops(
+                walker, xpGem, coinPrefab, 1,
+                "Assets/AlexMakes3D/Polygon style/Halloween pack/Characters/Prefabs/Zombie.prefab",
+                "Assets/AlexMakes3D/Polygon style/Halloween pack/Props/Prefabs/Kitchen cleaver.prefab",
+                new Vector3(0f, -0.5f, 0f), Vector3.one
+            );
 
             GameObject prefab = PrefabUtility.SaveAsPrefabAsset(go, path);
             Object.DestroyImmediate(go);
@@ -436,7 +444,12 @@ namespace RogueDrive.EditorTools
             GameObject existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
             if (existing != null)
             {
-                SetDropsOnEnemy(existing.GetComponent<RunnerMutant>(), xpGem, coinPrefab, 2);
+                SetEnemyVisualAndDrops(
+                    existing.GetComponent<RunnerMutant>(), xpGem, coinPrefab, 2,
+                    "Assets/AlexMakes3D/Polygon style/Halloween pack/Characters/Prefabs/Evil_Clown.prefab",
+                    "Assets/AlexMakes3D/Polygon style/Halloween pack/Props/Prefabs/Сlown hammer.prefab",
+                    new Vector3(0f, -0.5f, 0f), new Vector3(1.05f, 1.05f, 1.05f)
+                );
                 return existing;
             }
 
@@ -447,12 +460,15 @@ namespace RogueDrive.EditorTools
             cc.isTrigger = true;
 
             Renderer r = go.GetComponent<Renderer>();
-            Material mat = new Material(Shader.Find("Standard"));
-            mat.color = new Color(0.95f, 0.48f, 0.12f);
-            r.sharedMaterial = mat;
+            if (r != null) r.enabled = false;
 
             RunnerMutant runner = go.AddComponent<RunnerMutant>();
-            SetDropsOnEnemy(runner, xpGem, coinPrefab, 2);
+            SetEnemyVisualAndDrops(
+                runner, xpGem, coinPrefab, 2,
+                "Assets/AlexMakes3D/Polygon style/Halloween pack/Characters/Prefabs/Evil_Clown.prefab",
+                "Assets/AlexMakes3D/Polygon style/Halloween pack/Props/Prefabs/Сlown hammer.prefab",
+                new Vector3(0f, -0.5f, 0f), new Vector3(1.05f, 1.05f, 1.05f)
+            );
 
             GameObject prefab = PrefabUtility.SaveAsPrefabAsset(go, path);
             Object.DestroyImmediate(go);
@@ -465,23 +481,31 @@ namespace RogueDrive.EditorTools
             GameObject existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
             if (existing != null)
             {
-                SetDropsOnEnemy(existing.GetComponent<ArmoredBrute>(), xpGem, coinPrefab, 5);
+                SetEnemyVisualAndDrops(
+                    existing.GetComponent<ArmoredBrute>(), xpGem, coinPrefab, 5,
+                    "Assets/AlexMakes3D/Polygon style/Halloween pack/Characters/Prefabs/Pumpkinhead.prefab",
+                    "Assets/AlexMakes3D/Polygon style/Halloween pack/Props/Prefabs/Pitchfork.prefab",
+                    new Vector3(0f, -0.65f, 0f), new Vector3(1.35f, 1.35f, 1.35f)
+                );
                 return existing;
             }
 
-            GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            GameObject go = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             go.name = "ArmoredBrute";
-            go.transform.localScale = new Vector3(1.8f, 2.2f, 1.6f);
-            BoxCollider bc = go.GetComponent<BoxCollider>();
-            bc.isTrigger = true;
+            go.transform.localScale = new Vector3(1.4f, 1.8f, 1.4f);
+            CapsuleCollider cc = go.GetComponent<CapsuleCollider>();
+            cc.isTrigger = true;
 
             Renderer r = go.GetComponent<Renderer>();
-            Material mat = new Material(Shader.Find("Standard"));
-            mat.color = new Color(0.55f, 0.15f, 0.18f);
-            r.sharedMaterial = mat;
+            if (r != null) r.enabled = false;
 
             ArmoredBrute brute = go.AddComponent<ArmoredBrute>();
-            SetDropsOnEnemy(brute, xpGem, coinPrefab, 5);
+            SetEnemyVisualAndDrops(
+                brute, xpGem, coinPrefab, 5,
+                "Assets/AlexMakes3D/Polygon style/Halloween pack/Characters/Prefabs/Pumpkinhead.prefab",
+                "Assets/AlexMakes3D/Polygon style/Halloween pack/Props/Prefabs/Pitchfork.prefab",
+                new Vector3(0f, -0.65f, 0f), new Vector3(1.35f, 1.35f, 1.35f)
+            );
 
             GameObject prefab = PrefabUtility.SaveAsPrefabAsset(go, path);
             Object.DestroyImmediate(go);
@@ -494,23 +518,31 @@ namespace RogueDrive.EditorTools
             GameObject existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
             if (existing != null)
             {
-                SetDropsOnEnemy(existing.GetComponent<AcidSpitter>(), xpGem, coinPrefab, 3);
+                SetEnemyVisualAndDrops(
+                    existing.GetComponent<AcidSpitter>(), xpGem, coinPrefab, 3,
+                    "Assets/3D Characters Zombie Hospital Lowpoly Pack - Lite/Prefabs/(P) Characters_Zombie_Pacient_04.prefab",
+                    null,
+                    new Vector3(0f, -0.5f, 0f), Vector3.one
+                );
                 return existing;
             }
 
-            GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            GameObject go = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             go.name = "AcidSpitter";
             go.transform.localScale = new Vector3(1.0f, 1.2f, 1.0f);
             CapsuleCollider cc = go.GetComponent<CapsuleCollider>();
             if (cc != null) cc.isTrigger = true;
 
             Renderer r = go.GetComponent<Renderer>();
-            Material mat = new Material(Shader.Find("Standard"));
-            mat.color = new Color(0.6f, 0.2f, 0.8f);
-            r.sharedMaterial = mat;
+            if (r != null) r.enabled = false;
 
             AcidSpitter spitter = go.AddComponent<AcidSpitter>();
-            SetDropsOnEnemy(spitter, xpGem, coinPrefab, 3);
+            SetEnemyVisualAndDrops(
+                spitter, xpGem, coinPrefab, 3,
+                "Assets/3D Characters Zombie Hospital Lowpoly Pack - Lite/Prefabs/(P) Characters_Zombie_Pacient_04.prefab",
+                null,
+                new Vector3(0f, -0.5f, 0f), Vector3.one
+            );
 
             SerializedObject so = new SerializedObject(spitter);
             so.FindProperty("acidProjectilePrefab").objectReferenceValue = acidProj;
@@ -545,14 +577,35 @@ namespace RogueDrive.EditorTools
             return prefab;
         }
 
-        static void SetDropsOnEnemy(EnemyBase enemy, GameObject gem, GameObject coin, int coinReward)
+        static void SetEnemyVisualAndDrops(EnemyBase enemy, GameObject gem, GameObject coin, int coinReward, string modelPath, string weaponPath, Vector3 offset, Vector3 scale)
         {
             if (enemy == null) return;
             SerializedObject so = new SerializedObject(enemy);
             so.FindProperty("xpGemPrefab").objectReferenceValue = gem;
             so.FindProperty("coinPrefab").objectReferenceValue = coin;
             so.FindProperty("coinReward").intValue = coinReward;
+
+            if (!string.IsNullOrEmpty(modelPath))
+            {
+                GameObject model = AssetDatabase.LoadAssetAtPath<GameObject>(modelPath);
+                if (model != null) so.FindProperty("visualModelPrefab").objectReferenceValue = model;
+            }
+            if (!string.IsNullOrEmpty(weaponPath))
+            {
+                GameObject weapon = AssetDatabase.LoadAssetAtPath<GameObject>(weaponPath);
+                if (weapon != null) so.FindProperty("weaponPropPrefab").objectReferenceValue = weapon;
+            }
+            so.FindProperty("visualModelOffset").vector3Value = offset;
+            so.FindProperty("visualModelScale").vector3Value = scale;
             so.ApplyModifiedProperties();
+
+            MeshRenderer mr = enemy.GetComponent<MeshRenderer>();
+            if (mr != null)
+            {
+                SerializedObject mrSo = new SerializedObject(mr);
+                mrSo.FindProperty("m_Enabled").boolValue = false;
+                mrSo.ApplyModifiedProperties();
+            }
         }
 
         static GameObject CreatePrimitive(PrimitiveType type, string objectName, Vector3 position, Vector3 scale, Color color)

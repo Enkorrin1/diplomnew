@@ -23,14 +23,25 @@ namespace RogueDrive.Gameplay
         private void Awake()
         {
             enemyBase = GetComponent<EnemyBase>();
+            ResolveVisual();
+            randomSeed = Random.Range(0f, 100f);
+        }
 
-            // Ищем дочерний меш или берем сам объект
-            Transform bodyChild = transform.Find("Body") ?? transform.Find("Visual") ?? transform.Find("VisualBody");
+        private void Start()
+        {
+            if (visualTransform == null || visualTransform == transform)
+            {
+                ResolveVisual();
+            }
+        }
+
+        private void ResolveVisual()
+        {
+            Transform bodyChild = transform.Find("VisualModel") ?? transform.Find("Body") ?? transform.Find("Visual") ?? transform.Find("VisualBody");
             visualTransform = bodyChild != null ? bodyChild : transform;
 
             initialLocalPos = visualTransform.localPosition;
             initialLocalRot = visualTransform.localRotation;
-            randomSeed = Random.Range(0f, 100f);
         }
 
         private void Update()

@@ -71,7 +71,7 @@ MeshRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6653125392747780469}
-  m_Enabled: 1
+  m_Enabled: 0
   m_CastShadows: 1
   m_ReceiveShadows: 1
   m_DynamicOccludee: 1
@@ -130,3 +130,7 @@ MonoBehaviour:
   xpGemPrefab: {fileID: 4869399585758919649, guid: c537b43b246219c4c811f417ca56c45b, type: 3}
   coinPrefab: {fileID: 5932357062884214837, guid: 2a5a1ee1b1308fe43a81b6b6ab53b991, type: 3}
   coinReward: 5
+  visualModelPrefab: {fileID: 1804796395356536279, guid: 08fa9a04e27cb2541b0e1c6d167100e2, type: 3}
+  visualModelOffset: {x: 0, y: -0.65, z: 0}
+  visualModelScale: {x: 1.35, y: 1.35, z: 1.35}
+  weaponPropPrefab: {fileID: 1448823981531281663, guid: 3248d872c0adf2447ab41706bd6479a2, type: 3}

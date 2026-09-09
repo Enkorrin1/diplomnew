@@ -62,10 +62,10 @@ CapsuleCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2
-  m_Radius: 0.5
-  m_Height: 2
+  m_Radius: 0.42
+  m_Height: 1.7
   m_Direction: 1
-  m_Center: {x: 0, y: 0, z: 0}
+  m_Center: {x: 0, y: 0.35000002, z: 0}
 --- !u!23 &159512083062624260
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -73,7 +73,7 @@ MeshRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2038328427448897492}
-  m_Enabled: 1
+  m_Enabled: 0
   m_CastShadows: 1
   m_ReceiveShadows: 1
   m_DynamicOccludee: 1
@@ -132,4 +132,8 @@ MonoBehaviour:
   xpGemPrefab: {fileID: 4869399585758919649, guid: c537b43b246219c4c811f417ca56c45b, type: 3}
   coinPrefab: {fileID: 5932357062884214837, guid: 2a5a1ee1b1308fe43a81b6b6ab53b991, type: 3}
   coinReward: 2
+  visualModelPrefab: {fileID: 2897203465821358608, guid: c8dc6a052acf5c943a3cd1afc5af3462, type: 3}
+  visualModelOffset: {x: 0, y: -0.5, z: 0}
+  visualModelScale: {x: 1.05, y: 1.05, z: 1.05}
+  weaponPropPrefab: {fileID: 5887383070449686907, guid: f1995252398fd8d47b9036d702bd7840, type: 3}
   flankOffset: 3.5

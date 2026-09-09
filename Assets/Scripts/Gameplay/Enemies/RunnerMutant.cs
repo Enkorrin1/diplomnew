@@ -18,6 +18,8 @@ namespace RogueDrive.Gameplay
             xpReward = 2;
             resistsRamming = false;
             ramVulnerability = 1.5f;
+            visualModelScale = new Vector3(1.05f, 1.05f, 1.05f);
+            visualModelOffset = new Vector3(0f, -0.5f, 0f);
             base.Awake();
         }
 
