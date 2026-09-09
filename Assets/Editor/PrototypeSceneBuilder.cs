@@ -137,24 +137,34 @@ namespace RogueDrive.EditorTools
             GameObject visualBody = new GameObject("VisualBody");
             visualBody.transform.SetParent(car.transform, false);
 
-            CreateCarPart(visualBody.transform, "Chassis", new Vector3(0f, 0.35f, 0f), new Vector3(1.75f, 0.55f, 3.5f), new Color(0.08f, 0.55f, 0.95f));
-            CreateCarPart(visualBody.transform, "Cabin", new Vector3(0f, 0.85f, -0.2f), new Vector3(1.35f, 0.55f, 1.6f), new Color(0.68f, 0.88f, 1f));
-            CreateCarPart(visualBody.transform, "FrontBumper", new Vector3(0f, 0.25f, 1.75f), new Vector3(1.82f, 0.35f, 0.25f), new Color(0.2f, 0.2f, 0.25f));
-
-            // Фары и колеса
-            CreateCarPart(visualBody.transform, "Headlight_L", new Vector3(-0.65f, 0.35f, 1.78f), new Vector3(0.3f, 0.18f, 0.1f), Color.yellow);
-            CreateCarPart(visualBody.transform, "Headlight_R", new Vector3(0.65f, 0.35f, 1.78f), new Vector3(0.3f, 0.18f, 0.1f), Color.yellow);
-
-            Vector3[] wheelOffsets =
+            GameObject carModelPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Awbmecreations/Mobile Optimize-Free Low Poly Cars/Prefabs/Classic Car_9.prefab");
+            if (carModelPrefab != null)
             {
-                new Vector3(-0.92f, 0.25f, 1.15f),
-                new Vector3(0.92f, 0.25f, 1.15f),
-                new Vector3(-0.92f, 0.25f, -1.15f),
-                new Vector3(0.92f, 0.25f, -1.15f)
-            };
-            for (int i = 0; i < wheelOffsets.Length; i++)
+                GameObject modelInstance = (GameObject)PrefabUtility.InstantiatePrefab(carModelPrefab, visualBody.transform);
+                modelInstance.name = "Classic Car_9";
+                modelInstance.transform.localPosition = Vector3.zero;
+                modelInstance.transform.localRotation = Quaternion.identity;
+            }
+            else
             {
-                CreateCarPart(visualBody.transform, $"Wheel_{i + 1}", wheelOffsets[i], new Vector3(0.22f, 0.55f, 0.55f), new Color(0.1f, 0.1f, 0.12f));
+                CreateCarPart(visualBody.transform, "Chassis", new Vector3(0f, 0.35f, 0f), new Vector3(1.75f, 0.55f, 3.5f), new Color(0.08f, 0.55f, 0.95f));
+                CreateCarPart(visualBody.transform, "Cabin", new Vector3(0f, 0.85f, -0.2f), new Vector3(1.35f, 0.55f, 1.6f), new Color(0.68f, 0.88f, 1f));
+                CreateCarPart(visualBody.transform, "FrontBumper", new Vector3(0f, 0.25f, 1.75f), new Vector3(1.82f, 0.35f, 0.25f), new Color(0.2f, 0.2f, 0.25f));
+
+                CreateCarPart(visualBody.transform, "Headlight_L", new Vector3(-0.65f, 0.35f, 1.78f), new Vector3(0.3f, 0.18f, 0.1f), Color.yellow);
+                CreateCarPart(visualBody.transform, "Headlight_R", new Vector3(0.65f, 0.35f, 1.78f), new Vector3(0.3f, 0.18f, 0.1f), Color.yellow);
+
+                Vector3[] wheelOffsets =
+                {
+                    new Vector3(-0.92f, 0.25f, 1.15f),
+                    new Vector3(0.92f, 0.25f, 1.15f),
+                    new Vector3(-0.92f, 0.25f, -1.15f),
+                    new Vector3(0.92f, 0.25f, -1.15f)
+                };
+                for (int i = 0; i < wheelOffsets.Length; i++)
+                {
+                    CreateCarPart(visualBody.transform, $"Wheel_{i + 1}", wheelOffsets[i], new Vector3(0.22f, 0.55f, 0.55f), new Color(0.1f, 0.1f, 0.12f));
+                }
             }
 
             // Настройка SocketRegistry
@@ -172,16 +182,15 @@ namespace RogueDrive.EditorTools
             turretObj.transform.localPosition = Vector3.zero;
 
             // База турели
-            GameObject baseObj = CreatePrimitive(PrimitiveType.Cylinder, "TurretBase", new Vector3(0f, 0.1f, 0f), new Vector3(0.6f, 0.15f, 0.6f), new Color(0.25f, 0.28f, 0.35f));
+            GameObject baseObj = CreatePrimitive(PrimitiveType.Cylinder, "TurretBase", new Vector3(0f, 0.02f, 0f), new Vector3(0.35f, 0.04f, 0.35f), new Color(0.25f, 0.28f, 0.35f));
             Collider baseCol = baseObj.GetComponent<Collider>();
             if (baseCol != null) Object.DestroyImmediate(baseCol);
             baseObj.transform.SetParent(turretObj.transform, false);
 
-            // Поворотная голова
-            GameObject swivelObj = CreatePrimitive(PrimitiveType.Cube, "TurretSwivel", new Vector3(0f, 0.28f, 0f), new Vector3(0.45f, 0.3f, 0.55f), new Color(0.85f, 0.35f, 0.15f));
-            Collider swivelCol = swivelObj.GetComponent<Collider>();
-            if (swivelCol != null) Object.DestroyImmediate(swivelCol);
+            // Поворотная голова (чистый трансформ шарнира без меша куба)
+            GameObject swivelObj = new GameObject("TurretSwivel");
             swivelObj.transform.SetParent(turretObj.transform, false);
+            swivelObj.transform.localPosition = new Vector3(0f, 0.06f, 0f);
 
             // 3D Модель штурмовой винтовки на поворотной турели
             GameObject weaponPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Low Poly AR Weapon Pack 1/Prefabs/Weapons/AR_A_1.prefab");
@@ -192,6 +201,11 @@ namespace RogueDrive.EditorTools
                 gunObj.transform.localPosition = new Vector3(0f, 0.05f, 0.15f);
                 gunObj.transform.localRotation = Quaternion.identity;
                 gunObj.transform.localScale = Vector3.one * 1.6f;
+                Collider[] gunCols = gunObj.GetComponentsInChildren<Collider>(true);
+                for (int i = 0; i < gunCols.Length; i++)
+                {
+                    Object.DestroyImmediate(gunCols[i]);
+                }
             }
             else
             {
@@ -223,7 +237,7 @@ namespace RogueDrive.EditorTools
 
         static void SetupCarSockets(Transform carTransform, SocketRegistry registry)
         {
-            Transform socketRoof = CreateSocketAnchor(carTransform, "Socket_Roof", new Vector3(0f, 1.18f, -0.2f));
+            Transform socketRoof = CreateSocketAnchor(carTransform, "Socket_Roof", new Vector3(0f, 1.25f, -0.1f));
             Transform socketHood = CreateSocketAnchor(carTransform, "Socket_Hood", new Vector3(0f, 0.68f, 1.1f));
             Transform socketBumper = CreateSocketAnchor(carTransform, "Socket_Bumper", new Vector3(0f, 0.32f, 1.85f));
             Transform socketExhaust = CreateSocketAnchor(carTransform, "Socket_Exhaust", new Vector3(0f, 0.2f, -1.82f));

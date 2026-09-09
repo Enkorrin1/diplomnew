@@ -45,6 +45,15 @@ namespace RogueDrive.Gameplay.VFX
             SetupLights();
         }
 
+        public void RefreshWheels()
+        {
+            wheelFL = null;
+            wheelFR = null;
+            wheelRL = null;
+            wheelRR = null;
+            SetupWheelsIfMissing();
+        }
+
         private void SetupWheelsIfMissing()
         {
             // 1. Сначала ищем реальные 3D-колеса среди дочерних объектов модели автомобиля
@@ -58,8 +67,8 @@ namespace RogueDrive.Gameplay.VFX
                 {
                     if (wheelFL == null && (n.Contains("FL") || n.Contains("FRONT_L") || n.Contains("FORWARD_L"))) wheelFL = t;
                     else if (wheelFR == null && (n.Contains("FR") || n.Contains("FRONT_R") || n.Contains("FORWARD_R"))) wheelFR = t;
-                    else if (wheelRL == null && (n.Contains("RL") || n.Contains("REAR_L") || n.Contains("BACK_L"))) wheelRL = t;
-                    else if (wheelRR == null && (n.Contains("RR") || n.Contains("REAR_R") || n.Contains("BACK_R"))) wheelRR = t;
+                    else if (wheelRL == null && (n.Contains("RL") || n.Contains("REAR_L") || n.Contains("BACK_L") || n.Contains("BL"))) wheelRL = t;
+                    else if (wheelRR == null && (n.Contains("RR") || n.Contains("REAR_R") || n.Contains("BACK_R") || n.Contains("BR"))) wheelRR = t;
                 }
             }
 

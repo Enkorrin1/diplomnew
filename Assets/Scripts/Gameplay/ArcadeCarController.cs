@@ -229,6 +229,12 @@ namespace RogueDrive.Gameplay
                     }
                 }
 
+                Transform existingModel = transform.Find("RealCarModel_3D");
+                if (existingModel != null)
+                {
+                    Destroy(existingModel.gameObject);
+                }
+
                 GameObject modelObj = Instantiate(prefab, transform);
                 modelObj.name = "RealCarModel_3D";
                 modelObj.transform.localPosition = Vector3.zero;
@@ -242,6 +248,12 @@ namespace RogueDrive.Gameplay
                 if (roofSocket != null)
                 {
                     roofSocket.localPosition = new Vector3(0f, 1.25f, -0.1f);
+                }
+
+                var enhancer = GetComponent<RogueDrive.Gameplay.VFX.CarVisualEnhancer>();
+                if (enhancer != null)
+                {
+                    enhancer.RefreshWheels();
                 }
             }
         }

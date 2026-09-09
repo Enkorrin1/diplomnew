@@ -52,9 +52,9 @@ namespace RogueDrive.Gameplay
                 swivelTransform = transform.Find("TurretSwivel");
             }
 
-            if (swivelTransform != null && swivelTransform.Find("AR_Turret_Gun") == null)
+            if (swivelTransform != null)
             {
-                // Скрываем старый примитивный ствол и куб
+                // Всегда скрываем старые примитивные меши базы, ствола и куба поворотника
                 Transform oldBarrel = swivelTransform.Find("Barrel");
                 if (oldBarrel != null)
                 {
@@ -64,7 +64,15 @@ namespace RogueDrive.Gameplay
                 Renderer swivelRen = swivelTransform.GetComponent<Renderer>();
                 if (swivelRen != null) swivelRen.enabled = false;
 
-                GameObject weaponPrefab = null;
+                Transform baseT = transform.Find("TurretBase");
+                if (baseT != null)
+                {
+                    baseT.localScale = new Vector3(0.35f, 0.05f, 0.35f);
+                }
+
+                if (swivelTransform.Find("AR_Turret_Gun") == null)
+                {
+                    GameObject weaponPrefab = null;
 #if UNITY_EDITOR
                 weaponPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Low Poly AR Weapon Pack 1/Prefabs/Weapons/AR_A_1.prefab");
 #endif
@@ -92,6 +100,7 @@ namespace RogueDrive.Gameplay
                 }
             }
         }
+    }
 
         private void Update()
         {
