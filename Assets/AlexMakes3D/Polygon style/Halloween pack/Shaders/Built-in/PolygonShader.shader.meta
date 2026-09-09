@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: 2f7e690af0d0fab45b53d4dbcc07a48b
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures: []
+  nonModifiableTextures: []
+  preprocessorOverride: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 268933
+  packageName: Polygon style - Halloween pack
+  packageVersion: 1.0
+  assetPath: Assets/AlexMakes3D/Polygon style/Halloween pack/Shaders/Built-in/PolygonShader.shader
+  uploadId: 878902

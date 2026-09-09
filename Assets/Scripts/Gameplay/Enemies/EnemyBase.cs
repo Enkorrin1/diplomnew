@@ -54,6 +54,11 @@ namespace RogueDrive.Gameplay
             }
             rb.isKinematic = true;
             rb.useGravity = false;
+
+            if (GetComponent<EnemyVisualBobbing>() == null)
+            {
+                gameObject.AddComponent<EnemyVisualBobbing>();
+            }
         }
 
         protected virtual void OnEnable()

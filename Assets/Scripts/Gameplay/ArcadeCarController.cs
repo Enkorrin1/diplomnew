@@ -163,6 +163,9 @@ namespace RogueDrive.Gameplay
             if (GetComponent<CarWreckEffect>() == null)
                 gameObject.AddComponent<CarWreckEffect>();
 
+            if (GetComponent<CarVisualEnhancer>() == null)
+                gameObject.AddComponent<CarVisualEnhancer>();
+
             if (AudioManager.Instance == null)
             {
                 GameObject audioGo = new GameObject("AudioManager");

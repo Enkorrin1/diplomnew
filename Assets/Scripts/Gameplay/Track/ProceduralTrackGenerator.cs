@@ -125,6 +125,30 @@ namespace RogueDrive.Gameplay
                 RenderSettings.fogDensity = currentBiome.fogDensity;
                 RenderSettings.ambientSkyColor = currentBiome.fogColor * 1.15f;
 
+                Light sun = RenderSettings.sun ?? FindFirstObjectByType<Light>();
+                if (sun != null && sun.type == LightType.Directional)
+                {
+                    switch (currentBiome.type)
+                    {
+                        case BiomeType.HighwayOutskirts:
+                            sun.color = new Color(0.95f, 0.95f, 1f);
+                            sun.intensity = 1.0f;
+                            break;
+                        case BiomeType.DustyWasteland:
+                            sun.color = new Color(1f, 0.82f, 0.55f);
+                            sun.intensity = 1.25f;
+                            break;
+                        case BiomeType.ToxicIndustrial:
+                            sun.color = new Color(0.65f, 0.95f, 0.55f);
+                            sun.intensity = 0.85f;
+                            break;
+                        case BiomeType.CitadelApproach:
+                            sun.color = new Color(0.95f, 0.35f, 0.35f);
+                            sun.intensity = 0.7f;
+                            break;
+                    }
+                }
+
                 // Уведомление в HUD
                 PrototypeHud.Instance?.ShowBiomeNotification(
                     currentBiome.title,
