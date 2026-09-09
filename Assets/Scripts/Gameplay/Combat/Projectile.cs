@@ -59,11 +59,13 @@ namespace RogueDrive.Gameplay
 
             lastTarget = targetTransform;
             target.TakeDamage(currentDamage, slow, burn);
+            RogueDrive.Audio.AudioManager.Instance?.PlayHit(0.5f);
 
             if (remainingBounces > 0 && TryBounce(targetTransform.position))
             {
                 remainingBounces--;
                 currentDamage *= 0.85f; // легкое угасание урона при рикошете
+                RogueDrive.Audio.AudioManager.Instance?.PlayRicochet();
             }
             else
             {

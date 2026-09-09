@@ -1,6 +1,8 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 using RogueDrive.Modifiers;
+using RogueDrive.Gameplay.VFX;
+using RogueDrive.Audio;
 
 namespace RogueDrive.Gameplay
 {
@@ -14,6 +16,12 @@ namespace RogueDrive.Gameplay
     {
         BehaviourRegistry registry;
         readonly Dictionary<string, float> cooldownTimers = new Dictionary<string, float>();
+        CarAuraVFX auraVFX;
+
+        private void Awake()
+        {
+            auraVFX = GetComponent<CarAuraVFX>() ?? gameObject.AddComponent<CarAuraVFX>();
+        }
 
         public void BindBehaviours(BehaviourRegistry behaviourRegistry)
         {
@@ -46,6 +54,26 @@ namespace RogueDrive.Gameplay
                 return;
 
             float dt = Time.deltaTime;
+
+            // Синхронизация визуальных эффектов активных аур
+            if (auraVFX != null)
+            {
+                bool hasFire = registry.States.ContainsKey("fire_trail");
+                bool hasSaws = registry.States.ContainsKey("side_saws");
+                bool hasShield = registry.States.ContainsKey("energy_shield");
+
+                auraVFX.SetFireTrail(hasFire);
+                auraVFX.SetSideSaws(hasSaws);
+
+                if (hasShield && registry.States.TryGetValue("energy_shield", out var shieldState))
+                {
+                    auraVFX.SetEnergyShield(true, Mathf.Max(2.8f, shieldState.Radius));
+                }
+                else
+                {
+                    auraVFX.SetEnergyShield(false, 3.2f);
+                }
+            }
 
             foreach (var kvp in registry.States)
             {
@@ -124,6 +152,8 @@ namespace RogueDrive.Gameplay
             float dmg = Mathf.Max(25f, state.TickDamage);
 
             ArcadeCameraFollow.Instance?.TriggerShake(0.6f, 0.25f);
+            auraVFX?.PlayShockwave(radius);
+            AudioManager.Instance?.PlayExplosion(0.85f);
 
             Collider[] hits = Physics.OverlapSphere(transform.position, radius);
             for (int i = 0; i < hits.Length; i++)
@@ -173,6 +203,8 @@ namespace RogueDrive.Gameplay
                 if (damageable != null && !damageable.IsDead)
                 {
                     damageable.TakeDamage(dmg, 0.3f, 0f);
+                    auraVFX?.PlayLightningArc(transform.position + Vector3.up * 1.5f, hits[i].transform.position + Vector3.up * 0.5f);
+                    AudioManager.Instance?.PlayHit();
                     zapped++;
                     if (zapped >= maxTargets)
                         break;

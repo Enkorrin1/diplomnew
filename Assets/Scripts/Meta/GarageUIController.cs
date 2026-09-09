@@ -439,12 +439,31 @@ namespace RogueDrive.Meta
 
             if (car == null) return;
 
-            _currentCarModel = new GameObject($"Podium_{car.Id}");
-            _currentCarModel.transform.SetParent(podiumAnchor, false);
-            _currentCarModel.transform.localPosition = Vector3.zero;
+            if (car.Prefab != null)
+            {
+                _currentCarModel = Instantiate(car.Prefab, podiumAnchor);
+                _currentCarModel.transform.localPosition = Vector3.zero;
+                _currentCarModel.transform.localRotation = Quaternion.identity;
 
-            // Построение процедурного 3D макета автомобиля выбранного типа
-            BuildPodiumCarModel(_currentCarModel.transform, car);
+                // Отключаем физику и коллайдеры на подиуме гаража, чтобы выставочная модель не падала и не конфликтовала
+                foreach (var rb in _currentCarModel.GetComponentsInChildren<Rigidbody>())
+                {
+                    rb.isKinematic = true;
+                }
+                foreach (var col in _currentCarModel.GetComponentsInChildren<Collider>())
+                {
+                    col.enabled = false;
+                }
+            }
+            else
+            {
+                _currentCarModel = new GameObject($"Podium_{car.Id}");
+                _currentCarModel.transform.SetParent(podiumAnchor, false);
+                _currentCarModel.transform.localPosition = Vector3.zero;
+
+                // Построение процедурного 3D макета автомобиля выбранного типа
+                BuildPodiumCarModel(_currentCarModel.transform, car);
+            }
         }
 
         void BuildPodiumCarModel(Transform parent, CarDefinition car)

@@ -1,5 +1,6 @@
 using UnityEngine;
 using RogueDrive.Modifiers;
+using RogueDrive.Audio;
 
 namespace RogueDrive.Gameplay
 {
@@ -158,6 +159,8 @@ namespace RogueDrive.Gameplay
                     proj.Launch(shootDir, dmg, bounces, slow, burn);
                 }
             }
+
+            AudioManager.Instance?.PlayShoot();
         }
     }
 }

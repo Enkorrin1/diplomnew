@@ -1,5 +1,7 @@
 using UnityEngine;
 using RogueDrive.Modifiers;
+using RogueDrive.Audio;
+using RogueDrive.Gameplay.VFX;
 
 namespace RogueDrive.Gameplay
 {
@@ -138,6 +140,22 @@ namespace RogueDrive.Gameplay
             // чтобы они не тормозили автомобиль и не мешали лучам
             CleanChildColliders();
 
+            // Автоматическое подключение компонентов VFX и аудио при старте
+            if (GetComponent<WheelSkidmarks>() == null)
+                gameObject.AddComponent<WheelSkidmarks>();
+
+            if (GetComponent<CarExhaustVFX>() == null)
+                gameObject.AddComponent<CarExhaustVFX>();
+
+            if (GetComponent<CarWreckEffect>() == null)
+                gameObject.AddComponent<CarWreckEffect>();
+
+            if (AudioManager.Instance == null)
+            {
+                GameObject audioGo = new GameObject("AudioManager");
+                audioGo.AddComponent<AudioManager>();
+            }
+
             lastPosition = transform.position;
         }
 
@@ -224,6 +242,9 @@ namespace RogueDrive.Gameplay
 
             // Визуальный крен кузова в поворотах
             UpdateVisualRoll(Time.deltaTime);
+
+            // Обновление звука мотора и нитро
+            AudioManager.Instance?.UpdateEngineSound(SpeedKmh, TopSpeedMps * 3.6f, IsNitroActive);
         }
 
         private void FixedUpdate()
@@ -364,6 +385,11 @@ namespace RogueDrive.Gameplay
 
         private void OnCollisionEnter(Collision collision)
         {
+            float impact = collision.relativeVelocity.magnitude / 12f;
+            if (impact > 0.2f)
+            {
+                AudioManager.Instance?.PlayCrash(impact);
+            }
             HandleObstacleHit(collision.gameObject);
         }
 
@@ -381,7 +407,8 @@ namespace RogueDrive.Gameplay
             if (obstacle == null || !obstacle.TryConsume())
                 return;
 
-            // Эффект удара: сотрясение камеры
+            // Эффект удара: сотрясение камеры и звук скрежета
+            AudioManager.Instance?.PlayCrash(0.9f);
             ArcadeCameraFollow.Instance?.TriggerShake(0.7f, 0.3f);
 
             // Если на полном ходу или на нитро — препятствие сносится легче

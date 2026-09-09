@@ -52,6 +52,7 @@ namespace RogueDrive.Gameplay
             isDestroyed = true;
 
             ArcadeCameraFollow.Instance?.TriggerShake(0.4f, 0.2f);
+            RogueDrive.Audio.AudioManager.Instance?.PlayCrateBreak();
 
             // Начисление бонуса топлива
             GameRunController run = FindFirstObjectByType<GameRunController>();

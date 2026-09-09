@@ -65,6 +65,9 @@ namespace RogueDrive.Gameplay
             // Сотрясение камеры
             ArcadeCameraFollow.Instance?.TriggerShake(0.9f, 0.45f);
 
+            // Звук взрыва
+            RogueDrive.Audio.AudioManager.Instance?.PlayExplosion(1.2f);
+
             // Поиск всех объектов в радиусе взрыва
             Collider[] colliders = Physics.OverlapSphere(transform.position, explosionRadius);
             for (int i = 0; i < colliders.Length; i++)

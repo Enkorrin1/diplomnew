@@ -102,6 +102,8 @@ namespace RogueDrive.Gameplay
                 runController.AddCoins(coinValue);
             }
 
+            RogueDrive.Audio.AudioManager.Instance?.PlayCoin();
+
             DespawnSelf();
         }
 
