@@ -55,6 +55,12 @@ namespace RogueDrive.Audio
 
             InitializeAudioClips();
             SetupAudioSources();
+
+            if (FindFirstObjectByType<BackgroundMusicController>() == null)
+            {
+                GameObject bgmObj = new GameObject("BackgroundMusicController");
+                bgmObj.AddComponent<BackgroundMusicController>();
+            }
         }
 
         private void OnDestroy()
