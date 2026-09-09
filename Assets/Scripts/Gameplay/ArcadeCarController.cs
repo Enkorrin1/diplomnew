@@ -1,7 +1,7 @@
 using UnityEngine;
+using RogueDrive.Gameplay.VFX;
 using RogueDrive.Modifiers;
 using RogueDrive.Audio;
-using RogueDrive.Gameplay.VFX;
 using RogueDrive.Meta;
 
 namespace RogueDrive.Gameplay
@@ -43,6 +43,14 @@ namespace RogueDrive.Gameplay
 
         Rigidbody body;
         SocketRegistry sockets;
+        BoxCollider chassisCollider;
+        Vector3 baseColliderCenter;
+        Vector3 baseCenterOfMass;
+        float baseLateralGrip;
+        float baseDownforce;
+        float baseBodyRollTilt;
+        float baseLinearDamping;
+        float currentLateralGrip;
 
         float throttleInput;
         float steerInput;
@@ -90,6 +98,7 @@ namespace RogueDrive.Gameplay
                 {
                     body.mass = mass;
                 }
+                RefreshUpgradeHandling();
             }
         }
 
@@ -135,6 +144,14 @@ namespace RogueDrive.Gameplay
             body.linearDamping = 0.35f;
             body.angularDamping = 2.5f;
             body.centerOfMass = new Vector3(0f, -0.2f, 0f);
+            chassisCollider = GetComponent<BoxCollider>();
+            baseColliderCenter = chassisCollider != null ? chassisCollider.center : Vector3.zero;
+            baseCenterOfMass = body.centerOfMass;
+            baseLateralGrip = lateralGrip;
+            baseDownforce = downforce;
+            baseBodyRollTilt = bodyRollTilt;
+            baseLinearDamping = body.linearDamping;
+            currentLateralGrip = lateralGrip;
 
             // Обеспечиваем скользящий аркадный физический контакт для основного коллайдера
             Collider rootCol = GetComponent<Collider>();
@@ -170,6 +187,9 @@ namespace RogueDrive.Gameplay
             if (GetComponent<CarVisualEnhancer>() == null)
                 gameObject.AddComponent<CarVisualEnhancer>();
 
+            if (GetComponent<CarSuspensionUpgradeVisuals>() == null)
+                gameObject.AddComponent<CarSuspensionUpgradeVisuals>();
+
             if (AudioManager.Instance == null)
             {
                 GameObject audioGo = new GameObject("AudioManager");
@@ -177,6 +197,29 @@ namespace RogueDrive.Gameplay
             }
 
             lastPosition = transform.position;
+        }
+
+        void RefreshUpgradeHandling()
+        {
+            float gripBonus = activeStats != null ? activeStats.Get(StatId.Grip) : 0f;
+            float suspensionQuality = activeStats != null ? activeStats.Get(StatId.Suspension) : 0f;
+            currentLateralGrip = Mathf.Clamp(baseLateralGrip + gripBonus, 0.55f, 0.98f);
+            downforce = baseDownforce * (1f + suspensionQuality);
+            bodyRollTilt = baseBodyRollTilt * Mathf.Clamp(1f - suspensionQuality * 0.65f, 0.55f, 1f);
+            if (body != null)
+                body.linearDamping = baseLinearDamping + suspensionQuality * 0.35f;
+        }
+
+        /// <summary>Настраивает реальный дорожный просвет и устойчивость шасси.</summary>
+        public void ApplySuspensionUpgrade(int level, float clearance)
+        {
+            if (chassisCollider != null)
+                chassisCollider.center = baseColliderCenter + Vector3.up * clearance;
+
+            if (body != null)
+                body.centerOfMass = baseCenterOfMass - Vector3.up * Mathf.Min(0.12f, level * 0.02f);
+
+            RefreshUpgradeHandling();
         }
 
         void CleanChildColliders()
@@ -433,7 +476,7 @@ namespace RogueDrive.Gameplay
         {
             Vector3 right = transform.right;
             float lateralVelocity = Vector3.Dot(body.linearVelocity, right);
-            Vector3 counterForce = -right * (lateralVelocity * lateralGrip);
+            Vector3 counterForce = -right * (lateralVelocity * currentLateralGrip);
             body.AddForce(counterForce, ForceMode.VelocityChange);
         }
 
@@ -496,6 +539,7 @@ namespace RogueDrive.Gameplay
             // Эффект удара: сотрясение камеры и звук скрежета
             AudioManager.Instance?.PlayCrash(0.9f);
             ArcadeCameraFollow.Instance?.TriggerShake(0.7f, 0.3f);
+            CombatVfxCatalog.Instance?.SpawnRamImpact(targetGo.transform.position, transform.forward);
 
             // Если на полном ходу или на нитро — препятствие сносится легче
             float damage = baseObstacleDamage;

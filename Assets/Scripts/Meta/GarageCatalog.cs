@@ -13,9 +13,11 @@ namespace RogueDrive.Meta
     {
         [SerializeField] private List<CarDefinition> _cars = new List<CarDefinition>();
         [SerializeField] private List<UpgradeTrack> _upgrades = new List<UpgradeTrack>();
+        [SerializeField] private GameObject[] _wheelUpgradePrefabs = System.Array.Empty<GameObject>();
 
         public IReadOnlyList<CarDefinition> Cars => _cars;
         public IReadOnlyList<UpgradeTrack> Upgrades => _upgrades;
+        public GameObject[] WheelUpgradePrefabs => _wheelUpgradePrefabs;
 
         public CarDefinition GetCar(string id)
         {
@@ -40,10 +42,11 @@ namespace RogueDrive.Meta
         }
 
 #if UNITY_EDITOR
-        public void EditorSetData(List<CarDefinition> cars, List<UpgradeTrack> upgrades)
+        public void EditorSetData(List<CarDefinition> cars, List<UpgradeTrack> upgrades, GameObject[] wheelUpgradePrefabs = null)
         {
             _cars = cars ?? new List<CarDefinition>();
             _upgrades = upgrades ?? new List<UpgradeTrack>();
+            _wheelUpgradePrefabs = wheelUpgradePrefabs ?? System.Array.Empty<GameObject>();
             UnityEditor.EditorUtility.SetDirty(this);
         }
 #endif

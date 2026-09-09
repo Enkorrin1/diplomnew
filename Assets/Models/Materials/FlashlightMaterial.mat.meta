@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: c3cf7eb0a91c19245ace453582c7e1d1
+timeCreated: 1514423868
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 107984
+  packageName: Low Poly Survival Game Props
+  packageVersion: 1.0
+  assetPath: Assets/Models/Materials/FlashlightMaterial.mat
+  uploadId: 221044

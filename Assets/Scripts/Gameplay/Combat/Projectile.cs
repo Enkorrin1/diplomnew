@@ -1,4 +1,5 @@
 using UnityEngine;
+using RogueDrive.Gameplay.VFX;
 
 namespace RogueDrive.Gameplay
 {
@@ -94,6 +95,7 @@ namespace RogueDrive.Gameplay
             lastTarget = targetTransform;
             target.TakeDamage(currentDamage, slow, burn);
             RogueDrive.Audio.AudioManager.Instance?.PlayHit(0.55f);
+            CombatVfxCatalog.Instance?.SpawnBulletHit(transform.position, Quaternion.LookRotation(-direction));
 
             if (remainingBounces > 0 && TryBounce(targetTransform.position))
             {

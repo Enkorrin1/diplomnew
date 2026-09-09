@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 426e3704c168f1749a6380580f18538b
+timeCreated: 1514426395
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 107984
+  packageName: Low Poly Survival Game Props
+  packageVersion: 1.0
+  assetPath: Assets/Prefabs/LowPolyKnife.prefab
+  uploadId: 221044

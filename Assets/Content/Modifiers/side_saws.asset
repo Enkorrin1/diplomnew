@@ -24,11 +24,11 @@ MonoBehaviour:
   RequiredSocket: 3
   LevelPrefabs: []
   Effects:
-  - rid: 8383095785616834621
+  - rid: 8383095785616834980
   references:
     version: 2
     RefIds:
-    - rid: 8383095785616834621
+    - rid: 8383095785616834980
       type: {class: AuraEffect, ns: RogueDrive.Modifiers, asm: Assembly-CSharp}
       data:
         BehaviourId: side_saws

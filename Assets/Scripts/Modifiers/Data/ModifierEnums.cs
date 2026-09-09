@@ -33,7 +33,9 @@ namespace RogueDrive.Modifiers
         FuelDrain,
         Speed,
         Mass,
-        PickupRadius
+        PickupRadius,
+        Grip,
+        Suspension
     }
 
     public enum ResourceKind

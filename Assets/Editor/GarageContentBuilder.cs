@@ -29,7 +29,7 @@ namespace RogueDrive.EditorTools
                 AssetDatabase.CreateAsset(catalog, CatalogPath);
             }
 
-            catalog.EditorSetData(cars, upgrades);
+            catalog.EditorSetData(cars, upgrades, LoadWheelUpgradePrefabs());
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
 
@@ -189,12 +189,17 @@ namespace RogueDrive.EditorTools
                 "Повышает максимальный запас прочности (HP) и устойчивость к столкновениям.",
                 StatId.MaxHealth, 30f, 5, 50, 1.4f));
 
-            // 5. Колёса и шины
-            list.Add(CreateOrUpdateUpgrade("tires", "Шины и подвеска",
-                "Специальный протектор увеличивает радиус подбора ресурсов и стабильность на трассе.",
-                StatId.PickupRadius, 1.0f, 5, 35, 1.35f));
+            // 5. Шины: сцепление и комплект дисков на модели автомобиля.
+            list.Add(CreateOrUpdateUpgrade("tires", "Колёса",
+                "Новый протектор повышает сцепление с дорогой и меняет комплект колёс.",
+                StatId.Grip, 0.018f, 5, 35, 1.35f));
 
-            // 6. Орудийная турель
+            // 6. Подвеска: дорожный просвет и контроль кузова.
+            list.Add(CreateOrUpdateUpgrade("suspension", "Подвеска",
+                "Поднимает клиренс и уменьшает раскачку кузова на неровностях.",
+                StatId.Suspension, 0.06f, 5, 45, 1.38f));
+
+            // 7. Орудийная турель
             list.Add(CreateOrUpdateUpgrade("armament", "Оружейный узел",
                 "Модернизирует калибр и кинетическую энергию снарядов авто-турели.",
                 StatId.Damage, 5f, 5, 75, 1.5f));
@@ -223,6 +228,24 @@ namespace RogueDrive.EditorTools
 
             EditorUtility.SetDirty(track);
             return track;
+        }
+
+        static GameObject[] LoadWheelUpgradePrefabs()
+        {
+            string[] paths =
+            {
+                "Assets/wheel/Prefabs/wheel_01.prefab",
+                "Assets/wheel/Prefabs/wheel_03.prefab",
+                "Assets/wheel/Prefabs/wheel_05.prefab",
+                "Assets/wheel/Prefabs/wheel_07.prefab",
+                "Assets/wheel/Prefabs/wheel_09.prefab",
+                "Assets/wheel/Prefabs/wheel_12.prefab"
+            };
+
+            GameObject[] prefabs = new GameObject[paths.Length];
+            for (int i = 0; i < paths.Length; i++)
+                prefabs[i] = AssetDatabase.LoadAssetAtPath<GameObject>(paths[i]);
+            return prefabs;
         }
     }
 }

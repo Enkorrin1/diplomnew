@@ -25,4 +25,12 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 74a0df8dd1508474693ba80eb95770a7, type: 2}
   - {fileID: 11400000, guid: 5d9bcbd73cb663c4b894dd2807a7aa37, type: 2}
   - {fileID: 11400000, guid: c3d4e5f60718293a4b5c6d7e8f90a1b2, type: 2}
+  - {fileID: 11400000, guid: 8a78ee079a164a641b86d87bec9a9d77, type: 2}
   - {fileID: 11400000, guid: 8823c56a4144b8a46bc7ebbe9547648f, type: 2}
+  _wheelUpgradePrefabs:
+  - {fileID: 5327963178059423916, guid: 2085c57d7576f874e83ffa2d211a27ea, type: 3}
+  - {fileID: 3570472843685785719, guid: 1f2c3323e4d72084abac4a0e9f21427c, type: 3}
+  - {fileID: 4147175499008398625, guid: 7529c546b9b31d54db34c19762699051, type: 3}
+  - {fileID: 5025580427080268077, guid: 15dba757a5ba3294597cee9b3cd41de6, type: 3}
+  - {fileID: 8639267618831878603, guid: d346c75fd69b7654bb149bf365bc1c1f, type: 3}
+  - {fileID: 4132143957973514598, guid: d0902eed0c71350468db11715bbf405d, type: 3}

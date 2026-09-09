@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: c66d9fb599cf54043939ed78abe24527
+timeCreated: 1514423880
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 107984
+  packageName: Low Poly Survival Game Props
+  packageVersion: 1.0
+  assetPath: Assets/Models/Materials/HammerMaterial.mat
+  uploadId: 221044

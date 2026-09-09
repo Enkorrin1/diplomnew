@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using RogueDrive.Gameplay.VFX;
 using RogueDrive.Modifiers;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -11,7 +12,7 @@ namespace RogueDrive.Meta
     /// 1. Управляет 3D-подиумом и визуализацией выбранного автомобиля (вращение мышью/пальцем).
     /// 2. Отображает характеристики 4 архетипов машин (Седан, Фургон, Джип, Броневик).
     /// 3. Позволяет покупать новые машины за накопленные монеты.
-    /// 4. Позволяет прокачивать 6 узлов шасси и вооружения (Двигатель, КПП, Бак, Броня, Шины, Турель).
+    /// 4. Позволяет отдельно прокачивать колёса и подвеску, а также другие узлы автомобиля.
     /// 5. Запускает боевой заезд ("В ЗАЕЗД") с сохранением всех модификаторов.
     /// </summary>
     public sealed class GarageUIController : MonoBehaviour
@@ -26,6 +27,8 @@ namespace RogueDrive.Meta
         MetaProgress _meta;
         int _selectedCarIndex;
         GameObject _currentCarModel;
+        CarWheelUpgradeVisuals _currentWheelVisuals;
+        CarSuspensionUpgradeVisuals _currentSuspensionVisuals;
         float _rotationAngle;
         bool _isDragging;
         Vector2 _lastMousePos;
@@ -317,7 +320,7 @@ namespace RogueDrive.Meta
 
             // Бонус и описание
             float bonus = track.GetBonus(currentLevel);
-            string bonusStr = bonus > 0f ? $"Бонус: +{bonus:0.#}" : "Базовый уровень";
+            string bonusStr = GetUpgradeBonusLabel(track, bonus);
             GUI.Label(new Rect(x + 10, y + 26, w - 150, 18), bonusStr, _statLabelStyle);
 
             // Кнопка улучшения
@@ -338,10 +341,25 @@ namespace RogueDrive.Meta
                     if (_meta.BuyUpgrade(track))
                     {
                         SaveService.SaveActive();
+                        // Колёса и клиренс должны меняться в тот же кадр на preview-модели.
+                        _currentWheelVisuals?.RefreshForCurrentProgress();
+                        _currentSuspensionVisuals?.RefreshForCurrentProgress();
                     }
                 }
                 GUI.enabled = true;
             }
+        }
+
+        string GetUpgradeBonusLabel(UpgradeTrack track, float bonus)
+        {
+            if (bonus <= 0f)
+                return "Базовый уровень";
+
+            if (track.Target == StatId.Grip)
+                return $"Сцепление: +{bonus * 100f:0}%";
+            if (track.Target == StatId.Suspension)
+                return $"Клиренс: +{bonus * 100f:0} см";
+            return $"Бонус: +{bonus:0.#}";
         }
 
         string GetLevelPips(int current, int max)
@@ -447,6 +465,8 @@ namespace RogueDrive.Meta
             {
                 Destroy(_currentCarModel);
             }
+            _currentWheelVisuals = null;
+            _currentSuspensionVisuals = null;
 
             CarDefinition car = (_selectedCarIndex >= 0 && _selectedCarIndex < catalog.Cars.Count)
                 ? catalog.Cars[_selectedCarIndex]
@@ -480,6 +500,11 @@ namespace RogueDrive.Meta
                 // Построение процедурного 3D макета автомобиля выбранного типа
                 BuildPodiumCarModel(_currentCarModel.transform, car);
             }
+
+            _currentWheelVisuals = _currentCarModel.AddComponent<CarWheelUpgradeVisuals>();
+            _currentWheelVisuals.Configure(catalog.WheelUpgradePrefabs);
+            _currentSuspensionVisuals = _currentCarModel.AddComponent<CarSuspensionUpgradeVisuals>();
+            _currentSuspensionVisuals.RefreshForCurrentProgress();
         }
 
         void BuildPodiumCarModel(Transform parent, CarDefinition car)

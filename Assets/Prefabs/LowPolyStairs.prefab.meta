@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: dee065858caa54c47943ea38f8cd18df
+timeCreated: 1514426342
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 107984
+  packageName: Low Poly Survival Game Props
+  packageVersion: 1.0
+  assetPath: Assets/Prefabs/LowPolyStairs.prefab
+  uploadId: 221044

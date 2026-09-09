@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 48d9f75b513da584b9e1f4d48c4cc783
+timeCreated: 1514426323
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 107984
+  packageName: Low Poly Survival Game Props
+  packageVersion: 1.0
+  assetPath: Assets/Prefabs/LowPolyStump.prefab
+  uploadId: 221044

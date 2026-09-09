@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using RogueDrive.Gameplay.VFX;
 
 namespace RogueDrive.Gameplay
 {
@@ -241,6 +242,7 @@ namespace RogueDrive.Gameplay
 
             // Сочный визуальный и звуковой эффект ликвидации врага
             SpawnDeathEffect(transform.position);
+            CombatVfxCatalog.Instance?.SpawnEnemyDeath(transform.position);
 
             // Спавн сфер опыта
             if (xpGemPrefab != null)

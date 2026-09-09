@@ -19,11 +19,11 @@ MonoBehaviour:
   - chain_lightning
   - multishot
   Effects:
-  - rid: 8383095785616834628
+  - rid: 8383095785616834987
   references:
     version: 2
     RefIds:
-    - rid: 8383095785616834628
+    - rid: 8383095785616834987
       type: {class: ProjectileEffect, ns: RogueDrive.Modifiers, asm: Assembly-CSharp}
       data:
         BouncesPerLevel: 1

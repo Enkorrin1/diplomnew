@@ -299,6 +299,8 @@ namespace RogueDrive.EditorTools
                 Track("hull", "Прочность кузова", StatId.MaxHealth, 25f, 5, 300, 1.45f),
                 Track("tank", "Объём бака", StatId.FuelCapacity, 20f, 5, 280, 1.45f),
                 Track("engine", "Двигатель", StatId.Speed, 2f, 5, 320, 1.5f),
+                Track("tires", "Колёса", StatId.Grip, 0.018f, 5, 260, 1.42f),
+                Track("suspension", "Подвеска", StatId.Suspension, 0.06f, 5, 280, 1.42f),
                 Track("armament", "Вооружение", StatId.Damage, 3f, 5, 350, 1.5f)
             };
         }

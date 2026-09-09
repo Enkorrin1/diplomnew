@@ -11,6 +11,9 @@ namespace RogueDrive.EditorTools
         {
             EditorApplication.delayCall += () =>
             {
+                if (EditorApplication.isPlayingOrWillChangePlaymode)
+                    return;
+
                 FixAllMaterials();
                 FixSceneCarAndTurret();
             };
@@ -19,6 +22,9 @@ namespace RogueDrive.EditorTools
         [MenuItem("RogueDrive/Graphics/Fix All Material Shaders")]
         public static void FixAllMaterials()
         {
+            if (EditorApplication.isPlayingOrWillChangePlaymode)
+                return;
+
             Shader standardShader = Shader.Find("Standard");
             if (standardShader == null) return;
 
@@ -78,6 +84,12 @@ namespace RogueDrive.EditorTools
         [MenuItem("RogueDrive/Graphics/Fix Scene Car and Turret Models")]
         public static void FixSceneCarAndTurret()
         {
+            if (EditorApplication.isPlayingOrWillChangePlaymode)
+            {
+                Debug.Log("[MaterialShaderFixer] Пропуск изменения сцены во время Play Mode.");
+                return;
+            }
+
             var activeScene = UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene();
             string prototypePath = "Assets/Scenes/RogueDrivePrototype.unity";
 
@@ -175,7 +187,9 @@ namespace RogueDrive.EditorTools
                 }
             }
 
-            if (modified)
+            // Отложенный вызов может попасть в момент переключения в Play Mode.
+            // Повторная проверка предотвращает попытку сохранить runtime-сцену.
+            if (modified && !EditorApplication.isPlayingOrWillChangePlaymode)
             {
                 UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(activeScene);
                 UnityEditor.SceneManagement.EditorSceneManager.SaveScene(activeScene);

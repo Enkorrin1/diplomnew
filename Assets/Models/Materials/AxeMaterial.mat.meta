@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 7f5063e664151a746bca416ec31b7890
+timeCreated: 1514423799
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 107984
+  packageName: Low Poly Survival Game Props
+  packageVersion: 1.0
+  assetPath: Assets/Models/Materials/AxeMaterial.mat
+  uploadId: 221044

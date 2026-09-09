@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 1bc94c88c323f704193fcd44aa2c7039
+timeCreated: 1514426358
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 107984
+  packageName: Low Poly Survival Game Props
+  packageVersion: 1.0
+  assetPath: Assets/Prefabs/LowPolyHammer.prefab
+  uploadId: 221044

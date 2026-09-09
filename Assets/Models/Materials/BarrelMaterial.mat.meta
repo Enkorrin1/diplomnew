@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 4fb60ecb3cc67f543896d4b2b080549d
+timeCreated: 1514423812
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 107984
+  packageName: Low Poly Survival Game Props
+  packageVersion: 1.0
+  assetPath: Assets/Models/Materials/BarrelMaterial.mat
+  uploadId: 221044

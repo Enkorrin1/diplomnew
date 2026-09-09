@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 7210ca101afd3e142ada14d893701080
+timeCreated: 1514423991
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 107984
+  packageName: Low Poly Survival Game Props
+  packageVersion: 1.0
+  assetPath: Assets/Models/Materials/WoodPileMaterial.mat
+  uploadId: 221044

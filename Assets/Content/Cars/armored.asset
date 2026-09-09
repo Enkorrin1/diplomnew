@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: armored
   m_EditorClassIdentifier: 
   Id: armored
-  DisplayName: "\u0411\u0430\u0441\u0442\u0438\u043E\u043D (\u0411\u0440\u043E\u043D\u0435\u0432\u0438\u043A)"
+  DisplayName: "\u0411\u0440\u043E\u043D\u0438\u0440\u043E\u0432\u0430\u043D\u043D\u0430\u044F"
   Description: "\u0421\u0432\u0435\u0440\u0445\u0442\u044F\u0436\u0435\u043B\u0430\u044F
     \u0432\u043E\u0435\u043D\u043D\u0430\u044F \u0431\u0440\u043E\u043D\u0435\u043C\u0430\u0448\u0438\u043D\u0430.
     5 \u0441\u043E\u043A\u0435\u0442\u043E\u0432 \u0432\u043E\u043E\u0440\u0443\u0436\u0435\u043D\u0438\u044F,
@@ -24,29 +24,29 @@ MonoBehaviour:
   BodyColor: {r: 0.48, g: 0.45, b: 0.52, a: 1}
   BaseStats:
   - Id: 0
-    Value: 18
+    Value: 10
   - Id: 1
-    Value: 2.5
+    Value: 2
   - Id: 2
-    Value: 300
+    Value: 140
   - Id: 3
-    Value: 200
+    Value: 100
   - Id: 4
-    Value: 1.5
+    Value: 1.1
   - Id: 5
-    Value: 18
+    Value: 20
   - Id: 6
-    Value: 3500
+    Value: 1400
   - Id: 7
-    Value: 6
+    Value: 4
   Sockets:
   - Type: 1
-    Count: 2
+    Count: 1
   - Type: 2
+    Count: 2
+  - Type: 3
+    Count: 1
+  - Type: 4
     Count: 1
   - Type: 5
-    Count: 1
-  - Type: 3
-    Count: 2
-  - Type: 4
     Count: 1

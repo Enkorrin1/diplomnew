@@ -1,6 +1,7 @@
 using UnityEngine;
 using RogueDrive.Modifiers;
 using RogueDrive.Audio;
+using RogueDrive.Gameplay.VFX;
 
 namespace RogueDrive.Gameplay
 {
@@ -223,6 +224,8 @@ namespace RogueDrive.Gameplay
                 {
                     proj.Launch(shootDir, dmg, bounces, slow, burn);
                 }
+
+                CombatVfxCatalog.Instance?.SpawnMuzzleFlash(muzzle.position, Quaternion.LookRotation(shootDir));
             }
 
             AudioManager.Instance?.PlayShoot();

@@ -1,6 +1,8 @@
 #if UNITY_EDITOR
 using System.IO;
+using RogueDrive.Audio;
 using RogueDrive.Gameplay;
+using RogueDrive.Gameplay.VFX;
 using RogueDrive.Modifiers;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -44,8 +46,11 @@ namespace RogueDrive.EditorTools
             RunExperienceManager exp = gameRoot.AddComponent<RunExperienceManager>();
             LevelUpView levelUp = gameRoot.AddComponent<LevelUpView>();
 
+            CreateAudioManager();
+            CreateCombatVfxCatalog();
             CreateLight();
             CreateInitialRoad();
+            CreateRoadsideSetDressing();
 
             // 3. Автомобиль игрока и турель
             ArcadeCarController car = CreateArcadeCar(run);
@@ -99,6 +104,41 @@ namespace RogueDrive.EditorTools
             GameObject rightWall = CreatePrimitive(PrimitiveType.Cube, "Right_Guardrail", new Vector3(guardrailX, 0.6f, roadZ), new Vector3(0.35f, 1.2f, roadLength), new Color(0.36f, 0.4f, 0.46f));
             leftWall.isStatic = true;
             rightWall.isStatic = true;
+        }
+
+        // Новые художественные ассеты используются через корневые объекты сцены. Это оставляет
+        // физику трассы предсказуемой и не позволяет импортированным коллайдерам мешать болиду.
+        static void CreateRoadsideSetDressing()
+        {
+            const string containerPath = "Assets/FREE Low Poly Shipping Container/Prefabs/Low Poly Shipping Container.prefab";
+            const string stonePath = "Assets/Low Poly Stones/Prefabs/ST_Stone3.prefab";
+            const string lampPath = "Assets/FastMesh/Prefabs/Road/LampPost-1.prefab";
+            const string signPath = "Assets/FastMesh/Prefabs/Road/WarningTriangles.prefab";
+
+            PlaceDecorativePrefab(containerPath, "Container_Left_01", new Vector3(-15.5f, 0f, 38f), Quaternion.Euler(0f, 90f, 0f), Vector3.one * 1.35f);
+            PlaceDecorativePrefab(containerPath, "Container_Right_01", new Vector3(15.5f, 0f, 72f), Quaternion.Euler(0f, -90f, 0f), Vector3.one * 1.35f);
+            PlaceDecorativePrefab(stonePath, "StoneCluster_Left", new Vector3(-14.5f, 0f, 94f), Quaternion.Euler(0f, 25f, 0f), Vector3.one * 2.2f);
+            PlaceDecorativePrefab(stonePath, "StoneCluster_Right", new Vector3(14.5f, 0f, 118f), Quaternion.Euler(0f, -35f, 0f), Vector3.one * 2.0f);
+            PlaceDecorativePrefab(lampPath, "Lamp_Left", new Vector3(-13.2f, 0f, 48f), Quaternion.identity, Vector3.one);
+            PlaceDecorativePrefab(lampPath, "Lamp_Right", new Vector3(13.2f, 0f, 104f), Quaternion.Euler(0f, 180f, 0f), Vector3.one);
+            PlaceDecorativePrefab(signPath, "WarningTriangle_Approach", new Vector3(10.5f, 0f, 62f), Quaternion.Euler(0f, 180f, 0f), Vector3.one);
+        }
+
+        static void PlaceDecorativePrefab(string assetPath, string objectName, Vector3 position, Quaternion rotation, Vector3 scale)
+        {
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(assetPath);
+            if (prefab == null)
+            {
+                Debug.LogWarning($"Не найден декоративный ассет: {assetPath}");
+                return;
+            }
+
+            GameObject instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+            instance.name = objectName;
+            instance.transform.SetPositionAndRotation(position, rotation);
+            instance.transform.localScale = scale;
+            instance.isStatic = true;
+            DisableChildColliders(instance);
         }
 
         static ArcadeCarController CreateArcadeCar(GameRunController run)
@@ -171,7 +211,29 @@ namespace RogueDrive.EditorTools
             SocketRegistry socketRegistry = car.AddComponent<SocketRegistry>();
             SetupCarSockets(car.transform, socketRegistry);
 
+            CarWheelUpgradeVisuals wheelUpgrades = car.AddComponent<CarWheelUpgradeVisuals>();
+            wheelUpgrades.Configure(LoadWheelUpgradePrefabs());
+            car.AddComponent<CarSuspensionUpgradeVisuals>();
+
             return controller;
+        }
+
+        static GameObject[] LoadWheelUpgradePrefabs()
+        {
+            string[] paths =
+            {
+                "Assets/wheel/Prefabs/wheel_01.prefab",
+                "Assets/wheel/Prefabs/wheel_03.prefab",
+                "Assets/wheel/Prefabs/wheel_05.prefab",
+                "Assets/wheel/Prefabs/wheel_07.prefab",
+                "Assets/wheel/Prefabs/wheel_09.prefab",
+                "Assets/wheel/Prefabs/wheel_12.prefab"
+            };
+
+            GameObject[] prefabs = new GameObject[paths.Length];
+            for (int i = 0; i < paths.Length; i++)
+                prefabs[i] = AssetDatabase.LoadAssetAtPath<GameObject>(paths[i]);
+            return prefabs;
         }
 
         static AutoTurret CreateRoofTurret(ArcadeCarController car, GameObject projPrefab)
@@ -295,19 +357,91 @@ namespace RogueDrive.EditorTools
 
         static void CreateInitialObstacles()
         {
-            float[] obstacleX = { -6f, 4f, -1f, 5f, -5f, 2f };
-            for (int i = 0; i < obstacleX.Length; i++)
-            {
-                float z = 30f + i * 20f;
-                bool isBarrel = (i % 2 == 0);
-                Color color = isBarrel ? new Color(1f, 0.45f, 0.1f) : new Color(0.92f, 0.22f, 0.18f);
-                string name = isBarrel ? $"Explosive_Barrel_{i + 1}" : $"Barrier_{i + 1}";
-                Vector3 scale = isBarrel ? new Vector3(1.3f, 1.6f, 1.3f) : new Vector3(2.4f, 1.4f, 1.4f);
+            CreateAssetObstacle("Assets/FREE Low Poly Shipping Container/Prefabs/Low Poly Shipping Container.prefab",
+                "Container_Blocker", new Vector3(-4.5f, 0f, 32f), Quaternion.Euler(0f, 90f, 0f), Vector3.one * 1.05f, new Vector3(3.1f, 2.6f, 7.2f));
+            CreateAssetObstacle("Assets/Low Poly Stones/Prefabs/ST_Stone2.prefab",
+                "Rock_Blocker", new Vector3(4.5f, 0f, 56f), Quaternion.Euler(0f, 35f, 0f), Vector3.one * 2.2f, new Vector3(3.2f, 2.2f, 3.2f));
+            CreateAssetObstacle("Assets/FastMesh/Prefabs/Road/RoadBarrier-1.prefab",
+                "Road_Barrier", new Vector3(0f, 0f, 82f), Quaternion.identity, Vector3.one, new Vector3(4.8f, 1.4f, 1.4f));
+            CreateAssetObstacle("Assets/Low Poly Stones/Prefabs/ST_Stone5.prefab",
+                "Rock_Blocker_02", new Vector3(-1.5f, 0f, 108f), Quaternion.Euler(0f, -20f, 0f), Vector3.one * 2.5f, new Vector3(3.5f, 2.6f, 3.5f));
+        }
 
-                GameObject obstacle = CreatePrimitive(PrimitiveType.Cube, name, new Vector3(obstacleX[i], scale.y * 0.5f, z), scale, color);
-                BoxCollider collider = obstacle.GetComponent<BoxCollider>();
-                collider.isTrigger = true;
-                obstacle.AddComponent<TrackObstacle>();
+        static void CreateAssetObstacle(string assetPath, string objectName, Vector3 position, Quaternion rotation, Vector3 scale, Vector3 triggerSize)
+        {
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(assetPath);
+            if (prefab == null)
+            {
+                Debug.LogWarning($"Не найден ассет препятствия: {assetPath}");
+                return;
+            }
+
+            GameObject obstacle = new GameObject(objectName);
+            obstacle.transform.SetPositionAndRotation(position, rotation);
+            GameObject visual = (GameObject)PrefabUtility.InstantiatePrefab(prefab, obstacle.transform);
+            visual.name = "Visual";
+            visual.transform.localPosition = Vector3.zero;
+            visual.transform.localRotation = Quaternion.identity;
+            visual.transform.localScale = scale;
+            DisableChildColliders(visual);
+
+            BoxCollider trigger = obstacle.AddComponent<BoxCollider>();
+            trigger.isTrigger = true;
+            trigger.center = new Vector3(0f, triggerSize.y * 0.5f, 0f);
+            trigger.size = triggerSize;
+            obstacle.AddComponent<TrackObstacle>();
+        }
+
+        static void DisableChildColliders(GameObject root)
+        {
+            foreach (Collider collider in root.GetComponentsInChildren<Collider>(true))
+            {
+                collider.enabled = false;
+            }
+        }
+
+        static void CreateAudioManager()
+        {
+            GameObject audioObject = new GameObject("AudioManager");
+            AudioManager audioManager = audioObject.AddComponent<AudioManager>();
+            SerializedObject audioSo = new SerializedObject(audioManager);
+            SetAudioClip(audioSo, "customEngineClip", "Assets/Libraries/Soundbits_freeSFX_2025/Sounds/crs-oa_driving_short_engine_01_04.wav");
+            SetAudioClip(audioSo, "customNitroClip", "Assets/Libraries/Soundbits_freeSFX_2025/Sounds/jw3_whoosh_fire-008.wav");
+            SetAudioClip(audioSo, "customShootClip", "Assets/Libraries/Soundbits_freeSFX_2025/Sounds/sotd_2013-10-20_gunshot.wav");
+            SetAudioClip(audioSo, "customExplosionClip", "Assets/Libraries/Soundbits_freeSFX_2025/Sounds/cs-d_mixed_crash_designed_013.wav");
+            SetAudioClip(audioSo, "customCrashClip", "Assets/Libraries/Soundbits_freeSFX_2025/Sounds/cs-d_metal_crash_designed_011.wav");
+            audioSo.ApplyModifiedProperties();
+        }
+
+        static void CreateCombatVfxCatalog()
+        {
+            GameObject catalogObject = new GameObject("CombatVfxCatalog");
+            catalogObject.AddComponent<CombatVfxCatalog>();
+            SerializedObject vfxSo = new SerializedObject(catalogObject.GetComponent<CombatVfxCatalog>());
+            SetPrefab(vfxSo, "muzzleFlashPrefab", "Assets/JMO Assets/Cartoon FX Remaster/CFXR Prefabs/Misc/CFXR Flash.prefab");
+            SetPrefab(vfxSo, "bulletHitPrefab", "Assets/JMO Assets/Cartoon FX Remaster/CFXR Prefabs/Impacts/CFXR Impact Glowing HDR (Blue).prefab");
+            SetPrefab(vfxSo, "enemyDeathPrefab", "Assets/JMO Assets/Cartoon FX Remaster/CFXR Prefabs/Eerie/CFXR2 WW Enemy Explosion.prefab");
+            SetPrefab(vfxSo, "ramImpactPrefab", "Assets/JMO Assets/Cartoon FX Remaster/CFXR Prefabs/Explosions/CFXR Explosion Smoke 2 Solo (HDR).prefab");
+            vfxSo.ApplyModifiedProperties();
+        }
+
+        static void SetAudioClip(SerializedObject target, string propertyName, string assetPath)
+        {
+            SerializedProperty property = target.FindProperty(propertyName);
+            AudioClip clip = AssetDatabase.LoadAssetAtPath<AudioClip>(assetPath);
+            if (property != null && clip != null)
+            {
+                property.objectReferenceValue = clip;
+            }
+        }
+
+        static void SetPrefab(SerializedObject target, string propertyName, string assetPath)
+        {
+            SerializedProperty property = target.FindProperty(propertyName);
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(assetPath);
+            if (property != null && prefab != null)
+            {
+                property.objectReferenceValue = prefab;
             }
         }
 
@@ -350,7 +484,11 @@ namespace RogueDrive.EditorTools
         {
             string path = $"{PrefabFolder}/BulletProjectile.prefab";
             GameObject existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
-            if (existing != null) return existing;
+            if (existing != null)
+            {
+                EnsureProjectileVisual(path);
+                return existing;
+            }
 
             GameObject go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             go.name = "BulletProjectile";
@@ -364,9 +502,43 @@ namespace RogueDrive.EditorTools
             r.sharedMaterial = mat;
 
             go.AddComponent<Projectile>();
+            AttachProjectileVisual(go);
             GameObject prefab = PrefabUtility.SaveAsPrefabAsset(go, path);
             Object.DestroyImmediate(go);
             return prefab;
+        }
+
+        static void AttachProjectileVisual(GameObject projectile)
+        {
+            GameObject bulletPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/DuNguyn/Bullets Pack/Prefabs/SM_Bullet_01.prefab");
+            if (bulletPrefab == null)
+            {
+                return;
+            }
+
+            GameObject visual = (GameObject)PrefabUtility.InstantiatePrefab(bulletPrefab, projectile.transform);
+            visual.name = "BulletVisual";
+            visual.transform.localPosition = Vector3.zero;
+            visual.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            visual.transform.localScale = Vector3.one * 0.18f;
+            DisableChildColliders(visual);
+        }
+
+        static void EnsureProjectileVisual(string prefabPath)
+        {
+            GameObject prefabContents = PrefabUtility.LoadPrefabContents(prefabPath);
+            try
+            {
+                if (prefabContents.transform.Find("BulletVisual") == null)
+                {
+                    AttachProjectileVisual(prefabContents);
+                    PrefabUtility.SaveAsPrefabAsset(prefabContents, prefabPath);
+                }
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(prefabContents);
+            }
         }
 
         static GameObject CreateAcidProjectilePrefab()

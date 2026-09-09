@@ -47,6 +47,13 @@ namespace RogueDrive.Gameplay.VFX
 
         public void RefreshWheels()
         {
+            // Удаляем старые процедурные колёса, чтобы не дублировались
+            Transform oldWheels = transform.Find("Wheels");
+            if (oldWheels != null)
+            {
+                Destroy(oldWheels.gameObject);
+            }
+
             wheelFL = null;
             wheelFR = null;
             wheelRL = null;
@@ -56,6 +63,19 @@ namespace RogueDrive.Gameplay.VFX
 
         private void SetupWheelsIfMissing()
         {
+            // Прокачиваемые колёса всегда имеют четыре явных точки крепления.
+            // Это приоритетнее эвристики имён штатной модели и исключает дубли.
+            Transform upgradeMounts = transform.Find("WheelMounts");
+            if (upgradeMounts != null)
+            {
+                wheelFL = upgradeMounts.Find("Wheel_FL");
+                wheelFR = upgradeMounts.Find("Wheel_FR");
+                wheelRL = upgradeMounts.Find("Wheel_RL");
+                wheelRR = upgradeMounts.Find("Wheel_RR");
+                if (wheelFL != null && wheelFR != null && wheelRL != null && wheelRR != null)
+                    return;
+            }
+
             // 1. Сначала ищем реальные 3D-колеса среди дочерних объектов модели автомобиля
             Transform[] allTransforms = GetComponentsInChildren<Transform>(true);
             for (int i = 0; i < allTransforms.Length; i++)
