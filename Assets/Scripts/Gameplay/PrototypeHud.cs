@@ -51,31 +51,32 @@ namespace RogueDrive.Gameplay
 
             // 1. Главная панель приборов слева сверху
             const float panelWidth = 320f;
-            const float panelHeight = 175f;
+            const float panelHeight = 195f;
             GUI.Box(new Rect(18f, 18f, panelWidth, panelHeight), string.Empty);
 
-            GUI.Label(new Rect(32f, 26f, 240f, 26f), "ROGUE DRIVE: SURVIVAL", headingStyle);
+            GUI.Label(new Rect(32f, 24f, 240f, 26f), "ROGUE DRIVE: SURVIVAL", headingStyle);
 
             // Полоса Прочности (HP)
-            DrawStatBar(32f, 58f, 180f, 14f, run.Health, run.MaxHealth, healthTex);
-            GUI.Label(new Rect(220f, 54f, 110f, 22f), $"HP: {run.Health:0}/{run.MaxHealth:0}", valueStyle);
+            DrawStatBar(32f, 54f, 180f, 14f, run.Health, run.MaxHealth, healthTex);
+            GUI.Label(new Rect(220f, 50f, 110f, 22f), $"HP: {run.Health:0}/{run.MaxHealth:0}", valueStyle);
 
             // Полоса Топлива
-            DrawStatBar(32f, 82f, 180f, 14f, run.Fuel, run.MaxFuel, fuelTex);
-            GUI.Label(new Rect(220f, 78f, 110f, 22f), $"Бак: {run.Fuel:0}/{run.MaxFuel:0}", valueStyle);
+            DrawStatBar(32f, 76f, 180f, 14f, run.Fuel, run.MaxFuel, fuelTex);
+            GUI.Label(new Rect(220f, 72f, 110f, 22f), $"Бак: {run.Fuel:0}/{run.MaxFuel:0}", valueStyle);
 
             // Полоса Нитро
-            DrawStatBar(32f, 106f, 180f, 14f, run.Nitro, run.MaxNitro, nitroTex);
+            DrawStatBar(32f, 98f, 180f, 14f, run.Nitro, run.MaxNitro, nitroTex);
             string nitroLabel = car != null && car.IsNitroActive ? "НИТРО (АКТИВНО)" : $"Нитро: {run.Nitro:0}%";
-            GUI.Label(new Rect(220f, 102f, 110f, 22f), nitroLabel, valueStyle);
+            GUI.Label(new Rect(220f, 94f, 110f, 22f), nitroLabel, valueStyle);
 
-            // Дистанция
-            GUI.Label(new Rect(32f, 134f, 260f, 22f), $"Дистанция: {run.Distance:0} м", valueStyle);
+            // Дистанция и монеты
+            GUI.Label(new Rect(32f, 122f, 260f, 22f), $"Дистанция: {run.Distance:0} м", valueStyle);
+            GUI.Label(new Rect(32f, 144f, 260f, 22f), $"Монеты заезда: <color=#ffd700>+{run.CoinsCollected}</color>", valueStyle);
 
             // Предупреждение о накате при 0 топлива
             if (run.IsOutOfFuel && !run.IsGameOver)
             {
-                GUI.Label(new Rect(32f, 154f, 280f, 22f), "⚠ БАК ПУСТ! НАКАТ ПО ИНЕРЦИИ...", warningStyle);
+                GUI.Label(new Rect(32f, 168f, 280f, 22f), "⚠ БАК ПУСТ! НАКАТ ПО ИНЕРЦИИ...", warningStyle);
             }
 
             // 2. Спидометр справа снизу
@@ -97,15 +98,25 @@ namespace RogueDrive.Gameplay
             if (!run.IsGameOver)
                 return;
 
-            float width = 380f;
-            float height = 200f;
+            float width = 420f;
+            float height = 260f;
             Rect panel = new Rect((Screen.width - width) * 0.5f, (Screen.height - height) * 0.5f, width, height);
             GUI.Box(panel, string.Empty);
-            GUI.Label(new Rect(panel.x, panel.y + 24f, width, 36f), "ЗАЕЗД ЗАВЕРШЁН", endStyle);
-            GUI.Label(new Rect(panel.x, panel.y + 64f, width, 24f), run.EndReason, valueStyle);
-            GUI.Label(new Rect(panel.x, panel.y + 92f, width, 24f), $"Итоговая дистанция: {run.Distance:0} м", valueStyle);
+            GUI.Label(new Rect(panel.x, panel.y + 20f, width, 32f), "ЗАЕЗД ЗАВЕРШЁН", endStyle);
+            GUI.Label(new Rect(panel.x, panel.y + 56f, width, 22f), run.EndReason, valueStyle);
+            GUI.Label(new Rect(panel.x, panel.y + 82f, width, 22f), $"Дистанция: {run.Distance:0} м", valueStyle);
+            GUI.Label(new Rect(panel.x, panel.y + 106f, width, 22f), $"Заработано: <color=#ffd700>+{run.CoinsCollected} монет</color>", valueStyle);
 
-            if (GUI.Button(new Rect(panel.x + 94f, panel.y + 135f, 192f, 40f), "Начать заново"))
+            int totalCoins = RogueDrive.Meta.SaveService.GetActiveProgress()?.Coins ?? 0;
+            GUI.Label(new Rect(panel.x, panel.y + 130f, width, 22f), $"Всего в банке: <color=#ffd700>{totalCoins} монет</color>", valueStyle);
+
+            float btnY = panel.y + 175f;
+            if (GUI.Button(new Rect(panel.x + 30f, btnY, 170f, 45f), "В ГАРАЖ"))
+            {
+                run.LoadGarage();
+            }
+
+            if (GUI.Button(new Rect(panel.x + 220f, btnY, 170f, 45f), "ЕЩЁ ЗАЕЗД"))
             {
                 run.Restart();
             }

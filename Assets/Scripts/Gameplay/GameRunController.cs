@@ -19,12 +19,14 @@ namespace RogueDrive.Gameplay
         public event Action<float, float> FuelChanged;
         public event Action<float, float> NitroChanged;
         public event Action<float> DistanceChanged;
+        public event Action<int> CoinsChanged;
         public event Action<string> RunEnded;
 
         public float Health { get; private set; }
         public float Fuel { get; private set; }
         public float Nitro { get; private set; }
         public float Distance { get; private set; }
+        public int CoinsCollected { get; private set; }
 
         public float MaxHealth => startingHealth;
         public float MaxFuel => startingFuel;
@@ -162,10 +164,25 @@ namespace RogueDrive.Gameplay
             }
         }
 
+        public void AddCoins(int amount)
+        {
+            if (IsGameOver || amount <= 0)
+                return;
+
+            CoinsCollected += amount;
+            CoinsChanged?.Invoke(CoinsCollected);
+        }
+
         public void Restart()
         {
             Time.timeScale = 1f;
             SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+        }
+
+        public void LoadGarage()
+        {
+            Time.timeScale = 1f;
+            SceneManager.LoadScene("GarageScene");
         }
 
         void ResetRun()
@@ -175,6 +192,7 @@ namespace RogueDrive.Gameplay
             Fuel = startingFuel;
             Nitro = startingNitro;
             Distance = 0f;
+            CoinsCollected = 0;
             IsGameOver = false;
             IsOutOfFuel = false;
             EndReason = string.Empty;
@@ -184,6 +202,26 @@ namespace RogueDrive.Gameplay
         {
             IsGameOver = true;
             EndReason = reason;
+
+            // Навсегда сохраняем заработанные монеты в мета-прогресс
+            try
+            {
+                var meta = RogueDrive.Meta.SaveService.GetActiveProgress();
+                if (meta != null)
+                {
+                    if (CoinsCollected > 0)
+                    {
+                        meta.AddCoins(CoinsCollected);
+                    }
+                    meta.RegisterRunResult(1, Distance);
+                    RogueDrive.Meta.SaveService.SaveActive();
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[GameRunController] Ошибка сохранения прогресса: {ex.Message}");
+            }
+
             RunEnded?.Invoke(reason);
         }
     }

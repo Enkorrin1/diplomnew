@@ -31,10 +31,11 @@ namespace RogueDrive.EditorTools
             GameObject projectilePrefab = CreateProjectilePrefab();
             GameObject acidProjectilePrefab = CreateAcidProjectilePrefab();
             GameObject xpGemPrefab = CreateExperienceGemPrefab();
-            GameObject walkerPrefab = CreateWalkerPrefab(xpGemPrefab);
-            GameObject runnerPrefab = CreateRunnerPrefab(xpGemPrefab);
-            GameObject brutePrefab = CreateBrutePrefab(xpGemPrefab);
-            GameObject spitterPrefab = CreateSpitterPrefab(xpGemPrefab, acidProjectilePrefab);
+            GameObject coinPrefab = CreateCoinPickupPrefab();
+            GameObject walkerPrefab = CreateWalkerPrefab(xpGemPrefab, coinPrefab);
+            GameObject runnerPrefab = CreateRunnerPrefab(xpGemPrefab, coinPrefab);
+            GameObject brutePrefab = CreateBrutePrefab(xpGemPrefab, coinPrefab);
+            GameObject spitterPrefab = CreateSpitterPrefab(xpGemPrefab, acidProjectilePrefab, coinPrefab);
 
             // 2. Игровой корень
             GameObject gameRoot = new GameObject("RogueDrivePrototype");
@@ -387,11 +388,15 @@ namespace RogueDrive.EditorTools
             return prefab;
         }
 
-        static GameObject CreateWalkerPrefab(GameObject xpGem)
+        static GameObject CreateWalkerPrefab(GameObject xpGem, GameObject coinPrefab)
         {
             string path = $"{PrefabFolder}/WalkerZombie.prefab";
             GameObject existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
-            if (existing != null) return existing;
+            if (existing != null)
+            {
+                SetDropsOnEnemy(existing.GetComponent<WalkerZombie>(), xpGem, coinPrefab, 1);
+                return existing;
+            }
 
             GameObject go = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             go.name = "WalkerZombie";
@@ -405,18 +410,22 @@ namespace RogueDrive.EditorTools
             r.sharedMaterial = mat;
 
             WalkerZombie walker = go.AddComponent<WalkerZombie>();
-            SetXpGemOnEnemy(walker, xpGem);
+            SetDropsOnEnemy(walker, xpGem, coinPrefab, 1);
 
             GameObject prefab = PrefabUtility.SaveAsPrefabAsset(go, path);
             Object.DestroyImmediate(go);
             return prefab;
         }
 
-        static GameObject CreateRunnerPrefab(GameObject xpGem)
+        static GameObject CreateRunnerPrefab(GameObject xpGem, GameObject coinPrefab)
         {
             string path = $"{PrefabFolder}/RunnerMutant.prefab";
             GameObject existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
-            if (existing != null) return existing;
+            if (existing != null)
+            {
+                SetDropsOnEnemy(existing.GetComponent<RunnerMutant>(), xpGem, coinPrefab, 2);
+                return existing;
+            }
 
             GameObject go = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             go.name = "RunnerMutant";
@@ -430,18 +439,22 @@ namespace RogueDrive.EditorTools
             r.sharedMaterial = mat;
 
             RunnerMutant runner = go.AddComponent<RunnerMutant>();
-            SetXpGemOnEnemy(runner, xpGem);
+            SetDropsOnEnemy(runner, xpGem, coinPrefab, 2);
 
             GameObject prefab = PrefabUtility.SaveAsPrefabAsset(go, path);
             Object.DestroyImmediate(go);
             return prefab;
         }
 
-        static GameObject CreateBrutePrefab(GameObject xpGem)
+        static GameObject CreateBrutePrefab(GameObject xpGem, GameObject coinPrefab)
         {
             string path = $"{PrefabFolder}/ArmoredBrute.prefab";
             GameObject existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
-            if (existing != null) return existing;
+            if (existing != null)
+            {
+                SetDropsOnEnemy(existing.GetComponent<ArmoredBrute>(), xpGem, coinPrefab, 5);
+                return existing;
+            }
 
             GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
             go.name = "ArmoredBrute";
@@ -455,18 +468,22 @@ namespace RogueDrive.EditorTools
             r.sharedMaterial = mat;
 
             ArmoredBrute brute = go.AddComponent<ArmoredBrute>();
-            SetXpGemOnEnemy(brute, xpGem);
+            SetDropsOnEnemy(brute, xpGem, coinPrefab, 5);
 
             GameObject prefab = PrefabUtility.SaveAsPrefabAsset(go, path);
             Object.DestroyImmediate(go);
             return prefab;
         }
 
-        static GameObject CreateSpitterPrefab(GameObject xpGem, GameObject acidProj)
+        static GameObject CreateSpitterPrefab(GameObject xpGem, GameObject acidProj, GameObject coinPrefab)
         {
             string path = $"{PrefabFolder}/AcidSpitter.prefab";
             GameObject existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
-            if (existing != null) return existing;
+            if (existing != null)
+            {
+                SetDropsOnEnemy(existing.GetComponent<AcidSpitter>(), xpGem, coinPrefab, 3);
+                return existing;
+            }
 
             GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             go.name = "AcidSpitter";
@@ -480,7 +497,7 @@ namespace RogueDrive.EditorTools
             r.sharedMaterial = mat;
 
             AcidSpitter spitter = go.AddComponent<AcidSpitter>();
-            SetXpGemOnEnemy(spitter, xpGem);
+            SetDropsOnEnemy(spitter, xpGem, coinPrefab, 3);
 
             SerializedObject so = new SerializedObject(spitter);
             so.FindProperty("acidProjectilePrefab").objectReferenceValue = acidProj;
@@ -491,10 +508,37 @@ namespace RogueDrive.EditorTools
             return prefab;
         }
 
-        static void SetXpGemOnEnemy(EnemyBase enemy, GameObject gem)
+        static GameObject CreateCoinPickupPrefab()
         {
+            string path = $"{PrefabFolder}/CoinPickup.prefab";
+            GameObject existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (existing != null) return existing;
+
+            GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            go.name = "CoinPickup";
+            go.transform.localScale = new Vector3(0.5f, 0.08f, 0.5f);
+            go.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+            Collider col = go.GetComponent<Collider>();
+            if (col != null) col.isTrigger = true;
+
+            Renderer r = go.GetComponent<Renderer>();
+            Material mat = new Material(Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Unlit/Color") ?? Shader.Find("Standard"));
+            mat.color = new Color(1f, 0.85f, 0.1f);
+            r.sharedMaterial = mat;
+
+            go.AddComponent<CoinPickup>();
+            GameObject prefab = PrefabUtility.SaveAsPrefabAsset(go, path);
+            Object.DestroyImmediate(go);
+            return prefab;
+        }
+
+        static void SetDropsOnEnemy(EnemyBase enemy, GameObject gem, GameObject coin, int coinReward)
+        {
+            if (enemy == null) return;
             SerializedObject so = new SerializedObject(enemy);
             so.FindProperty("xpGemPrefab").objectReferenceValue = gem;
+            so.FindProperty("coinPrefab").objectReferenceValue = coin;
+            so.FindProperty("coinReward").intValue = coinReward;
             so.ApplyModifiedProperties();
         }
 

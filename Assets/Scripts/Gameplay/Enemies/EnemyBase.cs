@@ -23,8 +23,10 @@ namespace RogueDrive.Gameplay
         [SerializeField, Min(0f)] protected float ramVulnerability = 1f; // множитель урона от тарана
         [SerializeField] protected bool resistsRamming = false;
 
-        [Header("Drop Prefab")]
+        [Header("Drop Prefabs")]
         [SerializeField] protected GameObject xpGemPrefab;
+        [SerializeField] protected GameObject coinPrefab;
+        [SerializeField, Min(0)] protected int coinReward = 1;
 
         protected float currentHealth;
         protected float slowTimer;
@@ -224,6 +226,36 @@ namespace RogueDrive.Gameplay
                     else
                     {
                         Instantiate(xpGemPrefab, dropPos, Quaternion.identity);
+                    }
+                }
+            }
+
+            // Спавн монет или прямое начисление
+            if (coinReward > 0)
+            {
+                if (coinPrefab != null)
+                {
+                    for (int i = 0; i < coinReward; i++)
+                    {
+                        Vector3 coinPos = transform.position + UnityEngine.Random.insideUnitSphere * 0.4f;
+                        coinPos.y = 0.5f;
+
+                        if (GameplayPool.Instance != null)
+                        {
+                            GameplayPool.Instance.Spawn(coinPrefab, coinPos, Quaternion.identity);
+                        }
+                        else
+                        {
+                            Instantiate(coinPrefab, coinPos, Quaternion.identity);
+                        }
+                    }
+                }
+                else
+                {
+                    GameRunController run = playerCar != null && playerCar.Run != null ? playerCar.Run : FindFirstObjectByType<GameRunController>();
+                    if (run != null)
+                    {
+                        run.AddCoins(coinReward);
                     }
                 }
             }
