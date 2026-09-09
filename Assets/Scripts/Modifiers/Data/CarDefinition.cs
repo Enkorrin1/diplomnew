@@ -34,6 +34,8 @@ namespace RogueDrive.Modifiers
         public string DisplayName;
         [TextArea] public string Description;
         public GameObject Prefab;
+        [Min(0)] public int Price = 0;
+        public Color BodyColor = new Color(0.08f, 0.55f, 0.95f);
 
         [Header("Базовые характеристики")]
         public StatValue[] BaseStats =
@@ -63,6 +65,17 @@ namespace RogueDrive.Modifiers
                     total += Sockets[i].Count;
 
             return total;
+        }
+
+        public float GetStat(StatId id, float defaultValue = 0f)
+        {
+            if (BaseStats == null) return defaultValue;
+            for (int i = 0; i < BaseStats.Length; i++)
+            {
+                if (BaseStats[i].Id == id)
+                    return BaseStats[i].Value;
+            }
+            return defaultValue;
         }
 
         void OnValidate()
