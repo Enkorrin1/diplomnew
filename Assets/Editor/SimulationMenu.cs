@@ -48,10 +48,39 @@ namespace RogueDrive.EditorTools
             }
         }
 
-        [MenuItem("RogueDrive/Запустить серию прогонов %#r", true)]
+        [MenuItem("RogueDrive/Симуляция/Запустить выделенную серию %#r", true)]
         static bool ValidateRunSelectedBatch()
         {
             return Selection.activeObject is SimulationBatch;
+        }
+
+        [MenuItem("RogueDrive/Симуляция/Запустить базовую серию (12,000 заездов)")]
+        public static void RunBaselineBatch()
+        {
+            var batch = AssetDatabase.LoadAssetAtPath<SimulationBatch>("Assets/Content/Simulation/Batch_Baseline.asset");
+            if (batch == null)
+            {
+                EditorUtility.DisplayDialog("Ошибка", "Не найден ассет Assets/Content/Simulation/Batch_Baseline.asset", "ОК");
+                return;
+            }
+
+            try
+            {
+                string directory = SimulationRunner.Execute(batch, (progress, status) =>
+                    EditorUtility.DisplayProgressBar("Монте-Карло симуляция (12,000 заездов)", status, progress));
+
+                Debug.Log($"[Simulation] Симуляция успешно выполнена! Результаты в: {directory}");
+                EditorUtility.RevealInFinder(directory);
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogException(ex);
+                EditorUtility.DisplayDialog("Ошибка симуляции", ex.Message, "ОК");
+            }
+            finally
+            {
+                EditorUtility.ClearProgressBar();
+            }
         }
     }
 }
