@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!1 &6653125392747780469
+--- !u!1 &5932357062884214837
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -8,48 +8,48 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 1573824296884111118}
-  - component: {fileID: 8338307980504528540}
-  - component: {fileID: 4249248779764677990}
-  - component: {fileID: 4588355904755035677}
-  - component: {fileID: 7284346718227495670}
+  - component: {fileID: 8740010884279813624}
+  - component: {fileID: 8588158362375882167}
+  - component: {fileID: 9213855072690015833}
+  - component: {fileID: 1592298245959864088}
+  - component: {fileID: 8122475379294957658}
   m_Layer: 0
-  m_Name: ArmoredBrute
+  m_Name: CoinPickup
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &1573824296884111118
+--- !u!4 &8740010884279813624
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6653125392747780469}
+  m_GameObject: {fileID: 5932357062884214837}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: 0.7071068, y: 0, z: 0, w: 0.7071068}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1.8, y: 2.2, z: 1.6}
+  m_LocalScale: {x: 0.5, y: 0.08, z: 0.5}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!33 &8338307980504528540
+--- !u!33 &8588158362375882167
 MeshFilter:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6653125392747780469}
-  m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
---- !u!65 &4249248779764677990
-BoxCollider:
+  m_GameObject: {fileID: 5932357062884214837}
+  m_Mesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!136 &9213855072690015833
+CapsuleCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6653125392747780469}
+  m_GameObject: {fileID: 5932357062884214837}
   m_Material: {fileID: 0}
   m_IncludeLayers:
     serializedVersion: 2
@@ -61,16 +61,18 @@ BoxCollider:
   m_IsTrigger: 1
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 1, y: 1, z: 1}
+  serializedVersion: 2
+  m_Radius: 0.5
+  m_Height: 2
+  m_Direction: 1
   m_Center: {x: 0, y: 0, z: 0}
---- !u!23 &4588355904755035677
+--- !u!23 &1592298245959864088
 MeshRenderer:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6653125392747780469}
+  m_GameObject: {fileID: 5932357062884214837}
   m_Enabled: 1
   m_CastShadows: 1
   m_ReceiveShadows: 1
@@ -109,24 +111,18 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!114 &7284346718227495670
+--- !u!114 &8122475379294957658
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6653125392747780469}
+  m_GameObject: {fileID: 5932357062884214837}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a55ff7884ce759e46bd9e5cb75d79b7b, type: 3}
+  m_Script: {fileID: 11500000, guid: d4e5f60718293a4b5c6d7e8f90a1b2c3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  maxHealth: 50
-  contactDamage: 15
-  baseSpeed: 5
-  xpReward: 1
-  ramVulnerability: 1
-  resistsRamming: 0
-  xpGemPrefab: {fileID: 4869399585758919649, guid: c537b43b246219c4c811f417ca56c45b, type: 3}
-  coinPrefab: {fileID: 5932357062884214837, guid: 2a5a1ee1b1308fe43a81b6b6ab53b991, type: 3}
-  coinReward: 5
+  coinValue: 1
+  magnetFlySpeed: 24
+  rotationSpeed: 180

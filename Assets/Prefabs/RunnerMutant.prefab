@@ -130,4 +130,6 @@ MonoBehaviour:
   ramVulnerability: 1
   resistsRamming: 0
   xpGemPrefab: {fileID: 4869399585758919649, guid: c537b43b246219c4c811f417ca56c45b, type: 3}
+  coinPrefab: {fileID: 5932357062884214837, guid: 2a5a1ee1b1308fe43a81b6b6ab53b991, type: 3}
+  coinReward: 2
   flankOffset: 3.5

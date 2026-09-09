@@ -144,7 +144,7 @@ namespace RogueDrive.Gameplay
             {
                 Vector3 moveDir = direction.normalized;
                 transform.position += moveDir * (currentSpeed * dt);
-                transform.rotation = Quaternion.LookRotation(moveDir, Vector3.up);
+                transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
             }
         }
 

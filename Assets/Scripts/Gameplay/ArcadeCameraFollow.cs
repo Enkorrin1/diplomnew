@@ -97,8 +97,12 @@ namespace RogueDrive.Gameplay
 
             // Фокус взгляда направлен на трассу перед машиной
             Vector3 lookTarget = CalculateLookTarget();
-            Quaternion desiredRotation = Quaternion.LookRotation((lookTarget - transform.position).normalized);
-            transform.rotation = Quaternion.Slerp(transform.rotation, desiredRotation, 1f - Mathf.Exp(-rotationSharpness * dt));
+            Vector3 lookDir = lookTarget - transform.position;
+            if (lookDir.sqrMagnitude > 0.001f)
+            {
+                Quaternion desiredRotation = Quaternion.LookRotation(lookDir, Vector3.up);
+                transform.rotation = Quaternion.Slerp(transform.rotation, desiredRotation, 1f - Mathf.Exp(-rotationSharpness * dt));
+            }
 
             // Динамический FOV
             UpdateFov(dt);

@@ -49,7 +49,7 @@ namespace RogueDrive.Gameplay
                 toPlayer.y = 0f;
                 if (toPlayer.sqrMagnitude > 0.1f)
                 {
-                    transform.rotation = Quaternion.LookRotation(toPlayer.normalized, Vector3.up);
+                    transform.rotation = Quaternion.LookRotation(toPlayer, Vector3.up);
                 }
             }
 
@@ -69,16 +69,17 @@ namespace RogueDrive.Gameplay
 
             Vector3 spawnPos = shootPoint != null ? shootPoint.position : transform.position + Vector3.up * 1.2f;
             Vector3 targetAim = playerTarget.position + Vector3.up * 0.5f;
-            Vector3 shootDir = (targetAim - spawnPos).normalized;
+            Vector3 shootDir = targetAim - spawnPos;
+            Quaternion shootRot = shootDir.sqrMagnitude > 0.001f ? Quaternion.LookRotation(shootDir) : Quaternion.identity;
 
             GameObject projObj = GameplayPool.Instance != null
-                ? GameplayPool.Instance.Spawn(acidProjectilePrefab, spawnPos, Quaternion.LookRotation(shootDir))
-                : Instantiate(acidProjectilePrefab, spawnPos, Quaternion.LookRotation(shootDir));
+                ? GameplayPool.Instance.Spawn(acidProjectilePrefab, spawnPos, shootRot)
+                : Instantiate(acidProjectilePrefab, spawnPos, shootRot);
 
             AcidProjectile proj = projObj.GetComponent<AcidProjectile>();
             if (proj != null)
             {
-                proj.Launch(shootDir);
+                proj.Launch(shootDir.sqrMagnitude > 0.001f ? shootDir.normalized : Vector3.forward);
             }
         }
     }
