@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace RogueDrive.Audio
 {
@@ -61,12 +62,49 @@ namespace RogueDrive.Audio
                 GameObject bgmObj = new GameObject("BackgroundMusicController");
                 bgmObj.AddComponent<BackgroundMusicController>();
             }
+
+            SceneManager.sceneLoaded += OnSceneLoaded;
+            EnsureAudioListenerInActiveScene();
         }
 
         private void OnDestroy()
         {
+            SceneManager.sceneLoaded -= OnSceneLoaded;
             if (Instance == this)
                 Instance = null;
+        }
+
+        private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            EnsureAudioListenerInActiveScene();
+        }
+
+        private void EnsureAudioListenerInActiveScene()
+        {
+            AudioListener[] listeners = FindObjectsByType<AudioListener>(FindObjectsSortMode.None);
+            if (listeners == null || listeners.Length == 0)
+            {
+                Camera cam = Camera.main != null ? Camera.main : FindFirstObjectByType<Camera>();
+                if (cam != null)
+                {
+                    cam.gameObject.AddComponent<AudioListener>();
+                }
+                else
+                {
+                    if (GetComponent<AudioListener>() == null)
+                    {
+                        gameObject.AddComponent<AudioListener>();
+                    }
+                }
+            }
+            else if (listeners.Length > 1)
+            {
+                AudioListener myListener = GetComponent<AudioListener>();
+                if (myListener != null)
+                {
+                    Destroy(myListener);
+                }
+            }
         }
 
         void SetupAudioSources()

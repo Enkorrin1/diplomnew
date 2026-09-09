@@ -50,6 +50,17 @@ namespace RogueDrive.Audio
         // A2=110, C3=130.8, D3=146.8, E3=164.8, G3=196.0, A3=220.0, C4=261.6, E4=329.6
         private static readonly float[] ScaleNotes = { 110.0f, 130.81f, 146.83f, 164.81f, 174.61f, 196.0f, 220.0f, 261.63f, 329.63f, 392.0f, 440.0f };
 
+        // Потокобезопасный PRNG генератор шума для DSP-потока аудио (исключает UnityException из OnAudioFilterRead)
+        private uint noiseSeed = 22222u;
+
+        private float NextNoiseSample()
+        {
+            noiseSeed ^= noiseSeed << 13;
+            noiseSeed ^= noiseSeed >> 17;
+            noiseSeed ^= noiseSeed << 5;
+            return (float)(noiseSeed * (2.0 / 4294967296.0) - 1.0);
+        }
+
         private void Awake()
         {
             if (Instance != null && Instance != this)
@@ -72,11 +83,41 @@ namespace RogueDrive.Audio
             RogueDrive.Gameplay.BossJuggernaut.BossDefeated += HandleBossDefeated;
 
             UpdateTrackForCurrentScene(SceneManager.GetActiveScene().name);
+            EnsureAudioListenerInActiveScene();
 
             // Создаем тихий пустой клип, чтобы активировать OnAudioFilterRead
             AudioClip silentClip = AudioClip.Create("MusicSynthFeed", 44100, 1, 44100, false);
             audioSource.clip = silentClip;
             audioSource.Play();
+        }
+
+        private void EnsureAudioListenerInActiveScene()
+        {
+            AudioListener[] listeners = FindObjectsByType<AudioListener>(FindObjectsSortMode.None);
+            if (listeners == null || listeners.Length == 0)
+            {
+                Camera cam = Camera.main != null ? Camera.main : FindFirstObjectByType<Camera>();
+                if (cam != null)
+                {
+                    cam.gameObject.AddComponent<AudioListener>();
+                }
+                else
+                {
+                    if (GetComponent<AudioListener>() == null)
+                    {
+                        gameObject.AddComponent<AudioListener>();
+                    }
+                }
+            }
+            else if (listeners.Length > 1)
+            {
+                // Если на бессмертном объекте музыки был временный AudioListener, а в новой сцене есть свой на камере
+                AudioListener myListener = GetComponent<AudioListener>();
+                if (myListener != null)
+                {
+                    Destroy(myListener);
+                }
+            }
         }
 
         private void HandleBossSpawned(RogueDrive.Gameplay.BossJuggernaut boss) => PlayTrack(MusicTrack.Boss);
@@ -120,6 +161,7 @@ namespace RogueDrive.Audio
         private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
             UpdateTrackForCurrentScene(scene.name);
+            EnsureAudioListenerInActiveScene();
         }
 
         public void PlayTrack(MusicTrack track)
@@ -232,7 +274,7 @@ namespace RogueDrive.Audio
             float snare = 0f;
             if (currentStep == 4 || currentStep == 12)
             {
-                float noise = (float)(UnityEngine.Random.value * 2.0 - 1.0);
+                float noise = NextNoiseSample();
                 float snareEnv = Mathf.Exp(-stepProgress * 7.5f);
                 snare = noise * snareEnv * 0.35f;
             }
@@ -241,7 +283,7 @@ namespace RogueDrive.Audio
             float hihat = 0f;
             if (currentStep % 2 == 1)
             {
-                float noise = (float)(UnityEngine.Random.value * 2.0 - 1.0);
+                float noise = NextNoiseSample();
                 float hhEnv = Mathf.Exp(-stepProgress * 18.0f);
                 hihat = noise * hhEnv * 0.14f;
             }
