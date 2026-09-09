@@ -47,6 +47,11 @@ namespace RogueDrive.Gameplay
                 gameObject.AddComponent<RogueDrive.Gameplay.UI.TouchControlsUI>();
             }
 
+            if (FindFirstObjectByType<RogueDrive.UI.PauseMenuUI>() == null)
+            {
+                gameObject.AddComponent<RogueDrive.UI.PauseMenuUI>();
+            }
+
             ResetRun();
         }
 
