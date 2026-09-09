@@ -159,20 +159,59 @@ namespace RogueDrive.Gameplay
                 {
                     if (Random.value > 0.35f)
                     {
-                        GameObject enemyPrefab = enemyPrefabs[Random.Range(0, enemyPrefabs.Length)];
                         Vector3 spawnPos = enemySpawnPoints[i].position + Random.insideUnitSphere * 1.5f;
                         spawnPos.y = 0.5f;
 
-                        if (GameplayPool.Instance != null)
+                        // Шанс появления элитного противника растет с дистанцией/сложностью
+                        float eliteChance = Mathf.Clamp01((difficultyMultiplier - 1f) * 0.20f);
+                        if (Random.value < eliteChance)
                         {
-                            GameplayPool.Instance.Spawn(enemyPrefab, spawnPos, Quaternion.identity);
+                            SpawnEliteEnemy(spawnPos);
                         }
                         else
                         {
-                            Instantiate(enemyPrefab, spawnPos, Quaternion.identity);
+                            GameObject enemyPrefab = enemyPrefabs[Random.Range(0, enemyPrefabs.Length)];
+                            if (GameplayPool.Instance != null)
+                            {
+                                GameplayPool.Instance.Spawn(enemyPrefab, spawnPos, Quaternion.identity);
+                            }
+                            else
+                            {
+                                Instantiate(enemyPrefab, spawnPos, Quaternion.identity);
+                            }
                         }
                     }
                 }
+            }
+        }
+
+        void SpawnEliteEnemy(Vector3 pos)
+        {
+            pos.y = 0.5f;
+            int roll = Random.Range(0, 3);
+            GameObject obj;
+
+            switch (roll)
+            {
+                case 0:
+                    obj = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                    obj.name = "Elite_Kamikaze";
+                    obj.transform.position = pos;
+                    obj.AddComponent<EliteKamikaze>();
+                    break;
+                case 1:
+                    obj = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                    obj.name = "Elite_JuggernautMinion";
+                    obj.transform.position = pos;
+                    obj.AddComponent<EliteJuggernautMinion>();
+                    break;
+                case 2:
+                default:
+                    obj = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+                    obj.name = "Elite_PackLeader";
+                    obj.transform.position = pos;
+                    obj.AddComponent<ElitePackLeader>();
+                    break;
             }
         }
 

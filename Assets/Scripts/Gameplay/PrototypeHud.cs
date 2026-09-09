@@ -47,6 +47,14 @@ namespace RogueDrive.Gameplay
             bannerTimer = 4.0f;
         }
 
+        BossJuggernaut activeBoss;
+        bool showVictoryModal;
+
+        public void ShowCampaignVictoryScreen()
+        {
+            showVictoryModal = true;
+        }
+
         private void Awake()
         {
             Instance = this;
@@ -55,6 +63,20 @@ namespace RogueDrive.Gameplay
                 car = FindFirstObjectByType<ArcadeCarController>();
             if (run == null)
                 run = FindFirstObjectByType<GameRunController>();
+
+            BossJuggernaut.BossSpawned += HandleBossSpawned;
+            BossJuggernaut.BossDefeated += HandleBossDefeated;
+        }
+
+        void HandleBossSpawned(BossJuggernaut b)
+        {
+            activeBoss = b;
+        }
+
+        void HandleBossDefeated(BossJuggernaut b)
+        {
+            if (activeBoss == b)
+                activeBoss = null;
         }
 
         private void Update()
@@ -69,6 +91,9 @@ namespace RogueDrive.Gameplay
         {
             if (Instance == this)
                 Instance = null;
+
+            BossJuggernaut.BossSpawned -= HandleBossSpawned;
+            BossJuggernaut.BossDefeated -= HandleBossDefeated;
 
             if (barBgTex != null) Destroy(barBgTex);
             if (healthTex != null) Destroy(healthTex);
@@ -141,7 +166,20 @@ namespace RogueDrive.Gameplay
                 DrawBiomeBanner();
             }
 
-            // 5. Окно завершения заезда
+            // 5. Полоса здоровья босса Джаггернаута
+            if (activeBoss != null && !activeBoss.IsDead)
+            {
+                DrawBossHealthBar();
+            }
+
+            // 6. Окно триумфальной победы в кампании
+            if (showVictoryModal)
+            {
+                DrawCampaignVictoryModal();
+                return;
+            }
+
+            // 7. Окно завершения заезда
             if (!run.IsGameOver)
                 return;
 
@@ -166,6 +204,68 @@ namespace RogueDrive.Gameplay
             if (GUI.Button(new Rect(panel.x + 220f, btnY, 170f, 45f), "ЕЩЁ ЗАЕЗД"))
             {
                 run.Restart();
+            }
+        }
+
+        void DrawBossHealthBar()
+        {
+            if (activeBoss == null || activeBoss.IsDead) return;
+
+            float barW = 480f;
+            float barH = 34f;
+            float barX = (Screen.width - barW) * 0.5f;
+            float barY = 22f;
+
+            GUI.Box(new Rect(barX - 10f, barY - 6f, barW + 20f, barH + 28f), string.Empty);
+
+            string phaseStr = activeBoss.Phase switch
+            {
+                BossPhase.Phase1_Minefield => "ФАЗА 1: МИНЫ",
+                BossPhase.Phase2_ArtilleryEscort => "ФАЗА 2: ЗАЛПЫ И ЭСКОРТ",
+                BossPhase.Phase3_BerserkRam => "ФАЗА 3: ТАРАН",
+                _ => string.Empty
+            };
+
+            GUI.Label(new Rect(barX, barY - 2f, barW, 20f), $"☠ {activeBoss.BossTitle} ({phaseStr}) ☠", headingStyle);
+
+            float hpPercent = Mathf.Clamp01(activeBoss.CurrentHealth / activeBoss.MaxHealth);
+            GUI.DrawTexture(new Rect(barX, barY + 22f, barW, 14f), barBgTex);
+
+            Color prev = GUI.color;
+            GUI.color = Color.Lerp(Color.red, new Color(1f, 0.4f, 0f), hpPercent);
+            GUI.DrawTexture(new Rect(barX, barY + 22f, barW * hpPercent, 14f), healthTex);
+            GUI.color = prev;
+
+            GUI.Label(new Rect(barX, barY + 20f, barW, 18f), $"{activeBoss.CurrentHealth:0} / {activeBoss.MaxHealth:0} HP", valueStyle);
+        }
+
+        void DrawCampaignVictoryModal()
+        {
+            float width = 500f;
+            float height = 310f;
+            Rect panel = new Rect((Screen.width - width) * 0.5f, (Screen.height - height) * 0.5f, width, height);
+
+            GUI.Box(panel, string.Empty);
+            GUI.Label(new Rect(panel.x, panel.y + 18f, width, 32f), "★ ЦИТАДЕЛЬ ПРОБИТА! ПОБЕДА! ★", endStyle);
+            GUI.Label(new Rect(panel.x, panel.y + 54f, width, 22f), "Джаггернаут уничтожен! Эвакуационный вертолет на подходе!", valueStyle);
+            GUI.Label(new Rect(panel.x, panel.y + 80f, width, 22f), $"Дистанция кампании: {run.Distance:0} м", valueStyle);
+            GUI.Label(new Rect(panel.x, panel.y + 104f, width, 22f), "Бонус победы: <color=#ffd700>+50 монет</color>", valueStyle);
+            GUI.Label(new Rect(panel.x, panel.y + 130f, width, 22f), "<color=#2ecc71>РЕЖИМ БЕСКОНЕЧНОГО ВЫЖИВАНИЯ (ENDLESS) РАЗБЛОКИРОВАН!</color>", valueStyle);
+
+            int totalCoins = RogueDrive.Meta.SaveService.GetActiveProgress()?.Coins ?? 0;
+            GUI.Label(new Rect(panel.x, panel.y + 158f, width, 22f), $"Всего в банке: <color=#ffd700>{totalCoins} монет</color>", valueStyle);
+
+            float btnY = panel.y + 205f;
+            if (GUI.Button(new Rect(panel.x + 35f, btnY, 200f, 48f), "В ГАРАЖ С ПОБЕДОЙ"))
+            {
+                showVictoryModal = false;
+                run.LoadGarage();
+            }
+
+            if (GUI.Button(new Rect(panel.x + 265f, btnY, 200f, 48f), "ПРОДОЛЖИТЬ В ENDLESS"))
+            {
+                showVictoryModal = false;
+                CampaignMapModal.SelectedStartSector = 5;
             }
         }
 

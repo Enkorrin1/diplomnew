@@ -213,16 +213,48 @@ namespace RogueDrive.Gameplay
             SceneManager.LoadScene(0);
         }
 
+        public bool IsCampaignVictory { get; private set; }
+
+        public void ReportBossDefeated()
+        {
+            IsCampaignVictory = true;
+            try
+            {
+                var meta = RogueDrive.Meta.SaveService.GetActiveProgress();
+                if (meta != null)
+                {
+                    meta.RegisterRunResult(5, Distance);
+                    if (CoinsCollected > 0) meta.AddCoins(CoinsCollected);
+                    RogueDrive.Meta.SaveService.SaveActive();
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[GameRunController] Ошибка сохранения победы: {ex.Message}");
+            }
+        }
+
         void ResetRun()
         {
             Time.timeScale = 1f;
             Health = startingHealth;
             Fuel = startingFuel;
             Nitro = startingNitro;
-            Distance = 0f;
+
+            int startSector = CampaignMapModal.SelectedStartSector;
+            if (startSector >= 2 && startSector <= 4)
+            {
+                Distance = (startSector - 1) * 1000f;
+            }
+            else
+            {
+                Distance = 0f;
+            }
+
             CoinsCollected = 0;
             IsGameOver = false;
             IsOutOfFuel = false;
+            IsCampaignVictory = false;
             EndReason = string.Empty;
         }
 
@@ -241,7 +273,9 @@ namespace RogueDrive.Gameplay
                     {
                         meta.AddCoins(CoinsCollected);
                     }
-                    meta.RegisterRunResult(1, Distance);
+                    int sectorIdx = Mathf.Clamp(Mathf.FloorToInt(Distance / 1000f) + 1, 1, 4);
+                    if (IsCampaignVictory) sectorIdx = 5;
+                    meta.RegisterRunResult(sectorIdx, Distance);
                     RogueDrive.Meta.SaveService.SaveActive();
                 }
             }

@@ -358,6 +358,16 @@ namespace RogueDrive.Meta
             float playH = 48f;
             float playX = (Screen.width - playW) * 0.5f;
 
+            float mapBtnX = playX - 215;
+            if (GUI.Button(new Rect(mapBtnX, barY + 6, 200, playH - 12), "КАРТА КАМПАНИИ"))
+            {
+                if (RogueDrive.Gameplay.CampaignMapModal.Instance == null)
+                {
+                    new GameObject("CampaignMapModal").AddComponent<RogueDrive.Gameplay.CampaignMapModal>();
+                }
+                RogueDrive.Gameplay.CampaignMapModal.Instance.Toggle();
+            }
+
             if (GUI.Button(new Rect(playX, barY, playW, playH), "В ЗАЕЗД! [ПРОБЕЛ]", _btnPlayStyle))
             {
                 StartRun();

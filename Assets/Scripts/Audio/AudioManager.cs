@@ -38,6 +38,9 @@ namespace RogueDrive.Audio
         AudioClip crashClip;
         AudioClip coinClip;
         AudioClip crateClip;
+        AudioClip sirenClip;
+        AudioClip mineBeepClip;
+        AudioClip fanfareClip;
 
         private void Awake()
         {
@@ -158,6 +161,21 @@ namespace RogueDrive.Audio
             PlaySfx(crateClip, 0.85f, UnityEngine.Random.Range(0.9f, 1.1f));
         }
 
+        public void PlaySiren(float volume = 0.9f)
+        {
+            PlaySfx(sirenClip, volume, 1f);
+        }
+
+        public void PlayMineBeep(float pitch = 1f)
+        {
+            PlaySfx(mineBeepClip, 0.75f, pitch);
+        }
+
+        public void PlayFanfare()
+        {
+            PlaySfx(fanfareClip, 0.95f, 1f);
+        }
+
         void PlaySfx(AudioClip clip, float volume, float pitch)
         {
             if (clip == null) return;
@@ -179,6 +197,9 @@ namespace RogueDrive.Audio
             crashClip = customCrashClip != null ? customCrashClip : SynthesizeCrashClip();
             coinClip = customCoinClip != null ? customCoinClip : SynthesizeCoinClip();
             crateClip = SynthesizeCrateClip();
+            sirenClip = SynthesizeSirenClip();
+            mineBeepClip = SynthesizeMineBeepClip();
+            fanfareClip = SynthesizeFanfareClip();
         }
 
         AudioClip SynthesizeEngineClip()
@@ -374,6 +395,82 @@ namespace RogueDrive.Audio
             }
 
             AudioClip clip = AudioClip.Create("Proc_Crate", totalSamples, 1, sampleRate, false);
+            clip.SetData(samples, 0);
+            return clip;
+        }
+
+        AudioClip SynthesizeSirenClip()
+        {
+            const int sampleRate = 44100;
+            const float duration = 1.0f;
+            int totalSamples = (int)(sampleRate * duration);
+            float[] samples = new float[totalSamples];
+
+            for (int i = 0; i < totalSamples; i++)
+            {
+                float t = (float)i / sampleRate;
+                // Синусоидальная модуляция частоты от 550 Гц до 900 Гц с частотой цикла 2.5 Гц
+                float modFreq = 725f + Mathf.Sin(t * 2.5f * Mathf.PI * 2f) * 175f;
+                float tone = Mathf.Sin(t * modFreq * Mathf.PI * 2f);
+                samples[i] = tone * 0.6f;
+            }
+
+            AudioClip clip = AudioClip.Create("Proc_Siren", totalSamples, 1, sampleRate, false);
+            clip.SetData(samples, 0);
+            return clip;
+        }
+
+        AudioClip SynthesizeMineBeepClip()
+        {
+            const int sampleRate = 44100;
+            const float duration = 0.08f;
+            int totalSamples = (int)(sampleRate * duration);
+            float[] samples = new float[totalSamples];
+
+            for (int i = 0; i < totalSamples; i++)
+            {
+                float t = (float)i / sampleRate;
+                float env = Mathf.Sin(t / duration * Mathf.PI); // Плавная огибающая без щелчков
+                float tone = Mathf.Sin(t * 1850f * Mathf.PI * 2f);
+                samples[i] = tone * env * 0.7f;
+            }
+
+            AudioClip clip = AudioClip.Create("Proc_MineBeep", totalSamples, 1, sampleRate, false);
+            clip.SetData(samples, 0);
+            return clip;
+        }
+
+        AudioClip SynthesizeFanfareClip()
+        {
+            const int sampleRate = 44100;
+            const float duration = 0.8f;
+            int totalSamples = (int)(sampleRate * duration);
+            float[] samples = new float[totalSamples];
+
+            // Мажорный аккорд/арпеджио: C5 (523Hz), E5 (659Hz), G5 (784Hz), C6 (1046Hz)
+            float[] notes = { 523.25f, 659.25f, 783.99f, 1046.50f };
+            float noteLen = 0.16f;
+
+            for (int i = 0; i < totalSamples; i++)
+            {
+                float t = (float)i / sampleRate;
+                int noteIdx = Mathf.Clamp((int)(t / noteLen), 0, notes.Length - 1);
+                float noteT = t - noteIdx * noteLen;
+
+                float env = Mathf.Exp(-noteT * 5f);
+                if (noteIdx == notes.Length - 1)
+                {
+                    // Последняя нота тянется дольше
+                    env = Mathf.Exp(-noteT * 2.5f);
+                }
+
+                float tone = Mathf.Sin(t * notes[noteIdx] * Mathf.PI * 2f) * 0.7f
+                           + Mathf.Sin(t * notes[noteIdx] * 2f * Mathf.PI * 2f) * 0.25f;
+
+                samples[i] = Mathf.Clamp(tone * env * 0.65f, -1f, 1f);
+            }
+
+            AudioClip clip = AudioClip.Create("Proc_Fanfare", totalSamples, 1, sampleRate, false);
             clip.SetData(samples, 0);
             return clip;
         }

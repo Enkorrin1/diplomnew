@@ -57,13 +57,20 @@ namespace RogueDrive.Gameplay
                 nextSpawnPosition = new Vector3(0f, 0f, 150f);
             }
 
+            int startSector = CampaignMapModal.SelectedStartSector;
+            if (startSector >= 2 && startSector <= 4)
+            {
+                totalDistanceGenerated = (startSector - 1) * 1000f;
+                lastCheckpointSector = startSector - 1;
+            }
+
             // Начальная генерация стартовых чанков
             for (int i = 0; i < activeChunksAhead; i++)
             {
                 SpawnNextChunk(i < 2);
             }
 
-            UpdateBiomeEnvironment(0f);
+            UpdateBiomeEnvironment(totalDistanceGenerated);
         }
 
         private void Update()
@@ -188,6 +195,46 @@ namespace RogueDrive.Gameplay
             nextSpawnPosition = newChunk.EndPosition;
             nextSpawnRotation = newChunk.EndRotation;
             totalDistanceGenerated += newChunk.Length;
+
+            CheckSectorCheckpointSpawn(newChunk);
+            CheckBossSpawn(newChunk);
+        }
+
+        int lastCheckpointSector = 0;
+        bool bossSpawned = false;
+
+        void CheckSectorCheckpointSpawn(TrackChunk chunk)
+        {
+            int sector = Mathf.FloorToInt(totalDistanceGenerated / 1000f);
+            if (sector > lastCheckpointSector && sector <= 4)
+            {
+                lastCheckpointSector = sector;
+                GameObject cpObj = new GameObject($"Checkpoint_Sector_{sector}");
+                cpObj.transform.position = chunk.transform.position + chunk.transform.forward * 10f;
+                cpObj.transform.rotation = chunk.transform.rotation;
+                cpObj.transform.SetParent(chunk.transform);
+                var cp = cpObj.AddComponent<SectorCheckpoint>();
+                string[] names = { "Шоссе: Пригород", "Радиационная Пустошь", "Затопленная Промзона", "Военная Цитадель" };
+                cp.Configure(sector, names[Mathf.Clamp(sector - 1, 0, names.Length - 1)]);
+            }
+        }
+
+        void CheckBossSpawn(TrackChunk chunk)
+        {
+            if (bossSpawned) return;
+
+            // Босс спавнится в Секторе 4 на дистанции от 3800м
+            if (totalDistanceGenerated >= 3800f)
+            {
+                bossSpawned = true;
+                Vector3 bossSpawnPos = chunk.transform.position + chunk.transform.forward * 32f;
+                bossSpawnPos.y = 0.5f;
+
+                GameObject bossObj = new GameObject("Boss_Juggernaut");
+                bossObj.transform.position = bossSpawnPos;
+                bossObj.transform.rotation = chunk.transform.rotation;
+                bossObj.AddComponent<BossJuggernaut>();
+            }
         }
 
         ChunkType SelectNextChunkType(bool isSafeStart)
