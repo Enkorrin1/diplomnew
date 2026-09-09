@@ -44,3 +44,5 @@ crashlytics-build.properties
 # Результаты симуляции — выгружаются заново
 /Simulation/Output/
 *.csv
+*.log
+graphify-out/
