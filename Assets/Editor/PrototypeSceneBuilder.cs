@@ -131,6 +131,8 @@ namespace RogueDrive.EditorTools
             carSo.FindProperty("run").objectReferenceValue = run;
             carSo.ApplyModifiedProperties();
 
+            car.AddComponent<CarAuraController>();
+
             GameObject visualBody = new GameObject("VisualBody");
             visualBody.transform.SetParent(car.transform, false);
 

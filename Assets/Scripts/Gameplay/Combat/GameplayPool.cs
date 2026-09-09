@@ -21,7 +21,7 @@ namespace RogueDrive.Gameplay
             }
             else if (Instance != this)
             {
-                Destroy(gameObject);
+                Destroy(this);
             }
         }
 

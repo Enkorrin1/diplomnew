@@ -18,6 +18,8 @@ namespace RogueDrive.Gameplay
         RunExperienceManager xpManager;
         bool isMagnetized;
 
+        float currentFlySpeed;
+
         public void SetValue(float value)
         {
             xpValue = value;
@@ -26,6 +28,7 @@ namespace RogueDrive.Gameplay
         private void OnEnable()
         {
             isMagnetized = false;
+            currentFlySpeed = magnetFlySpeed;
             FindPlayer();
         }
 
@@ -43,16 +46,19 @@ namespace RogueDrive.Gameplay
                     return;
             }
 
+            // Автоматический возврат в пул, если машина уехала далеко вперед
+            float zDiff = transform.position.z - playerCar.position.z;
+            if (zDiff < -40f && Vector3.Distance(transform.position, playerCar.position) > 45f)
+            {
+                DespawnSelf();
+                return;
+            }
+
             float distToCar = Vector3.Distance(transform.position, playerCar.position);
 
-            // Определение радиуса подбора (из контроллера или дефолтный 6м)
-            float pickupRadius = 6.5f;
+            // Определение радиуса подбора (из контроллера автомобиля с учётом модификаторов)
             ArcadeCarController carController = playerCar.GetComponent<ArcadeCarController>();
-            if (carController != null && carController.Sockets != null)
-            {
-                // Если есть модификатор магнита, радиус увеличивается
-                pickupRadius = 9.0f;
-            }
+            float pickupRadius = carController != null ? carController.PickupRadius : 6.5f;
 
             if (!isMagnetized && distToCar <= pickupRadius)
             {
@@ -62,14 +68,22 @@ namespace RogueDrive.Gameplay
             if (isMagnetized)
             {
                 // Полёт к машине с ускорением
-                transform.position = Vector3.MoveTowards(transform.position, playerCar.position + Vector3.up * 0.5f, magnetFlySpeed * dt);
-                magnetFlySpeed += 15f * dt;
+                transform.position = Vector3.MoveTowards(transform.position, playerCar.position + Vector3.up * 0.5f, currentFlySpeed * dt);
+                currentFlySpeed += 15f * dt;
 
                 if (distToCar <= 1.2f)
                 {
                     Collect();
                 }
             }
+        }
+
+        void DespawnSelf()
+        {
+            if (GameplayPool.Instance != null)
+                GameplayPool.Instance.Despawn(gameObject);
+            else
+                Destroy(gameObject);
         }
 
         private void OnTriggerEnter(Collider other)

@@ -89,6 +89,52 @@ namespace RogueDrive.Gameplay
             NitroChanged?.Invoke(Nitro, MaxNitro);
         }
 
+        public void Heal(float amount)
+        {
+            if (IsGameOver || amount <= 0f)
+                return;
+
+            Health = Mathf.Min(MaxHealth, Health + amount);
+            HealthChanged?.Invoke(Health, MaxHealth);
+        }
+
+        public void AddFuel(float amount)
+        {
+            if (IsGameOver || amount <= 0f)
+                return;
+
+            Fuel = Mathf.Min(MaxFuel, Fuel + amount);
+            if (Fuel > 0f)
+            {
+                IsOutOfFuel = false;
+            }
+            FuelChanged?.Invoke(Fuel, MaxFuel);
+        }
+
+        public void BindStats(RogueDrive.Modifiers.StatBlock stats)
+        {
+            if (stats == null) return;
+            float maxHp = stats.Get(RogueDrive.Modifiers.StatId.MaxHealth);
+            if (maxHp > 0f)
+            {
+                float diff = maxHp - startingHealth;
+                startingHealth = maxHp;
+                if (diff > 0f) Health += diff;
+                Health = Mathf.Min(startingHealth, Health);
+                HealthChanged?.Invoke(Health, MaxHealth);
+            }
+
+            float maxFuel = stats.Get(RogueDrive.Modifiers.StatId.FuelCapacity);
+            if (maxFuel > 0f)
+            {
+                float diff = maxFuel - startingFuel;
+                startingFuel = maxFuel;
+                if (diff > 0f) Fuel += diff;
+                Fuel = Mathf.Min(startingFuel, Fuel);
+                FuelChanged?.Invoke(Fuel, MaxFuel);
+            }
+        }
+
         public void TakeDamage(float amount)
         {
             if (IsGameOver || amount <= 0f)

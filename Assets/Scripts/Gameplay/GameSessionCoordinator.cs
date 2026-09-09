@@ -100,9 +100,28 @@ namespace RogueDrive.Gameplay
                 turret.BindStats(session.Effects.Stats, session.Effects.Projectiles);
             }
 
+            if (carController != null)
+            {
+                carController.BindStats(session.Effects.Stats);
+
+                CarAuraController auras = carController.GetComponent<CarAuraController>();
+                if (auras == null)
+                {
+                    auras = carController.gameObject.AddComponent<CarAuraController>();
+                }
+                auras.BindBehaviours(session.Effects.Behaviours);
+            }
+
+            if (runController != null)
+            {
+                runController.BindStats(session.Effects.Stats);
+            }
+
             session.Service.Applied += (def, level) =>
             {
                 Debug.Log($"[Modifier Applied] {def.DisplayName} (Уровень {level})");
+                if (carController != null) carController.BindStats(session.Effects.Stats);
+                if (runController != null) runController.BindStats(session.Effects.Stats);
             };
 
             session.Service.SynergyActivated += (syn) =>
@@ -112,10 +131,18 @@ namespace RogueDrive.Gameplay
             };
         }
 
+        int pendingLevelUps;
+
         void HandleLevelUp(int newLevel)
         {
             if (session == null || levelUpView == null)
                 return;
+
+            if (levelUpView.IsVisible)
+            {
+                pendingLevelUps++;
+                return;
+            }
 
             IReadOnlyList<ModifierDefinition> offers = session.OfferGenerator.Generate(
                 session.Build, session.Context, 3);
@@ -129,6 +156,15 @@ namespace RogueDrive.Gameplay
                 return;
 
             session.Service.Apply(def);
+
+            if (pendingLevelUps > 0)
+            {
+                pendingLevelUps--;
+                IReadOnlyList<ModifierDefinition> offers = session.OfferGenerator.Generate(
+                    session.Build, session.Context, 3);
+
+                levelUpView.Show(offers, session.Build, session.Synergies);
+            }
         }
 
         void HandleRerollRequested()
@@ -163,12 +199,12 @@ namespace RogueDrive.Gameplay
                     {
                         if (t.Kind == ResourceKind.Fuel && runController != null)
                         {
-                            // Топливный вампиризм
+                            runController.AddFuel(t.Amount);
                             Debug.Log($"[Resource Trigger] Восстановлено топливо: +{t.Amount}");
                         }
                         else if (t.Kind == ResourceKind.Health && runController != null)
                         {
-                            // Ремонтный комплект
+                            runController.Heal(t.Amount);
                             Debug.Log($"[Resource Trigger] Ремонт кузова: +{t.Amount}");
                         }
                     }

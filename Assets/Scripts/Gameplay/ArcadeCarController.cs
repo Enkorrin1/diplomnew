@@ -54,10 +54,19 @@ namespace RogueDrive.Gameplay
         public bool IsNitroActive { get; private set; }
         public bool IsGrounded => isGrounded;
         public SocketRegistry Sockets => sockets;
+        public GameRunController Run => run;
+        public float PickupRadius => activeStats != null && activeStats.Get(StatId.PickupRadius) > 0f ? activeStats.Get(StatId.PickupRadius) : 6.5f;
+
+        StatBlock activeStats;
 
         public void Configure(GameRunController controller)
         {
             run = controller;
+        }
+
+        public void BindStats(StatBlock stats)
+        {
+            activeStats = stats;
         }
 
         private void Awake()
@@ -164,10 +173,11 @@ namespace RogueDrive.Gameplay
                 IsNitroActive = false;
             }
 
-            // Расход топлива при нажатой педали газа
+            // Расход топлива при нажатой педали газа (с учётом модификатора FuelDrain)
             if (run != null && throttleInput > 0f && !run.IsOutOfFuel)
             {
-                float fuelCost = fuelPerSecond * (IsNitroActive ? 1.5f : 1.0f) * Time.deltaTime;
+                float fuelDrainMult = (activeStats != null && activeStats.Get(StatId.FuelDrain) > 0f) ? (activeStats.Get(StatId.FuelDrain) / 1.8f) : 1.0f;
+                float fuelCost = fuelPerSecond * fuelDrainMult * (IsNitroActive ? 1.5f : 1.0f) * Time.deltaTime;
                 run.ConsumeFuel(fuelCost);
             }
 
@@ -230,8 +240,9 @@ namespace RogueDrive.Gameplay
                 return;
             }
 
-            float currentTopSpeed = IsNitroActive ? nitroTopSpeedMps : topSpeedMps;
-            float currentAccel = IsNitroActive ? nitroAcceleration : acceleration;
+            float speedMult = (activeStats != null && activeStats.Get(StatId.Speed) > 0f) ? (activeStats.Get(StatId.Speed) / 28f) : 1.0f;
+            float currentTopSpeed = (IsNitroActive ? nitroTopSpeedMps : topSpeedMps) * speedMult;
+            float currentAccel = (IsNitroActive ? nitroAcceleration : acceleration) * Mathf.Max(0.7f, speedMult);
 
             if (throttleInput > 0.05f)
             {

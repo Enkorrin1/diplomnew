@@ -136,8 +136,16 @@ namespace RogueDrive.Gameplay
                 Vector3 shootDir = muzzle.forward;
                 if (currentTarget != null)
                 {
-                    shootDir = (currentTarget.position - muzzle.position).normalized;
-                    shootDir.y = 0f;
+                    Vector3 toTarget = currentTarget.position - muzzle.position;
+                    toTarget.y = 0f;
+                    if (toTarget.sqrMagnitude > 0.001f)
+                    {
+                        shootDir = toTarget.normalized;
+                    }
+                }
+                if (shootDir.sqrMagnitude < 0.001f)
+                {
+                    shootDir = transform.forward;
                 }
 
                 GameObject pObj = GameplayPool.Instance != null

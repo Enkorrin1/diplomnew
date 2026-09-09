@@ -46,6 +46,10 @@ namespace RogueDrive.Gameplay
         {
             if (Instance == this)
                 Instance = null;
+
+            if (overlayTex != null) Destroy(overlayTex);
+            if (cardBgTex != null) Destroy(cardBgTex);
+            if (synergyCardBgTex != null) Destroy(synergyCardBgTex);
         }
 
         public void Show(IReadOnlyList<ModifierDefinition> offers, BuildState build, SynergyResolver synergies)

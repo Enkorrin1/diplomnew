@@ -110,6 +110,17 @@ namespace RogueDrive.Gameplay
                     slowFactor = 0f;
             }
 
+            // Автоматический возврат в пул, если машина уехала далеко вперед
+            if (playerTarget != null)
+            {
+                float zDiff = transform.position.z - playerTarget.position.z;
+                if (zDiff < -40f && Vector3.Distance(transform.position, playerTarget.position) > 45f)
+                {
+                    Despawn();
+                    return;
+                }
+            }
+
             MoveTowardsPlayer(dt);
         }
 
@@ -153,7 +164,7 @@ namespace RogueDrive.Gameplay
             if (car == null)
                 return;
 
-            GameRunController run = hitObj.GetComponentInParent<GameRunController>();
+            GameRunController run = car.Run != null ? car.Run : FindFirstObjectByType<GameRunController>();
 
             float carSpeed = Mathf.Abs(car.SpeedMps);
             bool isHighSpeedRam = carSpeed >= 12f || car.IsNitroActive;

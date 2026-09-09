@@ -34,10 +34,15 @@ namespace RogueDrive.Gameplay
                     targetCar = car.transform;
             }
 
-            // Начальная генерация нескольких чанков вперед
+            // Начальная генерация нескольких чанков вперед от конца стартовой дороги
+            if (nextSpawnPosition == Vector3.zero)
+            {
+                nextSpawnPosition = new Vector3(0f, 0f, 150f);
+            }
+
             for (int i = 0; i < activeChunksAhead; i++)
             {
-                SpawnNextChunk(i == 0); // первый чанк без врагов
+                SpawnNextChunk(false);
             }
         }
 
@@ -134,7 +139,46 @@ namespace RogueDrive.Gameplay
             conn.transform.SetParent(chunkObj.transform, false);
             conn.transform.localPosition = new Vector3(0f, 0f, chunkLen);
 
+            // Точки спавна врагов
+            Vector3[] enemyOffsets =
+            {
+                new Vector3(-6f, 0.5f, 20f),
+                new Vector3(6f, 0.5f, 25f),
+                new Vector3(-3f, 0.5f, 45f),
+                new Vector3(3f, 0.5f, 50f),
+                new Vector3(-7f, 0.5f, 70f),
+                new Vector3(7f, 0.5f, 75f),
+                new Vector3(0f, 0.5f, 85f),
+                new Vector3(-4f, 0.5f, 95f)
+            };
+            Transform[] enemySpawns = new Transform[enemyOffsets.Length];
+            for (int i = 0; i < enemyOffsets.Length; i++)
+            {
+                GameObject sp = new GameObject($"EnemySpawn_{i + 1}");
+                sp.transform.SetParent(chunkObj.transform, false);
+                sp.transform.localPosition = enemyOffsets[i];
+                enemySpawns[i] = sp.transform;
+            }
+
+            // Точки спавна препятствий
+            Vector3[] obstacleOffsets =
+            {
+                new Vector3(-5f, 0.5f, 32f),
+                new Vector3(5f, 0.5f, 42f),
+                new Vector3(0f, 0.5f, 62f),
+                new Vector3(-4f, 0.5f, 82f)
+            };
+            Transform[] obstacleSpawns = new Transform[obstacleOffsets.Length];
+            for (int i = 0; i < obstacleOffsets.Length; i++)
+            {
+                GameObject ob = new GameObject($"ObstacleSpawn_{i + 1}");
+                ob.transform.SetParent(chunkObj.transform, false);
+                ob.transform.localPosition = obstacleOffsets[i];
+                obstacleSpawns[i] = ob.transform;
+            }
+
             TrackChunk chunkComp = chunkObj.AddComponent<TrackChunk>();
+            chunkComp.Configure(conn.transform, enemySpawns, obstacleSpawns, chunkLen);
             return chunkComp;
         }
 

@@ -40,6 +40,14 @@ namespace RogueDrive.Gameplay
         public Transform[] EnemySpawnPoints => enemySpawnPoints;
         public Transform[] ObstacleSpawnPoints => obstacleSpawnPoints;
 
+        public void Configure(Transform connection, Transform[] enemySpawns, Transform[] obstacleSpawns, float chunkLength = 100f)
+        {
+            connectionPoint = connection;
+            enemySpawnPoints = enemySpawns;
+            obstacleSpawnPoints = obstacleSpawns;
+            length = chunkLength;
+        }
+
         public void Populate(GameObject[] enemyPrefabs, GameObject[] obstaclePrefabs, float difficultyMultiplier)
         {
             // Спавн препятствий
@@ -67,11 +75,14 @@ namespace RogueDrive.Gameplay
                         Vector3 spawnPos = enemySpawnPoints[i].position + Random.insideUnitSphere * 1.5f;
                         spawnPos.y = 0.5f;
 
-                        GameObject enemyObj = GameplayPool.Instance != null
-                            ? GameplayPool.Instance.Spawn(enemyPrefab, spawnPos, Quaternion.identity)
-                            : Instantiate(enemyPrefab, spawnPos, Quaternion.identity);
-
-                        enemyObj.transform.SetParent(transform, true);
+                        if (GameplayPool.Instance != null)
+                        {
+                            GameplayPool.Instance.Spawn(enemyPrefab, spawnPos, Quaternion.identity);
+                        }
+                        else
+                        {
+                            Instantiate(enemyPrefab, spawnPos, Quaternion.identity);
+                        }
                     }
                 }
             }

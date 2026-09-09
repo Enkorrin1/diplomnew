@@ -34,7 +34,11 @@ namespace RogueDrive.Gameplay
 
         private void OnTriggerEnter(Collider other)
         {
-            GameRunController run = other.GetComponentInParent<GameRunController>();
+            ArcadeCarController car = other.GetComponentInParent<ArcadeCarController>();
+            GameRunController run = car != null && car.Run != null ? car.Run : other.GetComponentInParent<GameRunController>();
+            if (run == null && car != null)
+                run = FindFirstObjectByType<GameRunController>();
+
             if (run != null)
             {
                 run.TakeDamage(damage);

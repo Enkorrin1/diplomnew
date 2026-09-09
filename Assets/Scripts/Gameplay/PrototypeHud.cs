@@ -33,6 +33,14 @@ namespace RogueDrive.Gameplay
                 run = FindFirstObjectByType<GameRunController>();
         }
 
+        private void OnDestroy()
+        {
+            if (barBgTex != null) Destroy(barBgTex);
+            if (healthTex != null) Destroy(healthTex);
+            if (fuelTex != null) Destroy(fuelTex);
+            if (nitroTex != null) Destroy(nitroTex);
+        }
+
         void OnGUI()
         {
             if (run == null)
