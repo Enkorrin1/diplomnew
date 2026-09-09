@@ -21,6 +21,17 @@ namespace RogueDrive.Gameplay
         float age;
         Transform lastTarget;
 
+        private void Awake()
+        {
+            Rigidbody rb = GetComponent<Rigidbody>();
+            if (rb == null)
+            {
+                rb = gameObject.AddComponent<Rigidbody>();
+            }
+            rb.isKinematic = true;
+            rb.useGravity = false;
+        }
+
         public void Launch(Vector3 dir, float damage, int bounces = 0, float slowFactor = 0f, float burnDmg = 0f)
         {
             direction = dir.normalized;
@@ -43,23 +54,46 @@ namespace RogueDrive.Gameplay
                 return;
             }
 
-            Vector3 nextPos = transform.position + direction * (speed * dt);
-            transform.position = nextPos;
+            Vector3 currentPos = transform.position;
+            float stepDist = speed * dt;
+
+            // Непрерывный SphereCast вдоль траектории полета:
+            // Исключает пропуск коллизий на высокой скорости и надежно поражает врагов
+            if (Physics.SphereCast(currentPos, 0.45f, direction, out RaycastHit hit, stepDist, ~0, QueryTriggerInteraction.Collide))
+            {
+                if (HandleHit(hit.collider))
+                {
+                    return;
+                }
+            }
+
+            transform.position = currentPos + direction * stepDist;
         }
 
         private void OnTriggerEnter(Collider other)
         {
+            HandleHit(other);
+        }
+
+        bool HandleHit(Collider other)
+        {
+            if (other == null) return false;
+
+            // Игнорируем автомобиль игрока
+            if (other.GetComponentInParent<ArcadeCarController>() != null)
+                return false;
+
             IDamageable target = other.GetComponentInParent<IDamageable>();
             if (target == null || target.IsDead)
-                return;
+                return false;
 
             Transform targetTransform = other.transform;
             if (targetTransform == lastTarget)
-                return;
+                return false;
 
             lastTarget = targetTransform;
             target.TakeDamage(currentDamage, slow, burn);
-            RogueDrive.Audio.AudioManager.Instance?.PlayHit(0.5f);
+            RogueDrive.Audio.AudioManager.Instance?.PlayHit(0.55f);
 
             if (remainingBounces > 0 && TryBounce(targetTransform.position))
             {
@@ -71,6 +105,8 @@ namespace RogueDrive.Gameplay
             {
                 DespawnSelf();
             }
+
+            return true;
         }
 
         bool TryBounce(Vector3 currentHitPos)

@@ -45,6 +45,15 @@ namespace RogueDrive.Gameplay
         protected virtual void Awake()
         {
             currentHealth = maxHealth;
+
+            // Обеспечиваем наличие кинематического Rigidbody для безотказной регистрации триггерных столкновений
+            Rigidbody rb = GetComponent<Rigidbody>();
+            if (rb == null)
+            {
+                rb = gameObject.AddComponent<Rigidbody>();
+            }
+            rb.isKinematic = true;
+            rb.useGravity = false;
         }
 
         protected virtual void OnEnable()
@@ -212,6 +221,9 @@ namespace RogueDrive.Gameplay
             currentHealth = 0f;
             AnyEnemyKilled?.Invoke(this);
 
+            // Сочный визуальный и звуковой эффект ликвидации врага
+            SpawnDeathEffect(transform.position);
+
             // Спавн сфер опыта
             if (xpGemPrefab != null)
             {
@@ -262,6 +274,27 @@ namespace RogueDrive.Gameplay
             }
 
             Despawn();
+        }
+
+        void SpawnDeathEffect(Vector3 pos)
+        {
+            RogueDrive.Audio.AudioManager.Instance?.PlayCrash(0.45f);
+
+            GameObject puff = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            puff.name = "EnemyDeathPuff";
+            puff.transform.position = pos + Vector3.up * 0.5f;
+            puff.transform.localScale = Vector3.one * 1.2f;
+            Destroy(puff.GetComponent<Collider>());
+
+            Renderer r = puff.GetComponent<Renderer>();
+            if (r != null)
+            {
+                Material m = new Material(Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Unlit/Color") ?? Shader.Find("Standard"));
+                m.color = new Color(0.9f, 0.25f, 0.15f, 0.8f);
+                r.sharedMaterial = m;
+            }
+
+            Destroy(puff, 0.18f);
         }
 
         protected void Despawn()

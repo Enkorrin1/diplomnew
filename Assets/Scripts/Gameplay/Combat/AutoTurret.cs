@@ -29,7 +29,9 @@ namespace RogueDrive.Gameplay
         ProjectilePipeline activeProjectiles;
 
         public float Range => range;
-        public float Damage => activeStats != null && activeStats.Get(StatId.Damage) > 0f ? activeStats.Get(StatId.Damage) : baseDamage;
+        public float Damage => activeStats != null && activeStats.Get(StatId.Damage) > 0f 
+            ? Mathf.Max(baseDamage, activeStats.Get(StatId.Damage)) 
+            : baseDamage;
         public float FireRate => activeStats != null && activeStats.Get(StatId.FireRate) > 0f ? activeStats.Get(StatId.FireRate) : baseFireRate;
 
         public void BindStats(StatBlock stats, ProjectilePipeline projectiles)
@@ -137,8 +139,9 @@ namespace RogueDrive.Gameplay
                 Vector3 shootDir = muzzle.forward;
                 if (currentTarget != null)
                 {
-                    Vector3 toTarget = currentTarget.position - muzzle.position;
-                    toTarget.y = 0f;
+                    // Целимся в центр массы врага (0.6м выше точки опоры)
+                    Vector3 targetCenter = currentTarget.position + Vector3.up * 0.6f;
+                    Vector3 toTarget = targetCenter - muzzle.position;
                     if (toTarget.sqrMagnitude > 0.001f)
                     {
                         shootDir = toTarget.normalized;
