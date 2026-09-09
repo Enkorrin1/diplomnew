@@ -775,36 +775,39 @@ namespace RogueDrive.Gameplay
             GameObject barrel = new GameObject("ExplosiveBarrel_Prefab");
             barrel.transform.SetParent(transform, false);
 
-            // Визуальный цилиндр
-            GameObject body = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            body.name = "BarrelBody";
-            body.transform.SetParent(barrel.transform, false);
-            body.transform.localPosition = new Vector3(0f, 0.6f, 0f);
-            body.transform.localScale = new Vector3(0.9f, 0.6f, 0.9f);
-
-            Renderer r = body.GetComponent<Renderer>();
-            if (r != null)
+            GameObject modelPrefab = null;
+#if UNITY_EDITOR
+            modelPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/GarageAssetPack/Prefabs/Barrelfbx.prefab");
+#endif
+            if (modelPrefab != null)
             {
-                Material m = new Material(Shader.Find("Standard"));
-                m.color = new Color(0.85f, 0.18f, 0.15f); // Ярко-красный цвет опасности
-                r.sharedMaterial = m;
+                GameObject visual = Instantiate(modelPrefab, barrel.transform);
+                visual.name = "BarrelVisual3D";
+                visual.transform.localPosition = Vector3.zero;
+                visual.transform.localRotation = Quaternion.identity;
+                visual.transform.localScale = Vector3.one * 1.15f;
+                Collider[] childCols = visual.GetComponentsInChildren<Collider>(true);
+                for (int i = 0; i < childCols.Length; i++) Destroy(childCols[i]);
             }
-
-            // Желтые предупреждающие кольца
-            GameObject band = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            band.name = "HazardBand";
-            band.transform.SetParent(barrel.transform, false);
-            band.transform.localPosition = new Vector3(0f, 0.6f, 0f);
-            band.transform.localScale = new Vector3(0.92f, 0.15f, 0.92f);
-            Renderer bandR = band.GetComponent<Renderer>();
-            if (bandR != null)
+            else
             {
-                Material bm = new Material(Shader.Find("Standard"));
-                bm.color = new Color(1f, 0.85f, 0.1f);
-                bandR.sharedMaterial = bm;
+                // Визуальный цилиндр (резерв)
+                GameObject body = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                body.name = "BarrelBody";
+                body.transform.SetParent(barrel.transform, false);
+                body.transform.localPosition = new Vector3(0f, 0.6f, 0f);
+                body.transform.localScale = new Vector3(0.9f, 0.6f, 0.9f);
+
+                Renderer r = body.GetComponent<Renderer>();
+                if (r != null)
+                {
+                    Material m = new Material(Shader.Find("Standard"));
+                    m.color = new Color(0.85f, 0.18f, 0.15f);
+                    r.sharedMaterial = m;
+                }
+                Collider bodyCol = body.GetComponent<Collider>();
+                if (bodyCol != null) Destroy(bodyCol);
             }
-            Collider bandCol = band.GetComponent<Collider>();
-            if (bandCol != null) Destroy(bandCol);
 
             // Основной коллайдер и логика
             CapsuleCollider capsule = barrel.AddComponent<CapsuleCollider>();
@@ -812,11 +815,7 @@ namespace RogueDrive.Gameplay
             capsule.radius = 0.45f;
             capsule.height = 1.2f;
 
-            Collider bodyCol = body.GetComponent<Collider>();
-            if (bodyCol != null) Destroy(bodyCol);
-
             barrel.AddComponent<ExplosiveBarrel>();
-
             barrel.SetActive(false);
             return barrel;
         }
@@ -826,29 +825,60 @@ namespace RogueDrive.Gameplay
             GameObject crate = new GameObject("SupplyCrate_Prefab");
             crate.transform.SetParent(transform, false);
 
-            GameObject body = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            body.name = "CrateBody";
-            body.transform.SetParent(crate.transform, false);
-            body.transform.localPosition = new Vector3(0f, 0.6f, 0f);
-            body.transform.localScale = new Vector3(1.2f, 1.2f, 1.2f);
-
-            Renderer r = body.GetComponent<Renderer>();
-            if (r != null)
+            GameObject palletPrefab = null;
+#if UNITY_EDITOR
+            palletPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/GarageAssetPack/Prefabs/WoodenPallet.prefab");
+#endif
+            if (palletPrefab != null)
             {
-                Material m = new Material(Shader.Find("Standard"));
-                m.color = new Color(0.62f, 0.44f, 0.26f); // Древесно-коричневый
-                r.sharedMaterial = m;
+                GameObject pallet = Instantiate(palletPrefab, crate.transform);
+                pallet.name = "PalletVisual3D";
+                pallet.transform.localPosition = Vector3.zero;
+                pallet.transform.localScale = Vector3.one * 0.9f;
+                Collider[] pCols = pallet.GetComponentsInChildren<Collider>(true);
+                for (int i = 0; i < pCols.Length; i++) Destroy(pCols[i]);
+
+                // Стильный деревянный ящик припасов поверх поддона
+                GameObject body = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                body.name = "CrateBody";
+                body.transform.SetParent(crate.transform, false);
+                body.transform.localPosition = new Vector3(0f, 0.45f, 0f);
+                body.transform.localScale = new Vector3(0.95f, 0.65f, 0.95f);
+
+                Renderer r = body.GetComponent<Renderer>();
+                if (r != null)
+                {
+                    Material m = new Material(Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard"));
+                    m.color = new Color(0.22f, 0.58f, 0.32f); // Военно-зеленый ящик припасов
+                    r.sharedMaterial = m;
+                }
+                Collider bodyCol = body.GetComponent<Collider>();
+                if (bodyCol != null) Destroy(bodyCol);
+            }
+            else
+            {
+                GameObject body = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                body.name = "CrateBody";
+                body.transform.SetParent(crate.transform, false);
+                body.transform.localPosition = new Vector3(0f, 0.6f, 0f);
+                body.transform.localScale = new Vector3(1.2f, 1.2f, 1.2f);
+
+                Renderer r = body.GetComponent<Renderer>();
+                if (r != null)
+                {
+                    Material m = new Material(Shader.Find("Standard"));
+                    m.color = new Color(0.62f, 0.44f, 0.26f);
+                    r.sharedMaterial = m;
+                }
+                Collider bodyCol = body.GetComponent<Collider>();
+                if (bodyCol != null) Destroy(bodyCol);
             }
 
             BoxCollider box = crate.AddComponent<BoxCollider>();
-            box.center = new Vector3(0f, 0.6f, 0f);
-            box.size = new Vector3(1.2f, 1.2f, 1.2f);
-
-            Collider bodyCol = body.GetComponent<Collider>();
-            if (bodyCol != null) Destroy(bodyCol);
+            box.center = new Vector3(0f, 0.5f, 0f);
+            box.size = new Vector3(1.1f, 1.0f, 1.1f);
 
             crate.AddComponent<SupplyCrate>();
-
             crate.SetActive(false);
             return crate;
         }

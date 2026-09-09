@@ -8,11 +8,24 @@ using UnityEngine.SceneManagement;
 
 namespace RogueDrive.EditorTools
 {
+    [InitializeOnLoad]
     public static class GarageSceneBuilder
     {
         const string ScenePath = "Assets/Scenes/GarageScene.unity";
         const string PrototypeScenePath = "Assets/Scenes/RogueDrivePrototype.unity";
         const string CatalogPath = "Assets/Content/GarageCatalog.asset";
+
+        static GarageSceneBuilder()
+        {
+            EditorApplication.delayCall += () =>
+            {
+                if (!SessionState.GetBool("GarageScene3DDecorated", false))
+                {
+                    SessionState.SetBool("GarageScene3DDecorated", true);
+                    CreateGarageScene();
+                }
+            };
+        }
 
         [MenuItem("RogueDrive/Создать сцену Гаража")]
         public static void CreateGarageScene()
@@ -55,6 +68,27 @@ namespace RogueDrive.EditorTools
             CreatePrimitive(PrimitiveType.Cube, "Pillar_L", new Vector3(-8f, 5f, 8f), new Vector3(1f, 10f, 1f), new Color(0.2f, 0.22f, 0.26f), garageEnv.transform);
             CreatePrimitive(PrimitiveType.Cube, "Pillar_R", new Vector3(8f, 5f, 8f), new Vector3(1f, 10f, 1f), new Color(0.2f, 0.22f, 0.26f), garageEnv.transform);
 
+            // Реалистичные 3D-декорации мастерской из GarageAssetPack
+            Transform propsRoot = new GameObject("WorkshopProps").transform;
+            propsRoot.SetParent(garageEnv.transform, false);
+
+            // Левая зона: рабочий верстак с инструментами, урна и стопка колес
+            SpawnProp("Assets/GarageAssetPack/Prefabs/WorkbenchFull.prefab", new Vector3(-4.8f, 0f, 3.2f), Quaternion.Euler(0f, 40f, 0f), Vector3.one * 1.15f, propsRoot);
+            SpawnProp("Assets/GarageAssetPack/Prefabs/TrashCan.prefab", new Vector3(-3.2f, 0f, 4.4f), Quaternion.Euler(0f, 15f, 0f), Vector3.one * 1.1f, propsRoot);
+            SpawnProp("Assets/GarageAssetPack/Prefabs/CarWheel.prefab", new Vector3(-4.6f, 0f, 1.8f), Quaternion.Euler(0f, 10f, 0f), Vector3.one * 1.1f, propsRoot);
+
+            // Правая зона: складской стеллаж с запчастями, поддон с бочкой, канистра и аккумулятор
+            SpawnProp("Assets/GarageAssetPack/Prefabs/StorageShelfFull.prefab", new Vector3(4.8f, 0f, 3.2f), Quaternion.Euler(0f, -40f, 0f), Vector3.one * 1.15f, propsRoot);
+            SpawnProp("Assets/GarageAssetPack/Prefabs/WoodenPallet.prefab", new Vector3(4.2f, 0f, 1.4f), Quaternion.Euler(0f, -15f, 0f), Vector3.one * 1.1f, propsRoot);
+            SpawnProp("Assets/GarageAssetPack/Prefabs/Barrelfbx.prefab", new Vector3(4.1f, 0.15f, 1.4f), Quaternion.identity, Vector3.one * 1.1f, propsRoot);
+            SpawnProp("Assets/GarageAssetPack/Prefabs/JerrycanLarge.prefab", new Vector3(3.3f, 0f, 1.2f), Quaternion.Euler(0f, 25f, 0f), Vector3.one * 1.1f, propsRoot);
+            SpawnProp("Assets/GarageAssetPack/Prefabs/CarBattery.prefab", new Vector3(3.2f, 0f, 2.0f), Quaternion.Euler(0f, -10f, 0f), Vector3.one * 1.2f, propsRoot);
+
+            // Задний план: запасные бочки вдоль стены
+            SpawnProp("Assets/GarageAssetPack/Prefabs/Barrelfbx.prefab", new Vector3(-7f, 0f, 7.8f), Quaternion.identity, Vector3.one * 1.15f, propsRoot);
+            SpawnProp("Assets/GarageAssetPack/Prefabs/Barrelfbx.prefab", new Vector3(-6.2f, 0f, 8.2f), Quaternion.identity, Vector3.one * 1.15f, propsRoot);
+            SpawnProp("Assets/GarageAssetPack/Prefabs/Barrelfbx.prefab", new Vector3(6.8f, 0f, 8.0f), Quaternion.identity, Vector3.one * 1.15f, propsRoot);
+
             // 3. Круглый вращающийся подиум
             GameObject podiumBase = CreatePrimitive(PrimitiveType.Cylinder, "PodiumBase", new Vector3(0f, 0.1f, 0f), new Vector3(6.5f, 0.2f, 6.5f), new Color(0.18f, 0.2f, 0.25f), garageEnv.transform);
 
@@ -74,6 +108,7 @@ namespace RogueDrive.EditorTools
             cam.clearFlags = CameraClearFlags.SolidColor;
             cam.backgroundColor = new Color(0.06f, 0.07f, 0.1f);
             cam.fieldOfView = 50f;
+            camObj.AddComponent<AudioListener>();
 
             // 5. Контроллер UI Гаража
             GameObject managerObj = new GameObject("GarageManager");
@@ -120,6 +155,18 @@ namespace RogueDrive.EditorTools
             }
 
             return go;
+        }
+
+        static GameObject SpawnProp(string prefabPath, Vector3 pos, Quaternion rot, Vector3 scale, Transform parent)
+        {
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+            if (prefab == null) return null;
+            GameObject instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+            instance.transform.position = pos;
+            instance.transform.rotation = rot;
+            instance.transform.localScale = scale;
+            if (parent != null) instance.transform.SetParent(parent, true);
+            return instance;
         }
     }
 }
