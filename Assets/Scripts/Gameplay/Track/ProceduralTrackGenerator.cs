@@ -138,7 +138,11 @@ namespace RogueDrive.Gameplay
                 TrackChunk furthestChunk = activeChunks[activeChunks.Count - 1];
                 float distToFurthest = Vector3.Distance(targetCar.position, furthestChunk.transform.position);
 
-                if (distToFurthest < activeChunksAhead * 85f)
+                int stageBiome = GetCurrentStageBiomeIndex();
+                bool isStageMode = stageBiome >= 0;
+                bool hasReachedStageEnd = isStageMode && totalDistanceGenerated >= 3200f;
+
+                if (!hasReachedStageEnd && distToFurthest < activeChunksAhead * 85f)
                 {
                     SpawnNextChunk(false);
                 }
@@ -247,8 +251,22 @@ namespace RogueDrive.Gameplay
             }
         }
 
+        public int GetCurrentStageBiomeIndex()
+        {
+            string sceneName = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+            if (sceneName.Contains("Stage1") || sceneName.Contains("Outskirts")) return 0;
+            if (sceneName.Contains("Stage2") || sceneName.Contains("Wasteland")) return 1;
+            if (sceneName.Contains("Stage3") || sceneName.Contains("Industrial")) return 2;
+            if (sceneName.Contains("Stage4") || sceneName.Contains("Citadel")) return 3;
+            return -1;
+        }
+
         int GetBiomeIndex(float distance)
         {
+            int stageBiome = GetCurrentStageBiomeIndex();
+            if (stageBiome >= 0 && stageBiome < biomes.Length)
+                return stageBiome;
+
             for (int i = 0; i < biomes.Length; i++)
             {
                 if (distance >= biomes[i].startDistance && distance < biomes[i].endDistance)
@@ -321,6 +339,7 @@ namespace RogueDrive.Gameplay
             totalDistanceGenerated += newChunk.Length;
 
             CheckSectorCheckpointSpawn(newChunk);
+            CheckStageOutpostSpawn(newChunk);
             CheckBossSpawn(newChunk);
         }
 
@@ -448,12 +467,37 @@ namespace RogueDrive.Gameplay
             }
         }
 
+        bool stageOutpostSpawned = false;
+
+        void CheckStageOutpostSpawn(TrackChunk chunk)
+        {
+            if (stageOutpostSpawned) return;
+
+            int stageBiome = GetCurrentStageBiomeIndex();
+            // На этапах 1, 2, 3 финишная база спавнится на 2900-3000м
+            if (stageBiome >= 0 && stageBiome < 3 && totalDistanceGenerated >= 2900f)
+            {
+                stageOutpostSpawned = true;
+                int stageNum = stageBiome + 1;
+                GameObject outpostObj = new GameObject($"Finish_Outpost_Stage_{stageNum}");
+                outpostObj.transform.position = chunk.transform.position + chunk.transform.forward * 20f;
+                outpostObj.transform.rotation = chunk.transform.rotation;
+                outpostObj.transform.SetParent(chunk.transform);
+                var outpost = outpostObj.AddComponent<StageFinishOutpost>();
+                string[] outpostNames = { "Форпост эвакуации №1", "Бункер выживших и нефтебаза", "Грузовой бастион" };
+                outpost.Configure(stageNum, outpostNames[Mathf.Clamp(stageNum - 1, 0, outpostNames.Length - 1)]);
+            }
+        }
+
         void CheckBossSpawn(TrackChunk chunk)
         {
             if (bossSpawned) return;
 
-            // Босс спавнится в Секторе 4 на дистанции от 3800м
-            if (totalDistanceGenerated >= 3800f)
+            int stageBiome = GetCurrentStageBiomeIndex();
+            // В Stage 4 босс спавнится на 2900-3000м, а в Endless/Prototype на 3800м
+            float requiredDistance = (stageBiome == 3) ? 2900f : 3800f;
+
+            if (totalDistanceGenerated >= requiredDistance)
             {
                 bossSpawned = true;
                 Vector3 bossSpawnPos = chunk.transform.position + chunk.transform.forward * 32f;

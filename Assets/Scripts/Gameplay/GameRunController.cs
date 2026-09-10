@@ -243,6 +243,20 @@ namespace RogueDrive.Gameplay
         }
 
         public bool IsCampaignVictory { get; private set; }
+        public bool IsStageVictory { get; private set; }
+        public int CurrentStageIndex { get; private set; } = 1;
+        public float StageTargetDistance => 3000f;
+
+        public void ReportStageCompleted(int stageIndex)
+        {
+            if (IsGameOver || IsStageVictory)
+                return;
+
+            IsStageVictory = true;
+            CurrentStageIndex = stageIndex;
+            AddCoins(50);
+            EndRun($"Этап {stageIndex} пройден!");
+        }
 
         public void ReportBossDefeated()
         {
@@ -250,6 +264,8 @@ namespace RogueDrive.Gameplay
                 return;
 
             IsCampaignVictory = true;
+            IsStageVictory = true;
+            CurrentStageIndex = 4;
             EndRun("Кампания завершена");
         }
 
@@ -260,20 +276,34 @@ namespace RogueDrive.Gameplay
             Fuel = startingFuel;
             Nitro = startingNitro;
 
-            int startSector = CampaignMapModal.SelectedStartSector;
-            if (startSector >= 2 && startSector <= 4)
+            string sceneName = SceneManager.GetActiveScene().name;
+            if (sceneName.StartsWith("Stage"))
             {
-                Distance = (startSector - 1) * 1000f;
+                if (sceneName.Contains("1")) CurrentStageIndex = 1;
+                else if (sceneName.Contains("2")) CurrentStageIndex = 2;
+                else if (sceneName.Contains("3")) CurrentStageIndex = 3;
+                else if (sceneName.Contains("4")) CurrentStageIndex = 4;
+                Distance = 0f;
             }
             else
             {
-                Distance = 0f;
+                int startSector = CampaignMapModal.SelectedStartSector;
+                CurrentStageIndex = Mathf.Clamp(startSector, 1, 4);
+                if (startSector >= 2 && startSector <= 4)
+                {
+                    Distance = (startSector - 1) * 1000f;
+                }
+                else
+                {
+                    Distance = 0f;
+                }
             }
 
             CoinsCollected = 0;
             IsGameOver = false;
             IsOutOfFuel = false;
             IsCampaignVictory = false;
+            IsStageVictory = false;
             EndReason = string.Empty;
         }
 
@@ -295,7 +325,7 @@ namespace RogueDrive.Gameplay
                     {
                         meta.AddCoins(CoinsCollected);
                     }
-                    int sectorIdx = Mathf.Clamp(Mathf.FloorToInt(Distance / 1000f) + 1, 1, 4);
+                    int sectorIdx = IsStageVictory ? (CurrentStageIndex + 1) : Mathf.Clamp(Mathf.FloorToInt(Distance / 1000f) + 1, 1, 4);
                     if (IsCampaignVictory) sectorIdx = 5;
                     meta.RegisterRunResult(sectorIdx, Distance);
                     RogueDrive.Meta.SaveService.SaveActive();

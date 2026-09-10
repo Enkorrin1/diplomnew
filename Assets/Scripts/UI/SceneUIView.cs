@@ -81,8 +81,26 @@ namespace RogueDrive.UI
             if (run != null)
             {
                 Fill(healthBar, run.Health, run.MaxHealth); Fill(fuelBar, run.Fuel, run.MaxFuel); Fill(nitroBar, run.Nitro, run.MaxNitro);
-                if (hudText != null) hudText.text = $"HP {run.Health:0}/{run.MaxHealth:0}    ТОПЛИВО {run.Fuel:0}/{run.MaxFuel:0}    НИТРО {run.Nitro:0}\n{run.Distance:0} м     +{run.CoinsCollected} монет     {(car != null ? car.SpeedKmh : 0):0} км/ч\n{(hud != null ? hud.BiomeTitle : "")}" + (run.IsOutOfFuel ? "\nБак пуст — движение по инерции" : "");
-                if (resultText != null) resultText.text = (run.IsCampaignVictory ? "КАМПАНИЯ ЗАВЕРШЕНА" : "ЗАЕЗД ЗАВЕРШЁН") + $"\n\n{run.EndReason}\nДистанция: {run.Distance:0} м\nЗаработано: {run.CoinsCollected} монет\nБаланс: {progress?.Coins ?? 0}";
+                float targetDist = run.StageTargetDistance;
+                float stageProgress = Mathf.Clamp01(run.Distance / targetDist);
+                string stageTitle = $"ЭТАП {run.CurrentStageIndex}: {run.Distance:0} / {targetDist:0} м ({stageProgress * 100:0}%)";
+                if (hudText != null) hudText.text = $"{stageTitle}\nHP {run.Health:0}/{run.MaxHealth:0}    ТОПЛИВО {run.Fuel:0}/{run.MaxFuel:0}    НИТРО {run.Nitro:0}%\n+{run.CoinsCollected} монет     {(car != null ? car.SpeedKmh : 0):0} км/ч" + (run.IsOutOfFuel ? "\nБак пуст — движение по инерции" : "");
+
+                if (resultText != null)
+                {
+                    if (run.IsStageVictory)
+                    {
+                        string nextInfo = run.CurrentStageIndex < 4
+                            ? $"\n\n★ ОТКРЫТ ЭТАП {run.CurrentStageIndex + 1} И НОВЫЙ АВТОМОБИЛЬ В ГАРАЖЕ! ★"
+                            : "\n\n★ ВСЯ КАМПАНИЯ ПРОЙДЕНА! ОТКРЫТ РЕЖИМ ENDLESS! ★";
+                        resultText.text = $"🏆 ЭТАП {run.CurrentStageIndex} ПРОЙДЕН!\n\n{run.EndReason}\nДистанция: {run.Distance:0} м\nЗаработано за этап: +{run.CoinsCollected} монет\nБаланс: {progress?.Coins ?? 0}{nextInfo}";
+                    }
+                    else
+                    {
+                        float pct = Mathf.Clamp01(run.Distance / run.StageTargetDistance) * 100f;
+                        resultText.text = $"ЗАЕЗД ЗАВЕРШЁН\n\n{run.EndReason}\nПройдено: {run.Distance:0} м из {run.StageTargetDistance:0} м ({pct:0}%)\nЗаработано: +{run.CoinsCollected} монет\nБаланс: {progress?.Coins ?? 0}";
+                    }
+                }
             }
             if (bannerText != null) bannerText.text = hud != null ? hud.Banner : "";
             if (comboText != null) comboText.text = combo != null ? combo.Banner : "";
@@ -125,7 +143,7 @@ namespace RogueDrive.UI
         {
             switch (action)
             {
-                case 0: Time.timeScale = 1f; if (garage != null) garage.StartRun(); else SceneTransitionManager.SwitchScene("RogueDrivePrototype"); break;
+                case 0: Time.timeScale = 1f; if (garage != null) garage.StartRun(); else LoadStage(CampaignMapModal.SelectedStartSector); break;
                 case 1: Time.timeScale = 1f; SceneTransitionManager.SwitchScene("GarageScene"); break;
                 case 2: settingsOpen = true; LoadSettings(); break;
                 case 3: aboutOpen = true; break;
@@ -144,15 +162,48 @@ namespace RogueDrive.UI
                 case 10: pause?.ResumeGame(); break;
                 case 11: run?.Restart(); break;
                 case 12: levelUp?.Reroll(); break;
+                case 13: NextStage(); break;
             }
             Refresh();
         }
+
+        public void NextStage()
+        {
+            Time.timeScale = 1f;
+            int nextStage = (run != null ? run.CurrentStageIndex : 1) + 1;
+            if (nextStage > 4) nextStage = 1;
+            CampaignMapModal.SelectedStartSector = nextStage;
+            LoadStage(nextStage);
+        }
+
+        public static void LoadStage(int sector)
+        {
+            Time.timeScale = 1f;
+            string sceneName = sector switch
+            {
+                1 => "Stage1_Outskirts",
+                2 => "Stage2_Wasteland",
+                3 => "Stage3_Industrial",
+                4 => "Stage4_Citadel",
+                _ => "RogueDrivePrototype"
+            };
+
+            if (Application.CanStreamedLevelBeLoaded(sceneName))
+            {
+                SceneTransitionManager.SwitchScene(sceneName);
+            }
+            else
+            {
+                SceneTransitionManager.SwitchScene("RogueDrivePrototype");
+            }
+        }
+
         public void SelectSector(int sector)
         {
             if (sector < 1 || sector > 5 || (sector > 1 && (progress == null || progress.Data.HighestCampaignLevel < sector))) return;
             CampaignMapModal.SelectedStartSector = sector;
             campaignOpen = false; Time.timeScale = 1f;
-            SceneTransitionManager.SwitchScene("RogueDrivePrototype");
+            LoadStage(sector);
         }
         public void SelectOffer(int index) => levelUp?.Choose(index);
         public void LoadSettings()

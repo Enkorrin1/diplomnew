@@ -152,21 +152,8 @@ namespace RogueDrive.Gameplay
         void LaunchSector(int sector)
         {
             Hide();
-
-            // Если мы находимся в гараже, загружаем сцену заезда
-            if (SceneManager.GetActiveScene().name == "GarageScene")
-            {
-                SceneManager.LoadScene(0);
-            }
-            else
-            {
-                // Если мы уже в заезде, перезапускаем с выбранного сектора
-                GameRunController run = FindFirstObjectByType<GameRunController>();
-                if (run != null)
-                {
-                    run.Restart();
-                }
-            }
+            SelectedStartSector = sector;
+            RogueDrive.UI.SceneUIView.LoadStage(sector);
         }
 
         void EnsureStyles()

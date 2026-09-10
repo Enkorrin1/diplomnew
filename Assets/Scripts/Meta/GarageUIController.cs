@@ -464,35 +464,12 @@ namespace RogueDrive.Meta
             }
             SaveService.SaveActive();
 
-            const string runSceneName = "RogueDrivePrototype";
-            const string runScenePath = "Assets/Scenes/RogueDrivePrototype.unity";
-
-            if (Application.CanStreamedLevelBeLoaded(runSceneName))
+            int selectedSector = RogueDrive.Gameplay.CampaignMapModal.SelectedStartSector;
+            if (selectedSector < 1 || selectedSector > 4)
             {
-                SceneManager.LoadScene(runSceneName);
-                return;
+                selectedSector = _meta != null ? Mathf.Clamp(_meta.Data.HighestCampaignLevel, 1, 4) : 1;
             }
-
-            if (Application.CanStreamedLevelBeLoaded(runScenePath))
-            {
-                SceneManager.LoadScene(runScenePath);
-                return;
-            }
-
-#if UNITY_EDITOR
-            try
-            {
-                UnityEditor.SceneManagement.EditorSceneManager.LoadSceneInPlayMode(
-                    runScenePath,
-                    new LoadSceneParameters(LoadSceneMode.Single));
-                return;
-            }
-            catch (Exception ex)
-            {
-                Debug.LogWarning($"[GarageUIController] Резервная загрузка через EditorSceneManager: {ex.Message}");
-            }
-#endif
-            SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+            RogueDrive.UI.SceneUIView.LoadStage(selectedSector);
         }
 
         void Update3DCarVisual()
