@@ -59,6 +59,8 @@ namespace RogueDrive.Gameplay
         float virtualThrottle;
         float virtualSteer;
         bool virtualNitro;
+        bool virtualHandbrake;
+        bool isHandbrakeActive;
         bool isGrounded;
         float lastGroundedTime;
         Vector3 lastPosition;
@@ -68,6 +70,7 @@ namespace RogueDrive.Gameplay
         public float SteeringAngle => steerInput * 28f;
         public float TopSpeedMps => IsNitroActive ? nitroTopSpeedMps : topSpeedMps;
         public bool IsNitroActive { get; private set; }
+        public bool IsHandbrakeActive => isHandbrakeActive;
         public bool IsGrounded => isGrounded;
         public SocketRegistry Sockets => sockets;
         public GameRunController Run => run;
@@ -78,11 +81,12 @@ namespace RogueDrive.Gameplay
         /// <summary>
         /// Установка сенсорного/виртуального ввода от мобильного интерфейса.
         /// </summary>
-        public void SetVirtualInput(float throttle, float steer, bool nitro)
+        public void SetVirtualInput(float throttle, float steer, bool nitro, bool handbrake = false)
         {
             virtualThrottle = Mathf.Clamp(throttle, -1f, 1f);
             virtualSteer = Mathf.Clamp(steer, -1f, 1f);
             virtualNitro = nitro;
+            virtualHandbrake = handbrake;
         }
 
         public void Configure(GameRunController controller)
@@ -357,7 +361,15 @@ namespace RogueDrive.Gameplay
 
             throttleInput = Mathf.Clamp(v, -1f, 1f);
             steerInput = Mathf.Clamp(h, -1f, 1f);
-            isNitroRequested = Input.GetKey(KeyCode.Space) || Input.GetKey(KeyCode.LeftShift) || virtualNitro;
+            isNitroRequested = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift) || virtualNitro;
+            isHandbrakeActive = Input.GetKey(KeyCode.Space) || virtualHandbrake;
+
+            // Ручной тормоз подавляет газ
+            if (isHandbrakeActive)
+            {
+                throttleInput = 0f;
+                isNitroRequested = false;
+            }
 
             // Обработка расхода нитро
             bool hasFuel = run == null || !run.IsOutOfFuel;
@@ -444,6 +456,17 @@ namespace RogueDrive.Gameplay
             float currentTopSpeed = (IsNitroActive ? nitroTopSpeedMps : topSpeedMps) * speedMult;
             float currentAccel = (IsNitroActive ? nitroAcceleration : acceleration) * Mathf.Max(0.7f, speedMult);
 
+            // Ручной тормоз (Пробел)
+            if (isHandbrakeActive)
+            {
+                if (Mathf.Abs(SpeedMps) > 0.3f)
+                {
+                    float hbForce = brakeForce * 1.6f;
+                    body.AddForce(-transform.forward * (Mathf.Sign(SpeedMps) * hbForce), ForceMode.Acceleration);
+                }
+                return;
+            }
+
             if (throttleInput > 0.05f)
             {
                 if (SpeedMps < currentTopSpeed)
@@ -478,7 +501,8 @@ namespace RogueDrive.Gameplay
                 return;
             float speedRatio = Mathf.Clamp01(Mathf.Abs(SpeedMps) / 5f);
             float speedFactor = speedRatio;
-            float turnAmount = steerInput * steerSpeed * Mathf.Clamp(PlayerPrefs.GetFloat("SteerSensitivity",1f),.5f,2f) * speedFactor * Time.fixedDeltaTime;
+            float handbrakeSteerMultiplier = isHandbrakeActive ? 1.35f : 1.0f;
+            float turnAmount = steerInput * steerSpeed * Mathf.Clamp(PlayerPrefs.GetFloat("SteerSensitivity",1f),.5f,2f) * speedFactor * handbrakeSteerMultiplier * Time.fixedDeltaTime;
 
             // Инвертируем поворот при движении назад
             if (SpeedMps < 0f)
@@ -503,7 +527,9 @@ namespace RogueDrive.Gameplay
         {
             Vector3 right = transform.right;
             float lateralVelocity = Vector3.Dot(body.linearVelocity, right);
-            Vector3 counterForce = -right * (lateralVelocity * currentLateralGrip);
+            // При активном ручном тормозе ослабляем боковое сцепление для эффектного входа в занос
+            float grip = isHandbrakeActive ? (currentLateralGrip * 0.35f) : currentLateralGrip;
+            Vector3 counterForce = -right * (lateralVelocity * grip);
             body.AddForce(counterForce, ForceMode.VelocityChange);
         }
 

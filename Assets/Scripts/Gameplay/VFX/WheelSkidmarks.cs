@@ -88,7 +88,8 @@ namespace RogueDrive.Gameplay.VFX
 
             bool isDrifting = lateralSlip > slipThreshold;
             bool isNitroSkid = car != null && car.IsNitroActive && car.SpeedKmh > 10f;
-            bool shouldEmit = isDrifting || isNitroSkid;
+            bool isHandbrakeSkid = car != null && car.IsHandbrakeActive && Mathf.Abs(car.SpeedMps) > 2.5f;
+            bool shouldEmit = isDrifting || isNitroSkid || isHandbrakeSkid;
 
             for (int i = 0; i < skidTrails.Length; i++)
             {

@@ -296,12 +296,15 @@ namespace RogueDrive.Gameplay.VFX
             float speed = car.SpeedMps;
             float lateralSpeed = Mathf.Abs(Vector3.Dot(body.linearVelocity, transform.right));
 
-            // Дым появляется при боковом скольжении на скорости
-            bool isDrifting = speed > 10f && lateralSpeed > 4.5f;
+            // Дым появляется при боковом скольжении на скорости или при активном ручном тормозе
+            bool isHandbrakeDrift = car != null && car.IsHandbrakeActive && Mathf.Abs(speed) > 4f;
+            bool isDrifting = isHandbrakeDrift || (speed > 10f && lateralSpeed > 4.5f);
 
             if (isDrifting)
             {
-                float driftIntensity = Mathf.Clamp01((lateralSpeed - 4.5f) / 8f);
+                float driftIntensity = isHandbrakeDrift 
+                    ? Mathf.Max(0.6f, Mathf.Clamp01((lateralSpeed - 2.5f) / 6f)) 
+                    : Mathf.Clamp01((lateralSpeed - 4.5f) / 8f);
                 float rate = Mathf.Lerp(8f, 35f, driftIntensity);
 
                 var emRL = driftSmokeRL.emission;
@@ -348,8 +351,8 @@ namespace RogueDrive.Gameplay.VFX
                 if (wheelRR != null) wheelRR.localRotation = rollRot;
             }
 
-            // 3. Индикация стоп-сигналов при торможении
-            bool isBraking = (Input.GetAxis("Vertical") < -0.05f) || (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow));
+            // 3. Индикация стоп-сигналов при торможении или ручном тормозе
+            bool isBraking = (Input.GetAxis("Vertical") < -0.05f) || (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow)) || (car != null && car.IsHandbrakeActive);
             Material curBrakeMat = isBraking ? brakeLightActiveMat : brakeLightIdleMat;
 
             if (brakeLightLeftRenderer != null) brakeLightLeftRenderer.sharedMaterial = curBrakeMat;
