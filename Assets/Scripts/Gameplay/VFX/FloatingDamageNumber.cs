@@ -3,53 +3,94 @@ using UnityEngine;
 namespace RogueDrive.Gameplay.VFX
 {
     /// <summary>
-    /// Всплывающее число урона над врагом.
-    /// Создаётся через статический метод Spawn и автоматически уничтожается.
+    /// Трехмерный элемент сцены: всплывающее число урона над противником.
+    /// Создается как физический объект сцены (GameObject с TextMesh и MeshRenderer),
+    /// не использует устаревший OnGUI, поворачивается лицом к камере (Billboard)
+    /// и плавно поднимается вверх, затухая.
     /// </summary>
+    [RequireComponent(typeof(TextMesh), typeof(MeshRenderer))]
     public sealed class FloatingDamageNumber : MonoBehaviour
     {
-        private float lifetime = 0.85f;
+        private const float Lifetime = 0.85f;
         private float elapsed;
         private Vector3 startPos;
-        private Color color;
-        private float fontSize;
-        private string text;
+        private Color baseColor;
+        private TextMesh textMesh;
         private Camera mainCam;
+        private static Font defaultFont;
 
         /// <summary>
-        /// Создать всплывающее число урона над указанной позицией.
+        /// Создать 3D-число урона как полноценный объект сцены над указанной позицией.
         /// </summary>
         public static void Spawn(Vector3 worldPosition, float damageAmount, bool isBurn = false)
         {
-            if (damageAmount < 0.5f) return; // не показываем микроурон
+            if (damageAmount < 0.5f) return;
 
-            GameObject go = new GameObject("DmgNum");
-            go.transform.position = worldPosition + Vector3.up * 1.8f + Random.insideUnitSphere * 0.3f;
+            GameObject go = new GameObject("DamageNumber_3D");
+            go.transform.position = worldPosition + Vector3.up * 1.6f + Random.insideUnitSphere * 0.25f;
 
             var dn = go.AddComponent<FloatingDamageNumber>();
-            dn.startPos = go.transform.position;
-            dn.text = Mathf.RoundToInt(damageAmount).ToString();
+            dn.Setup(Mathf.RoundToInt(damageAmount), isBurn, damageAmount >= 50f);
+        }
 
-            // Цвет в зависимости от типа урона
+        private void Setup(int damage, bool isBurn, bool isCritical)
+        {
+            if (defaultFont == null)
+            {
+                defaultFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+                if (defaultFont == null)
+                {
+                    defaultFont = Resources.GetBuiltinResource<Font>("Arial.ttf");
+                }
+            }
+
+            textMesh = GetComponent<TextMesh>();
+            if (defaultFont != null)
+            {
+                textMesh.font = defaultFont;
+                var mr = GetComponent<MeshRenderer>();
+                if (mr != null && defaultFont.material != null)
+                {
+                    mr.sharedMaterial = defaultFont.material;
+                }
+            }
+
+            textMesh.text = damage.ToString();
+            textMesh.alignment = TextAlignment.Center;
+            textMesh.anchor = TextAnchor.MiddleCenter;
+
             if (isBurn)
             {
-                dn.color = new Color(1f, 0.5f, 0.1f); // оранжевый для горения
-                dn.fontSize = 28;
+                baseColor = new Color(1f, 0.55f, 0.1f, 1f); // Оранжевый
+                textMesh.fontSize = 54;
+                textMesh.characterSize = 0.045f;
             }
-            else if (damageAmount >= 50f)
+            else if (isCritical)
             {
-                dn.color = new Color(1f, 0.95f, 0.2f); // жёлтый для критического
-                dn.fontSize = 38;
+                baseColor = new Color(1f, 0.95f, 0.15f, 1f); // Золотой крит
+                textMesh.fontSize = 68;
+                textMesh.characterSize = 0.06f;
             }
-            else if (damageAmount >= 25f)
+            else if (damage >= 25)
             {
-                dn.color = Color.white;
-                dn.fontSize = 32;
+                baseColor = Color.white;
+                textMesh.fontSize = 56;
+                textMesh.characterSize = 0.048f;
             }
             else
             {
-                dn.color = new Color(0.9f, 0.9f, 0.9f);
-                dn.fontSize = 26;
+                baseColor = new Color(0.9f, 0.9f, 0.92f, 1f);
+                textMesh.fontSize = 46;
+                textMesh.characterSize = 0.04f;
+            }
+
+            textMesh.color = baseColor;
+            startPos = transform.position;
+            mainCam = Camera.main;
+
+            if (mainCam != null)
+            {
+                transform.rotation = mainCam.transform.rotation;
             }
         }
 
@@ -61,68 +102,35 @@ namespace RogueDrive.Gameplay.VFX
         private void Update()
         {
             elapsed += Time.deltaTime;
-            if (elapsed >= lifetime)
+            if (elapsed >= Lifetime)
             {
                 Destroy(gameObject);
                 return;
             }
 
-            float t = elapsed / lifetime;
+            float t = elapsed / Lifetime;
 
-            // Подъём вверх с замедлением
-            float rise = Mathf.Lerp(0f, 2.2f, 1f - (1f - t) * (1f - t));
+            // Движение вверх с плавным замедлением (ease-out)
+            float rise = Mathf.Lerp(0f, 1.8f, 1f - Mathf.Pow(1f - t, 2f));
             transform.position = startPos + Vector3.up * rise;
 
-            // Биллбординг — всегда лицом к камере
+            // Поворот лицом к камере
+            if (mainCam == null) mainCam = Camera.main;
             if (mainCam != null)
             {
                 transform.rotation = mainCam.transform.rotation;
             }
-        }
 
-        private GUIStyle style;
-
-        private void OnGUI()
-        {
-            if (mainCam == null) return;
-
-            float t = elapsed / lifetime;
-            float alpha = t < 0.6f ? 1f : Mathf.Lerp(1f, 0f, (t - 0.6f) / 0.4f);
-
-            Vector3 screenPos = mainCam.WorldToScreenPoint(transform.position);
-            if (screenPos.z < 0f) return; // за камерой
-
-            // Unity GUI: Y инвертирован
-            float guiY = Screen.height - screenPos.y;
-
-            if (style == null)
+            // Плавное угасание прозрачности к концу жизни
+            float alpha = t < 0.5f ? 1f : Mathf.Lerp(1f, 0f, (t - 0.5f) / 0.5f);
+            if (textMesh != null)
             {
-                style = new GUIStyle(GUI.skin.label)
-                {
-                    alignment = TextAnchor.MiddleCenter,
-                    fontStyle = FontStyle.Bold
-                };
+                textMesh.color = new Color(baseColor.r, baseColor.g, baseColor.b, alpha);
             }
 
-            // Масштаб на входе (pop-in)
-            float scale = t < 0.1f ? Mathf.Lerp(1.5f, 1f, t / 0.1f) : 1f;
-            int fs = Mathf.RoundToInt(fontSize * scale);
-            style.fontSize = fs;
-
-            // Тень
-            float sw = 160f;
-            float sh = 40f;
-            Rect shadowRect = new Rect(screenPos.x - sw / 2f + 1.5f, guiY - sh / 2f + 1.5f, sw, sh);
-            Color prevColor = GUI.color;
-            GUI.color = new Color(0f, 0f, 0f, alpha * 0.7f);
-            GUI.Label(shadowRect, text, style);
-
-            // Основной текст
-            Rect mainRect = new Rect(screenPos.x - sw / 2f, guiY - sh / 2f, sw, sh);
-            GUI.color = new Color(color.r, color.g, color.b, alpha);
-            GUI.Label(mainRect, text, style);
-
-            GUI.color = prevColor;
+            // Легкая пульсация масштаба на старте (pop-in)
+            float scale = t < 0.12f ? Mathf.Lerp(1.4f, 1f, t / 0.12f) : 1f;
+            transform.localScale = Vector3.one * scale;
         }
     }
 }

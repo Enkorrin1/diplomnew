@@ -17,7 +17,7 @@ namespace RogueDrive.UI
 
         [Header("References")]
         [SerializeField] private GameRunController run;
-        [SerializeField] private bool useSceneUI;
+        [SerializeField] private bool useSceneUI = true;
 
         private bool isPaused = false;
         private bool showSettings = false;
@@ -47,6 +47,7 @@ namespace RogueDrive.UI
         private void Awake()
         {
             Instance = this;
+            useSceneUI = true;
             if (run == null) run = FindFirstObjectByType<GameRunController>();
 
             masterVolume = PlayerPrefs.GetFloat("MasterVolume", 0.85f);

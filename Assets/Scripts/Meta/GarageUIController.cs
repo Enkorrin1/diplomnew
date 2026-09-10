@@ -19,7 +19,7 @@ namespace RogueDrive.Meta
     {
         [Header("Каталог и данные")]
         [SerializeField] private GarageCatalog catalog;
-        [SerializeField] private bool useSceneUI;
+        [SerializeField] private bool useSceneUI = true;
         [SerializeField] private GameObject[] showcaseModels;
         public GarageCatalog Catalog => catalog;
         public MetaProgress Progress => _meta;
@@ -88,6 +88,7 @@ namespace RogueDrive.Meta
 
         private void Awake()
         {
+            useSceneUI = true;
             if (catalog == null)
             {
                 catalog = Resources.Load<GarageCatalog>("GarageCatalog");

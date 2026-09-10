@@ -14,7 +14,7 @@ namespace RogueDrive.Gameplay.Combat
     public sealed class ComboScoreSystem : MonoBehaviour
     {
         public static ComboScoreSystem Instance { get; private set; }
-        [SerializeField] private bool useSceneUI;
+        [SerializeField] private bool useSceneUI = true;
         public string Banner => bannerTimer > 0f ? activeBannerText : string.Empty;
 
         [Header("References")]
@@ -43,6 +43,7 @@ namespace RogueDrive.Gameplay.Combat
         private void Awake()
         {
             Instance = this;
+            useSceneUI = true;
             if (run == null) run = FindFirstObjectByType<GameRunController>();
             if (car == null) car = FindFirstObjectByType<ArcadeCarController>();
         }

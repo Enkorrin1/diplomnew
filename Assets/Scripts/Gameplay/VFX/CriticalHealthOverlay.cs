@@ -1,10 +1,12 @@
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace RogueDrive.Gameplay.VFX
 {
     /// <summary>
-    /// Красная пульсирующая виньетка по краям экрана при низком HP.
-    /// Чем ниже здоровье — тем интенсивнее и чаще пульсация.
+    /// Элемент интерфейса сцены (UI Canvas Image), сигнализирующий о критическом уровне здоровья.
+    /// Является полноценным объектом иерархии сцены (дочерним для UI_Canvas),
+    /// не использует OnGUI. При падении здоровья ниже 25% плавно пульсирует красным свечением по краям экрана.
     /// </summary>
     public sealed class CriticalHealthOverlay : MonoBehaviour
     {
@@ -12,18 +14,72 @@ namespace RogueDrive.Gameplay.VFX
         [SerializeField, Range(0f, 0.2f)] private float dangerThreshold = 0.10f;
 
         private GameRunController run;
-        private Texture2D whiteTex;
+        private GameObject vignetteObject;
+        private Image vignetteImage;
+        private Texture2D vignetteTexture;
 
-        private void Awake()
+        private void Start()
         {
             run = FindFirstObjectByType<GameRunController>();
-
-            whiteTex = new Texture2D(1, 1);
-            whiteTex.SetPixel(0, 0, Color.white);
-            whiteTex.Apply();
+            CreateSceneUIElement();
         }
 
-        private void OnGUI()
+        private void CreateSceneUIElement()
+        {
+            if (vignetteObject != null) return;
+
+            // Ищем Canvas в сцене (например, UI_Canvas)
+            Canvas canvas = FindFirstObjectByType<Canvas>();
+            if (canvas == null)
+            {
+                // Если Canvas не найден, создаем временный
+                GameObject cObj = new GameObject("UI_Canvas_VFX", typeof(Canvas), typeof(CanvasScaler));
+                canvas = cObj.GetComponent<Canvas>();
+                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            }
+
+            vignetteObject = new GameObject("UI_CriticalHealth_Vignette", typeof(RectTransform), typeof(Image));
+            vignetteObject.transform.SetParent(canvas.transform, false);
+
+            RectTransform rt = vignetteObject.GetComponent<RectTransform>();
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = Vector2.zero;
+
+            vignetteImage = vignetteObject.GetComponent<Image>();
+            vignetteImage.raycastTarget = false;
+
+            // Генерируем процедурную мягкую текстуру виньетки
+            GenerateVignetteTexture();
+            vignetteImage.sprite = Sprite.Create(vignetteTexture, new Rect(0, 0, vignetteTexture.width, vignetteTexture.height), new Vector2(0.5f, 0.5f));
+            vignetteImage.color = new Color(0.85f, 0.05f, 0.02f, 0f);
+
+            vignetteObject.SetActive(false);
+        }
+
+        private void GenerateVignetteTexture()
+        {
+            const int size = 64;
+            vignetteTexture = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            vignetteTexture.wrapMode = TextureWrapMode.Clamp;
+
+            for (int y = 0; y < size; y++)
+            {
+                float ny = (float)y / (size - 1) * 2f - 1f;
+                for (int x = 0; x < size; x++)
+                {
+                    float nx = (float)x / (size - 1) * 2f - 1f;
+                    float dist = Mathf.Sqrt(nx * nx + ny * ny);
+                    // Прозрачный центр, мягкое нарастание к краям
+                    float alpha = Mathf.Clamp01(Mathf.Pow(dist, 2.5f));
+                    vignetteTexture.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
+                }
+            }
+            vignetteTexture.Apply();
+        }
+
+        private void Update()
         {
             if (run == null)
             {
@@ -31,66 +87,60 @@ namespace RogueDrive.Gameplay.VFX
                 if (run == null) return;
             }
 
-            if (run.IsGameOver) return;
+            if (vignetteObject == null)
+            {
+                CreateSceneUIElement();
+                if (vignetteObject == null) return;
+            }
+
+            if (run.IsGameOver)
+            {
+                if (vignetteObject.activeSelf) vignetteObject.SetActive(false);
+                return;
+            }
 
             float hpPercent = run.MaxHealth > 0f ? run.Health / run.MaxHealth : 1f;
-            if (hpPercent > criticalThreshold) return;
+            if (hpPercent > criticalThreshold)
+            {
+                if (vignetteObject.activeSelf) vignetteObject.SetActive(false);
+                return;
+            }
 
-            // Определяем интенсивность и частоту пульсации
+            if (!vignetteObject.activeSelf) vignetteObject.SetActive(true);
+
             float intensity;
             float pulseFreq;
 
             if (hpPercent <= dangerThreshold)
             {
-                // Экстремально низкий HP — сильная и быстрая пульсация
-                intensity = Mathf.Lerp(0.45f, 0.6f, 1f - hpPercent / dangerThreshold);
-                pulseFreq = 4f;
+                intensity = Mathf.Lerp(0.55f, 0.85f, 1f - hpPercent / dangerThreshold);
+                pulseFreq = 4.2f;
             }
             else
             {
-                // Критический HP — умеренная пульсация
-                intensity = Mathf.Lerp(0.1f, 0.35f, 1f - (hpPercent - dangerThreshold) / (criticalThreshold - dangerThreshold));
-                pulseFreq = 2f;
+                intensity = Mathf.Lerp(0.2f, 0.45f, 1f - (hpPercent - dangerThreshold) / (criticalThreshold - dangerThreshold));
+                pulseFreq = 2.2f;
             }
 
-            // Пульсация через синусоиду
             float pulse = Mathf.Abs(Mathf.Sin(Time.unscaledTime * pulseFreq * Mathf.PI));
             float alpha = intensity * pulse;
 
-            if (alpha < 0.01f) return;
-
-            float sw = Screen.width;
-            float sh = Screen.height;
-            float borderX = sw * 0.15f;
-            float borderY = sh * 0.15f;
-
-            Color vigColor = new Color(0.8f, 0.05f, 0.02f, alpha);
-            Color prevColor = GUI.color;
-            GUI.color = vigColor;
-
-            // Рисуем красные полосы по краям экрана (имитация виньетки)
-            // Top
-            GUI.DrawTexture(new Rect(0, 0, sw, borderY), whiteTex);
-            // Bottom
-            GUI.DrawTexture(new Rect(0, sh - borderY, sw, borderY), whiteTex);
-            // Left
-            GUI.DrawTexture(new Rect(0, 0, borderX, sh), whiteTex);
-            // Right
-            GUI.DrawTexture(new Rect(sw - borderX, 0, borderX, sh), whiteTex);
-
-            // Дополнительный пульсирующий слой в углах (более насыщенный)
-            if (hpPercent <= dangerThreshold)
+            if (vignetteImage != null)
             {
-                float cornerAlpha = alpha * 0.5f;
-                GUI.color = new Color(1f, 0f, 0f, cornerAlpha);
-                float cornerSize = Mathf.Min(sw, sh) * 0.1f;
-                GUI.DrawTexture(new Rect(0, 0, cornerSize, cornerSize), whiteTex);
-                GUI.DrawTexture(new Rect(sw - cornerSize, 0, cornerSize, cornerSize), whiteTex);
-                GUI.DrawTexture(new Rect(0, sh - cornerSize, cornerSize, cornerSize), whiteTex);
-                GUI.DrawTexture(new Rect(sw - cornerSize, sh - cornerSize, cornerSize, cornerSize), whiteTex);
+                vignetteImage.color = new Color(0.9f, 0.04f, 0.02f, alpha);
             }
+        }
 
-            GUI.color = prevColor;
+        private void OnDestroy()
+        {
+            if (vignetteObject != null)
+            {
+                Destroy(vignetteObject);
+            }
+            if (vignetteTexture != null)
+            {
+                Destroy(vignetteTexture);
+            }
         }
     }
 }

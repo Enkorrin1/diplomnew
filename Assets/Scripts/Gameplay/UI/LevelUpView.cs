@@ -36,7 +36,7 @@ namespace RogueDrive.Gameplay
         Texture2D synergyCardBgTex;
 
         public bool IsVisible => isVisible;
-        [SerializeField] private bool useSceneUI;
+        [SerializeField] private bool useSceneUI = true;
         public IReadOnlyList<ModifierDefinition> Offers => currentOffers;
         public int RemainingRerolls => remainingRerolls;
         public int OfferLevel(int index) => currentOffers != null && index < currentOffers.Count && currentBuild != null ? currentBuild.GetLevel(currentOffers[index].Id) : 0;
@@ -55,6 +55,7 @@ namespace RogueDrive.Gameplay
         private void Awake()
         {
             Instance = this;
+            useSceneUI = true;
         }
 
         private void OnDestroy()

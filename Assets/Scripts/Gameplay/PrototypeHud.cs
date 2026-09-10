@@ -9,7 +9,7 @@ namespace RogueDrive.Gameplay
 
         [SerializeField] private GameRunController run;
         [SerializeField] private ArcadeCarController car;
-        [SerializeField] private bool useSceneUI;
+        [SerializeField] private bool useSceneUI = true;
         public string BiomeTitle => currentBiomeTitle;
         public string Banner => bannerTimer > 0f ? bannerTitle + "\n" + bannerSubtitle : string.Empty;
         public BossJuggernaut ActiveBoss => activeBoss;
@@ -62,6 +62,7 @@ namespace RogueDrive.Gameplay
         private void Awake()
         {
             Instance = this;
+            useSceneUI = true;
 
             if (car == null)
                 car = FindFirstObjectByType<ArcadeCarController>();

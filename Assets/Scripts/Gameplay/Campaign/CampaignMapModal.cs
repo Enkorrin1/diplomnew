@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.SceneManagement;
 
 namespace RogueDrive.Gameplay
@@ -16,7 +16,7 @@ namespace RogueDrive.Gameplay
         public static int SelectedStartSector = 1;
 
         public bool IsVisible { get; private set; }
-        [SerializeField] private bool useSceneUI;
+        [SerializeField] private bool useSceneUI = true;
 
         GUIStyle titleStyle;
         GUIStyle sectorTitleStyle;
@@ -27,6 +27,7 @@ namespace RogueDrive.Gameplay
 
         private void Awake()
         {
+            useSceneUI = true;
             if (Instance == null)
             {
                 Instance = this;

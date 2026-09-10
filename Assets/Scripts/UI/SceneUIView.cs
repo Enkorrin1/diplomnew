@@ -36,16 +36,30 @@ namespace RogueDrive.UI
 
         void Start()
         {
+            ResolveMissingReferences();
             progress = SaveService.GetActiveProgress(catalog != null ? catalog.Upgrades : null, catalog != null ? catalog.Cars : null);
             LoadSettings();
             if (masterSlider != null) AudioListener.volume = masterSlider.value;
             Refresh();
         }
 
+        void ResolveMissingReferences()
+        {
+            if (run == null) run = FindFirstObjectByType<GameRunController>();
+            if (car == null) car = FindFirstObjectByType<ArcadeCarController>();
+            if (hud == null) hud = FindFirstObjectByType<PrototypeHud>();
+            if (levelUp == null) levelUp = FindFirstObjectByType<LevelUpView>();
+            if (pause == null) pause = FindFirstObjectByType<PauseMenuUI>();
+            if (experience == null) experience = FindFirstObjectByType<RunExperienceManager>();
+            if (combo == null) combo = FindFirstObjectByType<ComboScoreSystem>();
+            if (garage == null) garage = FindFirstObjectByType<GarageUIController>();
+        }
+
         void Update() => Refresh();
 
         void Refresh()
         {
+            if (run == null || pause == null || combo == null) ResolveMissingReferences();
             bool choosing = levelUp != null && levelUp.IsVisible;
             bool paused = pause != null && pause.IsPaused;
             bool ended = run != null && run.IsGameOver;

@@ -57,13 +57,30 @@ namespace RogueDrive.UI
             Instance = this;
             DontDestroyOnLoad(gameObject);
 
-            blackTexture = new Texture2D(2, 2);
-            Color[] pixels = new Color[] { Color.black, Color.black, Color.black, Color.black };
-            blackTexture.SetPixels(pixels);
-            blackTexture.Apply();
+            EnsureCanvasOverlay();
+        }
 
-            fadeStyle = new GUIStyle();
-            fadeStyle.normal.background = blackTexture;
+        private void EnsureCanvasOverlay()
+        {
+            if (fadeOverlay != null) return;
+
+            GameObject canvasObj = new GameObject("TransitionCanvas", typeof(Canvas), typeof(UnityEngine.UI.CanvasScaler));
+            canvasObj.transform.SetParent(transform, false);
+            Canvas c = canvasObj.GetComponent<Canvas>();
+            c.renderMode = RenderMode.ScreenSpaceOverlay;
+            c.sortingOrder = 9999;
+
+            GameObject imgObj = new GameObject("FadeImage", typeof(RectTransform), typeof(UnityEngine.UI.Image));
+            imgObj.transform.SetParent(canvasObj.transform, false);
+            RectTransform rt = imgObj.GetComponent<RectTransform>();
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = Vector2.zero;
+
+            fadeOverlay = imgObj.GetComponent<UnityEngine.UI.Image>();
+            fadeOverlay.color = Color.clear;
+            fadeOverlay.raycastTarget = false;
         }
 
         public static void SwitchScene(string sceneName)
@@ -128,19 +145,6 @@ namespace RogueDrive.UI
             }
             currentAlpha = 0f;
             isTransitioning = false;
-        }
-
-        private void OnGUI()
-        {
-            if (fadeOverlay != null) return;
-            if (currentAlpha > 0.001f)
-            {
-                GUI.depth = -1000;
-                Color prevColor = GUI.color;
-                GUI.color = new Color(1f, 1f, 1f, currentAlpha);
-                GUI.Box(new Rect(0, 0, Screen.width, Screen.height), GUIContent.none, fadeStyle);
-                GUI.color = prevColor;
-            }
         }
 
         private void OnDestroy()

@@ -1,48 +1,91 @@
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace RogueDrive.Gameplay.VFX
 {
     /// <summary>
-    /// Радиальные линии скорости и лёгкая виньетка при высокой скорости / нитро.
-    /// Рисуется через OnGUI поверх всего.
+    /// Элемент интерфейса сцены (UI Canvas Overlay), создающий эффект радиальных линий скорости и виньетки ускорения.
+    /// Является полноценным объектом сцены в иерархии UI_Canvas, не использует устаревший OnGUI.
+    /// Активируется на высокой скорости и во время работы нитро-ускорителя.
     /// </summary>
     public sealed class SpeedLinesOverlay : MonoBehaviour
     {
         [SerializeField, Range(0f, 1f)] private float speedThreshold = 0.55f;
-        [SerializeField, Range(8, 32)] private int lineCount = 20;
 
         private ArcadeCarController car;
-        private Texture2D whiteTex;
+        private GameObject overlayObject;
+        private Image overlayImage;
+        private Texture2D speedLinesTexture;
 
-        // Предзаданные направления линий (от краёв к центру)
-        private Vector2[] lineDirections;
-        private float[] lineLengths;
-        private float[] lineOffsets;
-
-        private void Awake()
+        private void Start()
         {
             car = FindFirstObjectByType<ArcadeCarController>();
-
-            whiteTex = new Texture2D(1, 1);
-            whiteTex.SetPixel(0, 0, Color.white);
-            whiteTex.Apply();
-
-            // Генерируем случайные фиксированные направления для линий
-            lineDirections = new Vector2[lineCount];
-            lineLengths = new float[lineCount];
-            lineOffsets = new float[lineCount];
-
-            for (int i = 0; i < lineCount; i++)
-            {
-                float angle = (float)i / lineCount * 360f + Random.Range(-8f, 8f);
-                float rad = angle * Mathf.Deg2Rad;
-                lineDirections[i] = new Vector2(Mathf.Cos(rad), Mathf.Sin(rad));
-                lineLengths[i] = Random.Range(0.08f, 0.18f);
-                lineOffsets[i] = Random.Range(0.35f, 0.48f);
-            }
+            CreateSceneUIElement();
         }
 
-        private void OnGUI()
+        private void CreateSceneUIElement()
+        {
+            if (overlayObject != null) return;
+
+            Canvas canvas = FindFirstObjectByType<Canvas>();
+            if (canvas == null)
+            {
+                GameObject cObj = new GameObject("UI_Canvas_VFX", typeof(Canvas), typeof(CanvasScaler));
+                canvas = cObj.GetComponent<Canvas>();
+                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            }
+
+            overlayObject = new GameObject("UI_SpeedLines_Overlay", typeof(RectTransform), typeof(Image));
+            overlayObject.transform.SetParent(canvas.transform, false);
+
+            RectTransform rt = overlayObject.GetComponent<RectTransform>();
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = Vector2.zero;
+
+            overlayImage = overlayObject.GetComponent<Image>();
+            overlayImage.raycastTarget = false;
+
+            GenerateSpeedTunnelTexture();
+            overlayImage.sprite = Sprite.Create(speedLinesTexture, new Rect(0, 0, speedLinesTexture.width, speedLinesTexture.height), new Vector2(0.5f, 0.5f));
+            overlayImage.color = new Color(1f, 1f, 1f, 0f);
+
+            overlayObject.SetActive(false);
+        }
+
+        private void GenerateSpeedTunnelTexture()
+        {
+            const int size = 128;
+            speedLinesTexture = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            speedLinesTexture.wrapMode = TextureWrapMode.Clamp;
+
+            Vector2 center = new Vector2(size * 0.5f, size * 0.5f);
+            float maxR = size * 0.5f;
+
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    Vector2 p = new Vector2(x, y) - center;
+                    float dist = p.magnitude / maxR;
+                    float angle = Mathf.Atan2(p.y, p.x);
+
+                    // Радиальные лучи скорости по углам
+                    float streaks = Mathf.Sin(angle * 24f) * 0.5f + 0.5f;
+                    streaks = Mathf.Pow(streaks, 3f);
+
+                    // Плавное нарастание от центра к периферии
+                    float edgeMask = Mathf.Clamp01((dist - 0.45f) / 0.55f);
+                    float alpha = edgeMask * streaks * 0.7f + Mathf.Pow(edgeMask, 3f) * 0.35f;
+
+                    speedLinesTexture.SetPixel(x, y, new Color(1f, 1f, 1f, Mathf.Clamp01(alpha)));
+                }
+            }
+            speedLinesTexture.Apply();
+        }
+
+        private void Update()
         {
             if (car == null)
             {
@@ -50,86 +93,58 @@ namespace RogueDrive.Gameplay.VFX
                 if (car == null) return;
             }
 
+            if (overlayObject == null)
+            {
+                CreateSceneUIElement();
+                if (overlayObject == null) return;
+            }
+
             float speedPercent = Mathf.Clamp01(car.SpeedMps / car.TopSpeedMps);
             bool nitro = car.IsNitroActive;
 
-            // Не показываем ниже порога
             float effectIntensity = 0f;
             if (nitro)
             {
                 effectIntensity = Mathf.Clamp01((speedPercent - speedThreshold * 0.5f) / (1f - speedThreshold * 0.5f));
-                effectIntensity = Mathf.Max(effectIntensity, 0.6f);
+                effectIntensity = Mathf.Max(effectIntensity, 0.65f);
             }
             else if (speedPercent > speedThreshold)
             {
                 effectIntensity = (speedPercent - speedThreshold) / (1f - speedThreshold);
             }
 
-            if (effectIntensity < 0.01f) return;
-
-            float sw = Screen.width;
-            float sh = Screen.height;
-            Vector2 center = new Vector2(sw * 0.5f, sh * 0.5f);
-
-            Color lineColor = nitro
-                ? new Color(0.6f, 0.85f, 1f, effectIntensity * 0.35f)
-                : new Color(1f, 1f, 1f, effectIntensity * 0.2f);
-
-            Color prevColor = GUI.color;
-            Matrix4x4 prevMatrix = GUI.matrix;
-
-            for (int i = 0; i < lineCount; i++)
+            if (effectIntensity < 0.02f)
             {
-                Vector2 dir = lineDirections[i];
-
-                // Анимация: линии пульсируют по длине
-                float timePulse = Mathf.Sin(Time.time * 6f + lineOffsets[i] * 20f) * 0.3f + 0.7f;
-                float len = lineLengths[i] * timePulse * effectIntensity;
-                float offset = lineOffsets[i] + effectIntensity * 0.08f;
-
-                // Начальная и конечная точки (от краёв к центру, на расстоянии offset от центра)
-                float maxRadius = Mathf.Min(sw, sh) * 0.5f;
-                Vector2 start = center + dir * maxRadius * (offset + len);
-                Vector2 end = center + dir * maxRadius * offset;
-
-                // Рисуем линию как повёрнутый прямоугольник
-                float angle = Mathf.Atan2(end.y - start.y, end.x - start.x) * Mathf.Rad2Deg;
-                float lineLen = Vector2.Distance(start, end);
-                float lineWidth = Mathf.Lerp(1f, 2.5f, effectIntensity);
-
-                GUI.color = lineColor;
-                GUIUtility.RotateAroundPivot(angle, start);
-                GUI.DrawTexture(new Rect(start.x, start.y - lineWidth * 0.5f, lineLen, lineWidth), whiteTex);
-                GUI.matrix = prevMatrix; // reset rotation
+                if (overlayObject.activeSelf) overlayObject.SetActive(false);
+                return;
             }
 
-            // Виньетка — затемнение по краям при высокой скорости
-            if (effectIntensity > 0.3f)
+            if (!overlayObject.activeSelf) overlayObject.SetActive(true);
+
+            // Пульсация линий на высокой скорости
+            float pulse = Mathf.Sin(Time.time * 18f) * 0.15f + 0.85f;
+            float finalAlpha = effectIntensity * pulse * 0.5f;
+
+            Color targetColor = nitro
+                ? new Color(0.4f, 0.85f, 1f, finalAlpha) // Голубой неоновый оттенок при нитро
+                : new Color(1f, 1f, 1f, finalAlpha * 0.75f); // Белый на обычной скорости
+
+            if (overlayImage != null)
             {
-                float vigAlpha = (effectIntensity - 0.3f) / 0.7f * 0.25f;
-                Color vigColor = nitro
-                    ? new Color(0f, 0.1f, 0.2f, vigAlpha)
-                    : new Color(0f, 0f, 0f, vigAlpha);
-
-                DrawVignette(vigColor, sw, sh);
+                overlayImage.color = targetColor;
             }
-
-            GUI.color = prevColor;
         }
 
-        private void DrawVignette(Color color, float sw, float sh)
+        private void OnDestroy()
         {
-            float borderSize = Mathf.Min(sw, sh) * 0.2f;
-            GUI.color = color;
-
-            // Top
-            GUI.DrawTexture(new Rect(0, 0, sw, borderSize), whiteTex);
-            // Bottom
-            GUI.DrawTexture(new Rect(0, sh - borderSize, sw, borderSize), whiteTex);
-            // Left
-            GUI.DrawTexture(new Rect(0, 0, borderSize, sh), whiteTex);
-            // Right
-            GUI.DrawTexture(new Rect(sw - borderSize, 0, borderSize, sh), whiteTex);
+            if (overlayObject != null)
+            {
+                Destroy(overlayObject);
+            }
+            if (speedLinesTexture != null)
+            {
+                Destroy(speedLinesTexture);
+            }
         }
     }
 }

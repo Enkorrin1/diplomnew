@@ -12,7 +12,7 @@ namespace RogueDrive.Gameplay.UI
         [Header("References")]
         [SerializeField] private ArcadeCarController car;
         [SerializeField] private GameRunController run;
-        [SerializeField] private bool useSceneUI;
+        [SerializeField] private bool useSceneUI = true;
         [SerializeField] private RogueDrive.UI.SceneTouchButton leftButton, rightButton, gasButton, brakeButton, nitroButton;
 
         [Header("Configuration")]
@@ -45,6 +45,7 @@ namespace RogueDrive.Gameplay.UI
 
         private void Awake()
         {
+            useSceneUI = true;
             if (car == null) car = FindFirstObjectByType<ArcadeCarController>();
             if (run == null) run = FindFirstObjectByType<GameRunController>();
 

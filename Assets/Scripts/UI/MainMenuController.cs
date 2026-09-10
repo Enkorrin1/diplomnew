@@ -17,7 +17,7 @@ namespace RogueDrive.UI
         [SerializeField] private Transform podiumAnchor;
         [SerializeField] private float rotationSpeed = 20f;
         [SerializeField] private GarageCatalog catalog;
-        [SerializeField] private bool useSceneUI;
+        [SerializeField] private bool useSceneUI = true;
         [SerializeField] private GameObject[] showcaseModels;
 
         private MetaProgress metaProgress;
@@ -57,6 +57,7 @@ namespace RogueDrive.UI
             }
 
             Time.timeScale = 1f;
+            useSceneUI = true;
             if (!useSceneUI) EnsureEnvironment();
 
             if (catalog == null)
