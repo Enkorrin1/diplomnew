@@ -9,6 +9,10 @@ namespace RogueDrive.Gameplay
 
         [SerializeField] private GameRunController run;
         [SerializeField] private ArcadeCarController car;
+        [SerializeField] private bool useSceneUI;
+        public string BiomeTitle => currentBiomeTitle;
+        public string Banner => bannerTimer > 0f ? bannerTitle + "\n" + bannerSubtitle : string.Empty;
+        public BossJuggernaut ActiveBoss => activeBoss;
 
         GUIStyle headingStyle;
         GUIStyle valueStyle;
@@ -105,6 +109,7 @@ namespace RogueDrive.Gameplay
 
         void OnGUI()
         {
+            if (useSceneUI) return;
             if (run == null)
                 return;
 

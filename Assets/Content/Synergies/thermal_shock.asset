@@ -19,11 +19,11 @@ MonoBehaviour:
   - frost_ammo
   - fire_trail
   Effects:
-  - rid: 8383095785616834982
+  - rid: 8383095785616835171
   references:
     version: 2
     RefIds:
-    - rid: 8383095785616834982
+    - rid: 8383095785616835171
       type: {class: AuraEffect, ns: RogueDrive.Modifiers, asm: Assembly-CSharp}
       data:
         BehaviourId: thermal_shock

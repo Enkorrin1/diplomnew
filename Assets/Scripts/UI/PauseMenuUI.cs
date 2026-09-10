@@ -17,6 +17,7 @@ namespace RogueDrive.UI
 
         [Header("References")]
         [SerializeField] private GameRunController run;
+        [SerializeField] private bool useSceneUI;
 
         private bool isPaused = false;
         private bool showSettings = false;
@@ -84,6 +85,7 @@ namespace RogueDrive.UI
 
         public void PauseGame()
         {
+            if (LevelUpView.Instance != null && LevelUpView.Instance.IsVisible) return;
             isPaused = true;
             showSettings = false;
             Time.timeScale = 0f;
@@ -98,6 +100,7 @@ namespace RogueDrive.UI
 
         private void OnGUI()
         {
+            if (useSceneUI) return;
             EnsureStyles();
 
             // 1. Мобильная сенсорная кнопка паузы в правом верхнем углу

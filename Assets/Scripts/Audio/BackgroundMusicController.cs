@@ -139,7 +139,7 @@ namespace RogueDrive.Audio
             // Обновление громкости из настроек
             float masterVol = PlayerPrefs.GetFloat("MasterVolume", 0.85f);
             float customMusicVol = PlayerPrefs.GetFloat("MusicVolume", 0.75f);
-            musicVolume = masterVol * customMusicVol * 0.6f;
+            musicVolume = customMusicVol * 0.6f; // Master volume is applied once by AudioListener.
 
             // Плавное переключение треков
             if (currentTrack != targetTrack)

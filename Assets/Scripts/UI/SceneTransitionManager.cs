@@ -13,6 +13,7 @@ namespace RogueDrive.UI
 
         [Header("Fade Settings")]
         [SerializeField] private float fadeDuration = 0.45f;
+        [SerializeField] private UnityEngine.UI.Image fadeOverlay;
 
         private float currentAlpha = 0f;
         private bool isTransitioning = false;
@@ -131,6 +132,7 @@ namespace RogueDrive.UI
 
         private void OnGUI()
         {
+            if (fadeOverlay != null) return;
             if (currentAlpha > 0.001f)
             {
                 GUI.depth = -1000;
@@ -147,6 +149,13 @@ namespace RogueDrive.UI
             {
                 Destroy(blackTexture);
             }
+        }
+
+        private void LateUpdate()
+        {
+            if (fadeOverlay == null) return;
+            fadeOverlay.color = new Color(0,0,0,currentAlpha);
+            fadeOverlay.raycastTarget = isTransitioning;
         }
     }
 }

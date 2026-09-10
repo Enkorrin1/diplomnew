@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 namespace RogueDrive.Gameplay
 {
@@ -14,6 +15,7 @@ namespace RogueDrive.Gameplay
         [SerializeField, Min(1f)] private float maxHealth = 15f;
         [SerializeField, Min(1f)] private float explosionRadius = 8.5f;
         [SerializeField, Min(10f)] private float explosionDamage = 180f;
+        [SerializeField, Min(0f)] private float minimumRamSpeed = 7f;
 
         float currentHealth;
         bool hasExploded;
@@ -43,15 +45,17 @@ namespace RogueDrive.Gameplay
 
         private void OnCollisionEnter(Collision collision)
         {
-            CheckCarRam(collision.gameObject);
+            CheckCarRam(collision.gameObject, collision.relativeVelocity.magnitude);
         }
 
-        void CheckCarRam(GameObject target)
+        void CheckCarRam(GameObject target, float impactSpeed = -1f)
         {
             if (hasExploded) return;
 
             ArcadeCarController car = target.GetComponentInParent<ArcadeCarController>();
-            if (car != null)
+            Rigidbody body = car != null ? car.GetComponent<Rigidbody>() : null;
+            float speed = impactSpeed >= 0f ? impactSpeed : body != null ? body.linearVelocity.magnitude : 0f;
+            if (car != null && speed >= minimumRamSpeed)
             {
                 Explode();
             }
@@ -70,6 +74,8 @@ namespace RogueDrive.Gameplay
 
             // Поиск всех объектов в радиусе взрыва
             Collider[] colliders = Physics.OverlapSphere(transform.position, explosionRadius);
+            var damaged = new HashSet<IDamageable>();
+            var damagedCars = new HashSet<ArcadeCarController>();
             for (int i = 0; i < colliders.Length; i++)
             {
                 Collider col = colliders[i];
@@ -77,14 +83,14 @@ namespace RogueDrive.Gameplay
 
                 // Нанесение урона врагам и соседним бочкам
                 IDamageable damageable = col.GetComponentInParent<IDamageable>();
-                if (damageable != null && !damageable.IsDead)
+                if (damageable != null && !damageable.IsDead && damaged.Add(damageable))
                 {
                     damageable.TakeDamage(explosionDamage);
                 }
 
                 // Урон машине игрока, если она оказалась в эпицентре
                 ArcadeCarController car = col.GetComponentInParent<ArcadeCarController>();
-                if (car != null && car.Run != null)
+                if (car != null && car.Run != null && damagedCars.Add(car))
                 {
                     car.Run.TakeDamage(18f);
                 }

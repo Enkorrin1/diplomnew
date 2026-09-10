@@ -1,0 +1,72 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cf18d85b2bb2c84448b42b843e3c2697, type: 3}
+  m_Name: CampaignSceneSettings
+  m_EditorClassIdentifier: 
+  biomes:
+  - type: 0
+    title: "\u0428\u041E\u0421\u0421\u0415: \u041F\u0420\u0418\u0413\u041E\u0420\u041E\u0414"
+    subtitle: "\u0421\u0415\u041A\u0422\u041E\u0420 01 \u2014 \u0410\u0421\u0424\u0410\u041B\u042C\u0422
+      \u0418 \u0421\u0422\u0410\u041B\u042C"
+    startDistance: 0
+    endDistance: 1000
+    roadColor: {r: 0.14, g: 0.15, b: 0.18, a: 1}
+    guardrailColor: {r: 0.65, g: 0.68, b: 0.72, a: 1}
+    markingColor: {r: 0.95, g: 0.95, b: 0.95, a: 1}
+    fogColor: {r: 0.45, g: 0.55, b: 0.65, a: 1}
+    fogDensity: 0.003
+    enemyDensityMultiplier: 1
+    barrelSpawnChance: 0.35
+    crateSpawnChance: 0.45
+  - type: 1
+    title: "\u041F\u042B\u041B\u0415\u0412\u0410\u042F \u041F\u0423\u0421\u0422\u041E\u0428\u042C"
+    subtitle: "\u0421\u0415\u041A\u0422\u041E\u0420 02 \u2014 \u041F\u0415\u0421\u0427\u0410\u041D\u042B\u0415
+      \u0411\u0423\u0420\u0418 \u0418 \u0420\u0416\u0410\u0412\u0427\u0418\u041D\u0410"
+    startDistance: 1000
+    endDistance: 2000
+    roadColor: {r: 0.28, g: 0.22, b: 0.16, a: 1}
+    guardrailColor: {r: 0.72, g: 0.38, b: 0.18, a: 1}
+    markingColor: {r: 0.85, g: 0.72, b: 0.45, a: 1}
+    fogColor: {r: 0.75, g: 0.55, b: 0.32, a: 1}
+    fogDensity: 0.006
+    enemyDensityMultiplier: 1.25
+    barrelSpawnChance: 0.5
+    crateSpawnChance: 0.4
+  - type: 2
+    title: "\u0417\u0410\u0422\u041E\u041F\u041B\u0415\u041D\u041D\u0410\u042F \u041F\u0420\u041E\u041C\u0417\u041E\u041D\u0410"
+    subtitle: "\u0421\u0415\u041A\u0422\u041E\u0420 03 \u2014 \u041A\u0418\u0421\u041B\u041E\u0422\u041D\u042B\u0415
+      \u0418\u0421\u041F\u0410\u0420\u0415\u041D\u0418\u042F \u0418 \u0420\u0423\u0418\u041D\u042B"
+    startDistance: 2000
+    endDistance: 3000
+    roadColor: {r: 0.08, g: 0.12, b: 0.1, a: 1}
+    guardrailColor: {r: 0.25, g: 0.65, b: 0.35, a: 1}
+    markingColor: {r: 0.3, g: 0.85, b: 0.45, a: 1}
+    fogColor: {r: 0.18, g: 0.4, b: 0.28, a: 1}
+    fogDensity: 0.008
+    enemyDensityMultiplier: 1.5
+    barrelSpawnChance: 0.65
+    crateSpawnChance: 0.35
+  - type: 3
+    title: "\u041F\u041E\u0414\u0421\u0422\u0423\u041F\u042B \u041A \u0426\u0418\u0422\u0410\u0414\u0415\u041B\u0418"
+    subtitle: "\u0421\u0415\u041A\u0422\u041E\u0420 04 \u2014 \u0424\u041E\u0420\u0422\u0418\u0424\u0418\u041A\u0410\u0426\u0418\u0418
+      \u0418 \u0422\u0420\u0415\u0412\u041E\u0413\u0410"
+    startDistance: 3000
+    endDistance: 99999
+    roadColor: {r: 0.12, g: 0.1, b: 0.12, a: 1}
+    guardrailColor: {r: 0.82, g: 0.18, b: 0.18, a: 1}
+    markingColor: {r: 1, g: 0.25, b: 0.2, a: 1}
+    fogColor: {r: 0.55, g: 0.15, b: 0.15, a: 1}
+    fogDensity: 0.01
+    enemyDensityMultiplier: 1.85
+    barrelSpawnChance: 0.75
+    crateSpawnChance: 0.3
+  enemyActivationDistance: 240

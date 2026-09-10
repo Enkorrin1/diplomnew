@@ -17,6 +17,8 @@ namespace RogueDrive.UI
         [SerializeField] private Transform podiumAnchor;
         [SerializeField] private float rotationSpeed = 20f;
         [SerializeField] private GarageCatalog catalog;
+        [SerializeField] private bool useSceneUI;
+        [SerializeField] private GameObject[] showcaseModels;
 
         private MetaProgress metaProgress;
         private GameObject currentCarModel;
@@ -55,7 +57,7 @@ namespace RogueDrive.UI
             }
 
             Time.timeScale = 1f;
-            EnsureEnvironment();
+            if (!useSceneUI) EnsureEnvironment();
 
             if (catalog == null)
             {
@@ -79,6 +81,12 @@ namespace RogueDrive.UI
 
         private void SetupShowcaseCar()
         {
+            if (showcaseModels != null && showcaseModels.Length > 0 && catalog != null)
+            {
+                for (int i = 0; i < showcaseModels.Length; i++)
+                    if (showcaseModels[i] != null) showcaseModels[i].SetActive(i < catalog.Cars.Count && catalog.Cars[i] == metaProgress.SelectedCar);
+                return;
+            }
             if (podiumAnchor == null)
             {
                 GameObject podium = new GameObject("PodiumAnchor");
@@ -156,6 +164,7 @@ namespace RogueDrive.UI
 
         private void OnGUI()
         {
+            if (useSceneUI) return;
             if (!SceneManager.GetActiveScene().name.Contains("MainMenu"))
             {
                 return;

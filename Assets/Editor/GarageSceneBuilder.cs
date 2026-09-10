@@ -19,7 +19,7 @@ namespace RogueDrive.EditorTools
         {
             EditorApplication.delayCall += () =>
             {
-                if (!SessionState.GetBool("GarageScene3DDecorated", false))
+                if (!File.Exists(ScenePath) && !SessionState.GetBool("GarageScene3DDecorated", false))
                 {
                     SessionState.SetBool("GarageScene3DDecorated", true);
                     CreateGarageScene();

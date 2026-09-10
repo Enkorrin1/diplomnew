@@ -35,6 +35,10 @@ namespace RogueDrive.Gameplay.VFX
         private Material brakeLightActiveMat;
         private Material brakeLightIdleMat;
 
+        // Дым при заносе (Drift Smoke)
+        private ParticleSystem driftSmokeRL;
+        private ParticleSystem driftSmokeRR;
+
         private void Awake()
         {
             car = GetComponent<ArcadeCarController>();
@@ -43,6 +47,7 @@ namespace RogueDrive.Gameplay.VFX
 
             SetupWheelsIfMissing();
             SetupLights();
+            SetupDriftSmoke();
         }
 
         public void RefreshWheels()
@@ -96,6 +101,12 @@ namespace RogueDrive.Gameplay.VFX
             {
                 return; // Колеса 3D-модели успешно найдены и подключены к системе анимации
             }
+
+            // У прокачиваемой машины визуал колёс создаёт CarWheelUpgradeVisuals.
+            // Нельзя добавлять сюда второй процедурный набор: он появляется на
+            // кузове, если импорт модели ещё не завершил инициализацию.
+            if (GetComponent<CarWheelUpgradeVisuals>() != null)
+                return;
 
             // 2. Резерв: создание процедурных колес, если модель не содержит раздельных колес
             Transform wheelsRoot = transform.Find("Wheels");
@@ -225,6 +236,91 @@ namespace RogueDrive.Gameplay.VFX
             return r;
         }
 
+        private void SetupDriftSmoke()
+        {
+            driftSmokeRL = CreateDriftSmokeEmitter("DriftSmoke_RL", new Vector3(-0.85f, 0.15f, -1.3f));
+            driftSmokeRR = CreateDriftSmokeEmitter("DriftSmoke_RR", new Vector3(0.85f, 0.15f, -1.3f));
+        }
+
+        private ParticleSystem CreateDriftSmokeEmitter(string name, Vector3 localPos)
+        {
+            GameObject go = new GameObject(name);
+            go.transform.SetParent(transform, false);
+            go.transform.localPosition = localPos;
+
+            ParticleSystem ps = go.AddComponent<ParticleSystem>();
+
+            var main = ps.main;
+            main.startLifetime = 0.7f;
+            main.startSpeed = new ParticleSystem.MinMaxCurve(0.5f, 1.5f);
+            main.startSize = new ParticleSystem.MinMaxCurve(0.3f, 0.8f);
+            main.startColor = new Color(0.85f, 0.85f, 0.85f, 0.4f);
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            main.maxParticles = 40;
+            main.gravityModifier = -0.1f; // дым поднимается вверх
+
+            var emission = ps.emission;
+            emission.rateOverTime = 0f; // управляем вручную
+
+            var sizeOverLifetime = ps.sizeOverLifetime;
+            sizeOverLifetime.enabled = true;
+            sizeOverLifetime.size = new ParticleSystem.MinMaxCurve(1f, new AnimationCurve(
+                new Keyframe(0f, 0.5f), new Keyframe(0.5f, 1.2f), new Keyframe(1f, 2f)));
+
+            var colorOverLifetime = ps.colorOverLifetime;
+            colorOverLifetime.enabled = true;
+            Gradient grad = new Gradient();
+            grad.SetKeys(
+                new GradientColorKey[] { new GradientColorKey(new Color(0.9f, 0.9f, 0.9f), 0f), new GradientColorKey(new Color(0.7f, 0.7f, 0.7f), 1f) },
+                new GradientAlphaKey[] { new GradientAlphaKey(0.4f, 0f), new GradientAlphaKey(0.15f, 0.5f), new GradientAlphaKey(0f, 1f) }
+            );
+            colorOverLifetime.color = grad;
+
+            // Отключаем рендерер тени для производительности
+            var renderer = go.GetComponent<ParticleSystemRenderer>();
+            if (renderer != null)
+            {
+                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                renderer.receiveShadows = false;
+                renderer.material = new Material(Shader.Find("Particles/Standard Unlit") ?? Shader.Find("Standard"));
+            }
+
+            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            return ps;
+        }
+
+        private void UpdateDriftSmoke()
+        {
+            if (body == null || driftSmokeRL == null || driftSmokeRR == null) return;
+
+            float speed = car.SpeedMps;
+            float lateralSpeed = Mathf.Abs(Vector3.Dot(body.linearVelocity, transform.right));
+
+            // Дым появляется при боковом скольжении на скорости
+            bool isDrifting = speed > 10f && lateralSpeed > 4.5f;
+
+            if (isDrifting)
+            {
+                float driftIntensity = Mathf.Clamp01((lateralSpeed - 4.5f) / 8f);
+                float rate = Mathf.Lerp(8f, 35f, driftIntensity);
+
+                var emRL = driftSmokeRL.emission;
+                emRL.rateOverTime = rate;
+                var emRR = driftSmokeRR.emission;
+                emRR.rateOverTime = rate;
+
+                if (!driftSmokeRL.isPlaying) driftSmokeRL.Play();
+                if (!driftSmokeRR.isPlaying) driftSmokeRR.Play();
+            }
+            else
+            {
+                var emRL = driftSmokeRL.emission;
+                emRL.rateOverTime = 0f;
+                var emRR = driftSmokeRR.emission;
+                emRR.rateOverTime = 0f;
+            }
+        }
+
         private void Update()
         {
             if (car == null) return;
@@ -244,10 +340,13 @@ namespace RogueDrive.Gameplay.VFX
             Quaternion rollRot = Quaternion.Euler(wheelRotationDeg, 0f, 0f);
             Quaternion steerRot = Quaternion.Euler(0f, steerAngle, 0f);
 
-            if (wheelFL != null) wheelFL.localRotation = steerRot * rollRot;
-            if (wheelFR != null) wheelFR.localRotation = steerRot * rollRot;
-            if (wheelRL != null) wheelRL.localRotation = rollRot;
-            if (wheelRR != null) wheelRR.localRotation = rollRot;
+            if (GetComponent<CarWheelUpgradeVisuals>() == null)
+            {
+                if (wheelFL != null) wheelFL.localRotation = steerRot * rollRot;
+                if (wheelFR != null) wheelFR.localRotation = steerRot * rollRot;
+                if (wheelRL != null) wheelRL.localRotation = rollRot;
+                if (wheelRR != null) wheelRR.localRotation = rollRot;
+            }
 
             // 3. Индикация стоп-сигналов при торможении
             bool isBraking = (Input.GetAxis("Vertical") < -0.05f) || (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow));
@@ -257,12 +356,15 @@ namespace RogueDrive.Gameplay.VFX
             if (brakeLightRightRenderer != null) brakeLightRightRenderer.sharedMaterial = curBrakeMat;
 
             // 4. Крен кузова (Body tilt) при рулении
-            if (visualBody != null)
+            if (visualBody != null && GetComponent<CarSuspensionUpgradeVisuals>() == null)
             {
                 float targetRoll = -steerInput * 4.2f;
                 float targetPitch = (isBraking ? 1.5f : 0f) + (car.IsNitroActive ? -2.2f : 0f);
                 visualBody.localRotation = Quaternion.Slerp(visualBody.localRotation, Quaternion.Euler(targetPitch, 0f, targetRoll), dt * 8f);
             }
+
+            // 5. Дым из-под задних колёс при дрифте
+            UpdateDriftSmoke();
         }
     }
 }

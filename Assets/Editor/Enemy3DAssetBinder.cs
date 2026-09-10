@@ -10,7 +10,7 @@ namespace RogueDrive.EditorTools
     {
         static Enemy3DAssetBinder()
         {
-            EditorApplication.delayCall += BindAllEnemies;
+            // Rebinding is an explicit menu action: preserve authored prefab edits.
         }
 
         [MenuItem("RogueDrive/Enemies/Bind 3D Enemy Models to Prefabs")]

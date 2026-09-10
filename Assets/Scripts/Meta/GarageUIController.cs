@@ -19,6 +19,40 @@ namespace RogueDrive.Meta
     {
         [Header("Каталог и данные")]
         [SerializeField] private GarageCatalog catalog;
+        [SerializeField] private bool useSceneUI;
+        [SerializeField] private GameObject[] showcaseModels;
+        public GarageCatalog Catalog => catalog;
+        public MetaProgress Progress => _meta;
+        public int SelectedIndex => _selectedCarIndex;
+        public void BrowseCar(int index)
+        {
+            if (catalog == null || index < 0 || index >= catalog.Cars.Count) return;
+            _selectedCarIndex = index;
+            Update3DCarVisual();
+        }
+        public void BuyOrSelectCar()
+        {
+            if (_meta == null || catalog == null) return;
+            var selected = catalog.Cars[_selectedCarIndex];
+            if (_meta.OwnsCar(selected.Id) || _meta.BuyCar(selected, selected.Price))
+            {
+                _meta.SelectCar(selected.Id);
+                SaveService.SaveActive();
+                Update3DCarVisual();
+            }
+        }
+        public void BuyUpgradeAt(int index)
+        {
+            if (_meta == null || catalog == null || index < 0 || index >= catalog.Upgrades.Count) return;
+            // Upgrades belong to the equipped car; browsing never spends on another car.
+            if (catalog.Cars[_selectedCarIndex] != _meta.SelectedCar) return;
+            if (_meta.BuyUpgrade(catalog.Upgrades[index]))
+            {
+                SaveService.SaveActive();
+                _currentWheelVisuals?.RefreshForCurrentProgress();
+                _currentSuspensionVisuals?.RefreshForCurrentProgress();
+            }
+        }
 
         [Header("3D Сцена подиума")]
         [SerializeField] private Transform podiumAnchor;
@@ -31,6 +65,7 @@ namespace RogueDrive.Meta
         CarSuspensionUpgradeVisuals _currentSuspensionVisuals;
         float _rotationAngle;
         bool _isDragging;
+        private RogueDrive.UI.SceneUIView sceneView;
         Vector2 _lastMousePos;
 
         // Стили интерфейса
@@ -86,11 +121,13 @@ namespace RogueDrive.Meta
 
         private void Start()
         {
+            sceneView = FindFirstObjectByType<RogueDrive.UI.SceneUIView>();
             Update3DCarVisual();
         }
 
         private void Update()
         {
+            if (sceneView != null && sceneView.BlocksBackgroundInput) return;
             // Плавное вращение подиума
             if (!_isDragging)
             {
@@ -141,6 +178,7 @@ namespace RogueDrive.Meta
 
         private void OnGUI()
         {
+            if (useSceneUI) return;
             EnsureStyles();
             if (_meta == null || catalog == null)
             {
@@ -458,6 +496,17 @@ namespace RogueDrive.Meta
 
         void Update3DCarVisual()
         {
+            if (showcaseModels != null && showcaseModels.Length > 0)
+            {
+                for (int i = 0; i < showcaseModels.Length; i++)
+                    if (showcaseModels[i] != null) showcaseModels[i].SetActive(i == _selectedCarIndex);
+                _currentCarModel = showcaseModels[_selectedCarIndex];
+                _currentWheelVisuals = _currentCarModel.GetComponent<CarWheelUpgradeVisuals>();
+                _currentSuspensionVisuals = _currentCarModel.GetComponent<CarSuspensionUpgradeVisuals>();
+                _currentWheelVisuals?.RefreshForCurrentProgress();
+                _currentSuspensionVisuals?.RefreshForCurrentProgress();
+                return;
+            }
             if (podiumAnchor == null || catalog == null || catalog.Cars.Count == 0)
                 return;
 

@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a625d11e16061964d80a21ae531aa10b, type: 3}
+  m_Name: FirstMapAssets
+  m_EditorClassIdentifier: 
+  garage: {fileID: 8318264697060391321, guid: 481c8f6737ca1e945bce27972243cc57, type: 3}
+  gasStation: {fileID: 6368686047752830889, guid: 29725390facc2bf4ea3ed90cfcb9164d, type: 3}
+  station: {fileID: 4106738263427323207, guid: 55f8cf192e216a54593119d26ffa70dd, type: 3}
+  container: {fileID: 9092800077104529960, guid: 581545e5c17dfcf42a7afe3f9c080389, type: 3}
+  lamp: {fileID: 3362039222649345337, guid: 7aa292b1eb7b05d4c8e8565619505582, type: 3}
+  sign: {fileID: 292426699999352426, guid: 965965124f638dd4dbc21a204a80876a, type: 3}
+  cone: {fileID: 559993727811554497, guid: 3a5df9f18409e7c439c513e6d67a378c, type: 3}
+  barrier: {fileID: 6251666189375065463, guid: d4f40363aa44ea649ac792f348b8c36a, type: 3}
+  sedan: {fileID: 793685457875359081, guid: 9c92406c14c380849bca38280c133c64, type: 3}
+  van: {fileID: 745966575250574594, guid: 789bb11bfacf90443892854edcbb02f4, type: 3}
+  police: {fileID: 2295116759664368373, guid: 69cdbe0692ba4624b9259fb58689f06d, type: 3}
+  military: {fileID: 3314894990512055167, guid: 24895160902fca14ebd21bad6edc37cf, type: 3}
+  pallet: {fileID: 4937434432907904843, guid: 01e4dd584b8441842b32c4e8ffafdac4, type: 3}
+  barrel: {fileID: 7032585823465904377, guid: 4bfd38a646168b64ea9f445d6f0e6af8, type: 3}
+  tent: {fileID: 1000012508307484, guid: 9afb5f65098c7cb4786543d2601e0d1e, type: 3}
+  rocks:
+  - {fileID: 1969192603740655825, guid: 6649b2f5cd1488d49be654766dfe7855, type: 3}
+  - {fileID: 610830551852683834, guid: e4ef2a8a3811c6c4a9149de8e9bef49b, type: 3}
+  - {fileID: 3428947474597435797, guid: 9af7bc1de85fada4490857335cb4b727, type: 3}
+  - {fileID: 4423071090435520619, guid: 4032bc0cd51f63a4db05b3a2006340e0, type: 3}
+  - {fileID: 597106223415300186, guid: 9a7807950894d41429dc2c1d999e3e94, type: 3}

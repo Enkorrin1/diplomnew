@@ -46,6 +46,18 @@ namespace RogueDrive.Gameplay
         protected Transform playerTarget;
         protected ArcadeCarController playerCar;
 
+        private VFX.EnemyHitFlash hitFlash;
+
+        private void EnsureHitFlash()
+        {
+            if (hitFlash == null)
+            {
+                hitFlash = GetComponent<VFX.EnemyHitFlash>();
+                if (hitFlash == null)
+                    hitFlash = gameObject.AddComponent<VFX.EnemyHitFlash>();
+            }
+        }
+
         public bool IsDead => currentHealth <= 0f;
         public float CurrentHealth => currentHealth;
         public float MaxHealth => maxHealth;
@@ -94,6 +106,13 @@ namespace RogueDrive.Gameplay
                 return;
 
             currentHealth -= amount;
+
+            // Всплывающее число урона
+            VFX.FloatingDamageNumber.Spawn(transform.position, amount, burnDmg > 0f);
+
+            // Вспышка при попадании
+            EnsureHitFlash();
+            hitFlash?.Flash();
 
             if (slowAmount > 0f)
             {
@@ -150,6 +169,10 @@ namespace RogueDrive.Gameplay
             }
 
             MoveTowardsPlayer(dt);
+            // Apply after virtual movement so walkers, runners and spitters all
+            // respect the same road footprint, including curves and forks.
+            if (TrackChunk.TryProjectToRoad(transform.position, out Vector3 roadPosition))
+                transform.position = roadPosition + Vector3.up * 0.5f;
         }
 
         protected virtual void MoveTowardsPlayer(float dt)

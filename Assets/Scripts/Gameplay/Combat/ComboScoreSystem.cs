@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using RogueDrive.Audio;
 using UnityEngine;
 
@@ -13,6 +14,8 @@ namespace RogueDrive.Gameplay.Combat
     public sealed class ComboScoreSystem : MonoBehaviour
     {
         public static ComboScoreSystem Instance { get; private set; }
+        [SerializeField] private bool useSceneUI;
+        public string Banner => bannerTimer > 0f ? activeBannerText : string.Empty;
 
         [Header("References")]
         [SerializeField] private GameRunController run;
@@ -169,6 +172,12 @@ namespace RogueDrive.Gameplay.Combat
                     run.AddNitro(8f);
                 }
                 ArcadeCameraFollow.Instance?.TriggerShake(0.22f, shake);
+
+                // Кинематический рапид при мега-комбо (5+): кратковременное замедление времени
+                if (comboCount >= 5)
+                {
+                    StartCoroutine(KillStreakSlowMo());
+                }
             }
         }
 
@@ -180,6 +189,36 @@ namespace RogueDrive.Gameplay.Combat
             bannerScale = 1.35f;
         }
 
+        private bool isKillSlowMo;
+
+        private IEnumerator KillStreakSlowMo()
+        {
+            if (isKillSlowMo) yield break; // не накладываем несколько замедлений
+            isKillSlowMo = true;
+
+            float originalTimeScale = Time.timeScale;
+            Time.timeScale = 0.3f;
+            Time.fixedDeltaTime = 0.02f * Time.timeScale;
+
+            yield return new WaitForSecondsRealtime(0.25f);
+
+            // Плавное восстановление
+            float elapsed = 0f;
+            float restoreDuration = 0.15f;
+            while (elapsed < restoreDuration)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                float t = elapsed / restoreDuration;
+                Time.timeScale = Mathf.Lerp(0.3f, 1f, t * t);
+                Time.fixedDeltaTime = 0.02f * Time.timeScale;
+                yield return null;
+            }
+
+            Time.timeScale = originalTimeScale > 0.01f ? originalTimeScale : 1f;
+            Time.fixedDeltaTime = 0.02f;
+            isKillSlowMo = false;
+        }
+
         private void EndCombo()
         {
             comboCount = 0;
@@ -188,6 +227,7 @@ namespace RogueDrive.Gameplay.Combat
 
         private void OnGUI()
         {
+            if (useSceneUI) return;
             EnsureStyles();
 
             if (bannerTimer <= 0f || string.IsNullOrEmpty(activeBannerText))

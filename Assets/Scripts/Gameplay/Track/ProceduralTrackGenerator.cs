@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace RogueDrive.Gameplay
@@ -25,6 +26,12 @@ namespace RogueDrive.Gameplay
         [SerializeField] private GameObject explosiveBarrelPrefab;
         [SerializeField] private GameObject supplyCratePrefab;
         [SerializeField] private GameObject coinPrefab;
+        [Header("Authored campaign and endless modules")]
+        [SerializeField] private Transform authoredCampaign;
+        [SerializeField] private CampaignSceneSettings campaignSettings;
+        [SerializeField] private TrackChunk[] endlessModules;
+        [SerializeField] private GameObject authoredBoss;
+        private readonly HashSet<TrackChunk> populatedAuthoredChunks = new HashSet<TrackChunk>();
 
         readonly List<TrackChunk> activeChunks = new List<TrackChunk>();
         Vector3 nextSpawnPosition = Vector3.zero;
@@ -35,11 +42,19 @@ namespace RogueDrive.Gameplay
         int currentBiomeIndex = -1;
 
         BiomeConfig[] biomes;
+        FirstMapDressing firstMap;
+        GameObject[] firstMapEnemies;
 
         private void Awake()
         {
-            biomes = BiomeConfig.GetDefaultBiomes();
+            biomes = campaignSettings != null ? campaignSettings.Biomes : BiomeConfig.GetDefaultBiomes();
             EnsureObstaclePrefabs();
+            firstMap = GetComponent<FirstMapDressing>() ?? gameObject.AddComponent<FirstMapDressing>();
+            var earlyEnemies = new List<GameObject>();
+            if (enemyPrefabs != null)
+                foreach (GameObject prefab in enemyPrefabs)
+                    if (prefab != null && (prefab.GetComponent<WalkerZombie>() != null || prefab.GetComponent<RunnerMutant>() != null)) earlyEnemies.Add(prefab);
+            firstMapEnemies = earlyEnemies.ToArray();
         }
 
         private void Start()
@@ -51,32 +66,66 @@ namespace RogueDrive.Gameplay
                     targetCar = car.transform;
             }
 
-            // Стартовая точка генерации сразу после стартовой площадки
-            if (nextSpawnPosition == Vector3.zero)
-            {
-                nextSpawnPosition = new Vector3(0f, 0f, 150f);
-            }
-
             int startSector = CampaignMapModal.SelectedStartSector;
+            if (authoredCampaign != null && TryLoadAuthoredCampaign(startSector))
+            {
+                UpdateBiomeEnvironment(Mathf.Clamp(startSector - 1, 0, 3) * 1000f);
+                return;
+            }
             if (startSector >= 2 && startSector <= 4)
             {
                 totalDistanceGenerated = (startSector - 1) * 1000f;
                 lastCheckpointSector = startSector - 1;
             }
 
-            // Начальная генерация стартовых чанков
-            for (int i = 0; i < activeChunksAhead; i++)
+            bool hasBakedFirstMap = startSector < 2 && TryLoadBakedFirstMap();
+            if (!hasBakedFirstMap)
             {
-                SpawnNextChunk(i < 2);
+                // Резервный вариант для новой или очищенной сцены.
+                if (nextSpawnPosition == Vector3.zero)
+                    nextSpawnPosition = new Vector3(0f, 0f, 150f);
+
+                if (startSector < 2) firstMap.DressStart();
+                for (int i = 0; i < activeChunksAhead; i++)
+                    SpawnNextChunk(i < 2);
             }
 
             UpdateBiomeEnvironment(totalDistanceGenerated);
+        }
+
+        bool TryLoadBakedFirstMap()
+        {
+            Transform bakedRoot = transform.Find("BakedFirstMap");
+            if (bakedRoot == null)
+                return false;
+
+            TrackChunk[] chunks = bakedRoot.GetComponentsInChildren<TrackChunk>(true)
+                .OrderBy(chunk => chunk.GetComponent<BakedMapChunk>()?.Order ?? int.MaxValue)
+                .ToArray();
+            if (chunks.Length == 0)
+                return false;
+
+            activeChunks.Clear();
+            activeChunks.AddRange(chunks);
+            TrackChunk lastChunk = chunks[chunks.Length - 1];
+            nextSpawnPosition = lastChunk.EndPosition;
+            nextSpawnRotation = lastChunk.EndRotation;
+            totalDistanceGenerated = chunks.Sum(chunk => chunk.Length);
+            currentHeadingYaw = Mathf.DeltaAngle(0f, nextSpawnRotation.eulerAngles.y);
+
+            // Враги остаются сессионными, но окружение, объекты и препятствия карты сохранены в сцене.
+            BiomeConfig biome = GetBiomeForDistance(0f);
+            for (int i = 0; i < chunks.Length; i++)
+                chunks[i].Populate(firstMapEnemies, explosiveBarrelPrefab, supplyCratePrefab, 1f, biome, false, false);
+
+            return true;
         }
 
         private void Update()
         {
             if (targetCar == null)
                 return;
+            PopulateNearbyAuthoredChunks();
 
             // Проверка смены биома по текущей позиции игрока
             GameRunController run = FindFirstObjectByType<GameRunController>();
@@ -95,18 +144,41 @@ namespace RogueDrive.Gameplay
                 }
             }
 
-            // 3D-деспавн чанков, оставшихся позади машины с учетом вектора движения
-            for (int i = activeChunks.Count - 1; i >= 0; i--)
-            {
-                TrackChunk chunk = activeChunks[i];
-                Vector3 toChunkEnd = chunk.EndPosition - targetCar.position;
-                float behindDist = -Vector3.Dot(toChunkEnd, targetCar.forward);
-                float directDist = Vector3.Distance(targetCar.position, chunk.EndPosition);
+            // Не удаляем трассу во время разворота. Иначе активные чанки, которые
+            // физически находятся впереди, ошибочно считаются «позади» только из-за
+            // того, что машина на мгновение смотрит в обратную сторону.
+            Vector3 trackForward = nextSpawnRotation * Vector3.forward;
+            trackForward.y = 0f;
+            Vector3 carForward = targetCar.forward;
+            carForward.y = 0f;
 
-                if (behindDist > 50f && directDist > despawnDistanceBehind)
+            if (trackForward.sqrMagnitude > 0.001f && carForward.sqrMagnitude > 0.001f &&
+                Vector3.Dot(trackForward.normalized, carForward.normalized) > 0f)
+            {
+                // Деспавним только реальные пройденные чанки, когда машина снова едет
+                // по курсу кампании. Вектор направления берём от самой трассы, а не
+                // предполагаем, что глобальная ось Z всегда является движением вперёд.
+                for (int i = activeChunks.Count - 1; i >= 0; i--)
                 {
-                    activeChunks.RemoveAt(i);
-                    Destroy(chunk.gameObject);
+                    TrackChunk chunk = activeChunks[i];
+                    if (chunk == null)
+                    {
+                        activeChunks.RemoveAt(i);
+                        continue;
+                    }
+
+                    if (chunk.GetComponent<BakedMapChunk>() != null)
+                        continue;
+
+                    Vector3 toChunkEnd = chunk.EndPosition - targetCar.position;
+                    float behindDist = -Vector3.Dot(toChunkEnd, trackForward.normalized);
+                    float directDist = Vector3.Distance(targetCar.position, chunk.EndPosition);
+
+                    if (behindDist > 50f && directDist > despawnDistanceBehind)
+                    {
+                        activeChunks.RemoveAt(i);
+                        Destroy(chunk.gameObject);
+                    }
                 }
             }
         }
@@ -124,6 +196,22 @@ namespace RogueDrive.Gameplay
                 RenderSettings.fogColor = currentBiome.fogColor;
                 RenderSettings.fogDensity = currentBiome.fogDensity;
                 RenderSettings.ambientSkyColor = currentBiome.fogColor * 1.15f;
+                RenderSettings.fogMode = biomeIdx == 0 ? FogMode.Linear : FogMode.ExponentialSquared;
+                if (biomeIdx == 0)
+                {
+                    RenderSettings.fogStartDistance = 95f;
+                    RenderSettings.fogEndDistance = 360f;
+                    RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
+                    RenderSettings.ambientSkyColor = new Color(0.48f, 0.54f, 0.59f);
+                    RenderSettings.ambientEquatorColor = new Color(0.36f, 0.35f, 0.30f);
+                    RenderSettings.ambientGroundColor = new Color(0.19f, 0.20f, 0.18f);
+                }
+                Camera view = Camera.main;
+                if (view != null)
+                {
+                    view.clearFlags = CameraClearFlags.SolidColor;
+                    view.backgroundColor = currentBiome.fogColor;
+                }
 
                 Light sun = RenderSettings.sun ?? FindFirstObjectByType<Light>();
                 if (sun != null && sun.type == LightType.Directional)
@@ -131,8 +219,10 @@ namespace RogueDrive.Gameplay
                     switch (currentBiome.type)
                     {
                         case BiomeType.HighwayOutskirts:
-                            sun.color = new Color(0.95f, 0.95f, 1f);
-                            sun.intensity = 1.0f;
+                            sun.color = new Color(1f, 0.86f, 0.68f);
+                            sun.intensity = 1.15f;
+                            sun.transform.rotation = Quaternion.Euler(32f, -38f, 0f);
+                            sun.shadows = LightShadows.Soft;
                             break;
                         case BiomeType.DustyWasteland:
                             sun.color = new Color(1f, 0.82f, 0.55f);
@@ -179,7 +269,14 @@ namespace RogueDrive.Gameplay
 
             TrackChunk newChunk = null;
 
-            switch (nextType)
+            TrackChunk module = endlessModules?.FirstOrDefault(item => item != null && item.Type == nextType);
+            if (module != null)
+            {
+                newChunk = Instantiate(module, nextSpawnPosition, nextSpawnRotation, transform);
+                newChunk.gameObject.SetActive(true);
+                newChunk.ApplyBiome(activeBiome);
+            }
+            else switch (nextType)
             {
                 case ChunkType.CurveLeft:
                     newChunk = CreateCurvedChunk(nextSpawnPosition, nextSpawnRotation, activeBiome, -22f);
@@ -209,10 +306,13 @@ namespace RogueDrive.Gameplay
                     break;
             }
 
+            bool isFirstMap = totalDistanceGenerated < 1000f;
+            if (isFirstMap) firstMap.Dress(newChunk, totalDistanceGenerated, isSafeStart);
+
             if (!isSafeStart)
             {
                 float difficultyFactor = 1f + (totalDistanceGenerated / 600f);
-                newChunk.Populate(enemyPrefabs, explosiveBarrelPrefab, supplyCratePrefab, difficultyFactor, activeBiome);
+                newChunk.Populate(isFirstMap ? firstMapEnemies : enemyPrefabs, explosiveBarrelPrefab, supplyCratePrefab, difficultyFactor, activeBiome, !isFirstMap, !isFirstMap);
             }
 
             activeChunks.Add(newChunk);
@@ -224,8 +324,113 @@ namespace RogueDrive.Gameplay
             CheckBossSpawn(newChunk);
         }
 
+#if UNITY_EDITOR
+        /// <summary>Creates the first kilometre as ordinary scene GameObjects that can be edited by hand.</summary>
+        public void BakeFirstMapIntoScene()
+        {
+            Transform previousRoot = transform.Find("BakedFirstMap");
+            if (previousRoot != null)
+                DestroyImmediate(previousRoot.gameObject);
+
+            GameObject bakedRootObject = new GameObject("BakedFirstMap");
+            bakedRootObject.transform.SetParent(transform, false);
+            Transform bakedRoot = bakedRootObject.transform;
+
+            if (firstMap == null)
+                firstMap = GetComponent<FirstMapDressing>() ?? gameObject.AddComponent<FirstMapDressing>();
+
+            // The scene-baking command also runs when the game has not entered Play mode,
+            // so Awake has not prepared the runtime defaults yet.
+            if (biomes == null || biomes.Length == 0)
+                biomes = BiomeConfig.GetDefaultBiomes();
+            BiomeConfig mapBiome = BiomeConfig.GetDefaultBiomes()[0];
+
+            totalDistanceGenerated = 0f;
+            currentHeadingYaw = 0f;
+            nextSpawnPosition = new Vector3(0f, 0f, 150f);
+            nextSpawnRotation = Quaternion.identity;
+
+            firstMap.DressStart(bakedRoot);
+            for (int i = 0; i < 10; i++)
+            {
+                TrackChunk chunk;
+                bool safe = i < 2;
+                if (i == 2 || i == 7)
+                {
+                    chunk = CreateCurvedChunk(nextSpawnPosition, nextSpawnRotation, mapBiome, 22f);
+                    currentHeadingYaw += 22f;
+                }
+                else if (i == 4 || i == 8)
+                {
+                    chunk = CreateCurvedChunk(nextSpawnPosition, nextSpawnRotation, mapBiome, -22f);
+                    currentHeadingYaw -= 22f;
+                }
+                else
+                {
+                    chunk = CreateStraightChunk(nextSpawnPosition, nextSpawnRotation, mapBiome);
+                }
+
+                chunk.transform.SetParent(bakedRoot, true);
+                chunk.name = $"Map_{i + 1:00}_{chunk.Type}";
+                chunk.gameObject.AddComponent<BakedMapChunk>().Configure(i);
+                firstMap.Dress(chunk, totalDistanceGenerated, safe, bakedRoot);
+                nextSpawnPosition = chunk.EndPosition;
+                nextSpawnRotation = chunk.EndRotation;
+                totalDistanceGenerated += chunk.Length;
+            }
+
+            UnityEditor.EditorUtility.SetDirty(bakedRootObject);
+            UnityEditor.EditorUtility.SetDirty(gameObject);
+            UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(gameObject.scene);
+            UnityEditor.Selection.activeGameObject = bakedRootObject;
+        }
+#endif
+
         int lastCheckpointSector = 0;
         bool bossSpawned = false;
+
+        bool TryLoadAuthoredCampaign(int startSector)
+        {
+            var chunks = authoredCampaign.GetComponentsInChildren<TrackChunk>(true)
+                .OrderBy(c => c.GetComponent<BakedMapChunk>()?.Order ?? int.MaxValue).ToArray();
+            if (chunks.Length == 0) return false;
+            activeChunks.Clear(); activeChunks.AddRange(chunks);
+            var last = chunks[chunks.Length - 1];
+            nextSpawnPosition = last.EndPosition; nextSpawnRotation = last.EndRotation;
+            totalDistanceGenerated = chunks.Sum(c => c.Length);
+            currentHeadingYaw = Mathf.DeltaAngle(0, nextSpawnRotation.eulerAngles.y);
+            lastCheckpointSector = 4;
+            if (startSector > 1 && targetCar != null)
+            {
+                int index = Mathf.Min((startSector - 1) * 10, chunks.Length - 1);
+                var start = chunks[index];
+                targetCar.GetComponent<ArcadeCarController>()?.PlaceAtStart(start.transform.position + start.transform.forward * 8f + Vector3.up, start.transform.rotation);
+                foreach (var chunk in chunks)
+                    if (chunk.GetComponent<BakedMapChunk>().Order < index) populatedAuthoredChunks.Add(chunk);
+                if (startSector == 5) bossSpawned = true;
+            }
+            PopulateNearbyAuthoredChunks();
+            return true;
+        }
+
+        void PopulateNearbyAuthoredChunks()
+        {
+            if (authoredCampaign == null || targetCar == null) return;
+            float activationDistance = campaignSettings != null ? campaignSettings.EnemyActivationDistance : 240f;
+            foreach (var chunk in activeChunks)
+            {
+                if (chunk == null || populatedAuthoredChunks.Contains(chunk)) continue;
+                var marker = chunk.GetComponent<BakedMapChunk>();
+                if (marker == null || Vector3.Distance(targetCar.position,chunk.transform.position) > activationDistance) continue;
+                populatedAuthoredChunks.Add(chunk);
+                int order = marker.Order;
+                if (order >= 2) chunk.Populate(order < 10 ? firstMapEnemies : enemyPrefabs,explosiveBarrelPrefab,supplyCratePrefab,1f+order/6f,GetBiomeForDistance(order*100f),false,order>=10);
+                if (order >= 38 && !bossSpawned && authoredBoss != null)
+                {
+                    bossSpawned=true; authoredBoss.SetActive(true);
+                }
+            }
+        }
 
         void CheckSectorCheckpointSpawn(TrackChunk chunk)
         {
@@ -265,6 +470,15 @@ namespace RogueDrive.Gameplay
         {
             if (isSafeStart)
                 return ChunkType.Straight;
+
+            // Campaign one has a learnable route; enemy rolls remain independent.
+            if (totalDistanceGenerated < 1000f)
+            {
+                int section = Mathf.FloorToInt(totalDistanceGenerated / 100f);
+                if (section == 2 || section == 7) return ChunkType.CurveRight;
+                if (section == 4 || section == 8) return ChunkType.CurveLeft;
+                return ChunkType.Straight;
+            }
 
             // Если трасса сильно отклонилась от курса, возвращаем её к центру
             if (currentHeadingYaw > 32f)

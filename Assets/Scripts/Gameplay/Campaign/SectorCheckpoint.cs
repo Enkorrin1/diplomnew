@@ -37,7 +37,9 @@ namespace RogueDrive.Gameplay
             col.size = new Vector3(24f, 8f, 4f);
             col.center = new Vector3(0f, 4f, 0f);
 
-            BuildCheckpointArch();
+            Transform existing = transform.Find("CheckpointArchVisual");
+            if (existing != null) archRoot = existing.gameObject;
+            else BuildCheckpointArch();
         }
 
         private void OnTriggerEnter(Collider other)

@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 namespace RogueDrive.Gameplay
 {
@@ -20,6 +21,74 @@ namespace RogueDrive.Gameplay
     /// </summary>
     public sealed class TrackChunk : MonoBehaviour
     {
+        static readonly HashSet<TrackChunk> activeRoads = new HashSet<TrackChunk>();
+        readonly List<BoxCollider> roadBoxes = new List<BoxCollider>();
+        readonly List<Mesh> collisionMeshes = new List<Mesh>();
+        bool surfaceBuilt;
+
+        void OnEnable() => activeRoads.Add(this);
+        void OnDisable() => activeRoads.Remove(this);
+        void Start() => BuildDrivingSurface();
+        void OnDestroy()
+        {
+            activeRoads.Remove(this);
+            foreach (Mesh mesh in collisionMeshes) if (mesh != null) Destroy(mesh);
+        }
+
+        // Only the road's top face participates in driving contacts. Cuboid end
+        // faces at overlapping sections otherwise catch the chassis at seams.
+        void BuildDrivingSurface()
+        {
+            if (surfaceBuilt || roadRenderers == null || roadRenderers.Length == 0) return;
+            surfaceBuilt = true;
+            foreach (Renderer road in roadRenderers)
+            {
+                if (road == null) continue;
+                BoxCollider box = road.GetComponent<BoxCollider>();
+                if (box == null || box.isTrigger) continue;
+                roadBoxes.Add(box);
+                Vector3 lo = box.center - box.size * 0.5f;
+                Vector3 hi = box.center + box.size * 0.5f;
+                Mesh mesh = new Mesh { name = "Road top collision" };
+                mesh.vertices = new[] { new Vector3(lo.x, hi.y, lo.z), new Vector3(lo.x, hi.y, hi.z),
+                    new Vector3(hi.x, hi.y, hi.z), new Vector3(hi.x, hi.y, lo.z) };
+                mesh.triangles = new[] { 0, 1, 2, 0, 2, 3 };
+                mesh.RecalculateBounds();
+                MeshCollider top = road.gameObject.AddComponent<MeshCollider>();
+                top.sharedMesh = mesh;
+                top.sharedMaterial = box.sharedMaterial;
+                box.enabled = false;
+                collisionMeshes.Add(mesh);
+            }
+        }
+
+        public static bool TryProjectToRoad(Vector3 position, out Vector3 projected, float margin = 0.7f)
+        {
+            projected = position;
+            float best = float.PositiveInfinity;
+            foreach (TrackChunk chunk in activeRoads)
+            {
+                if (chunk == null) continue;
+                chunk.BuildDrivingSurface();
+                foreach (BoxCollider box in chunk.roadBoxes)
+                {
+                    if (box == null) continue;
+                    Transform t = box.transform;
+                    Vector3 p = t.InverseTransformPoint(position) - box.center;
+                    Vector3 half = box.size * 0.5f;
+                    float inset = Mathf.Min(half.x * 0.4f, margin / Mathf.Max(0.001f, Mathf.Abs(t.lossyScale.x)));
+                    p.x = Mathf.Clamp(p.x, -half.x + inset, half.x - inset);
+                    p.z = Mathf.Clamp(p.z, -half.z, half.z);
+                    p.y = half.y;
+                    Vector3 candidate = t.TransformPoint(p + box.center);
+                    float distance = (candidate - position).sqrMagnitude;
+                    if (distance >= best) continue;
+                    best = distance;
+                    projected = candidate;
+                }
+            }
+            return !float.IsPositiveInfinity(best);
+        }
         [Header("Chunk Properties")]
         [SerializeField] private ChunkType type = ChunkType.Straight;
         [SerializeField, Min(10f)] private float length = 100f;
@@ -37,6 +106,7 @@ namespace RogueDrive.Gameplay
 
         public ChunkType Type => type;
         public float Length => length;
+        public Renderer[] RoadRenderers => roadRenderers;
 
         public Vector3 EndPosition => connectionPoint != null
             ? connectionPoint.position
@@ -69,6 +139,7 @@ namespace RogueDrive.Gameplay
             guardrailRenderers = guardrails ?? new Renderer[0];
             leftLaneSpawnPoints = leftSpawns ?? new Transform[0];
             rightLaneSpawnPoints = rightSpawns ?? new Transform[0];
+            if (Application.isPlaying) BuildDrivingSurface();
         }
 
         /// <summary>
@@ -116,20 +187,22 @@ namespace RogueDrive.Gameplay
             GameObject barrelPrefab,
             GameObject cratePrefab,
             float difficultyMultiplier,
-            BiomeConfig biome)
+            BiomeConfig biome,
+            bool spawnObstacles = true,
+            bool allowElites = true)
         {
             float barrelChance = biome != null ? biome.barrelSpawnChance : 0.5f;
             float crateChance = biome != null ? biome.crateSpawnChance : 0.4f;
 
             // 1. Обработка развилок (Fork) со специфическим распределением по веткам
-            if (type == ChunkType.Fork)
+            if (type == ChunkType.Fork && spawnObstacles)
             {
                 PopulateForkLanes(enemyPrefabs, barrelPrefab, cratePrefab, difficultyMultiplier);
                 return;
             }
 
             // 2. Стандартный спавн препятствий (бочки и ящики)
-            if (obstacleSpawnPoints != null && obstacleSpawnPoints.Length > 0)
+            if (spawnObstacles && obstacleSpawnPoints != null && obstacleSpawnPoints.Length > 0)
             {
                 for (int i = 0; i < obstacleSpawnPoints.Length; i++)
                 {
@@ -139,11 +212,11 @@ namespace RogueDrive.Gameplay
                     float roll = Random.value;
                     if (roll < barrelChance && barrelPrefab != null)
                     {
-                        Instantiate(barrelPrefab, pt.position, pt.rotation, transform);
+                        Instantiate(barrelPrefab, pt.position, pt.rotation, transform).SetActive(true);
                     }
                     else if (roll < (barrelChance + crateChance) && cratePrefab != null)
                     {
-                        Instantiate(cratePrefab, pt.position, pt.rotation, transform);
+                        Instantiate(cratePrefab, pt.position, pt.rotation, transform).SetActive(true);
                     }
                 }
             }
@@ -160,11 +233,11 @@ namespace RogueDrive.Gameplay
                     if (Random.value > 0.35f)
                     {
                         Vector3 spawnPos = enemySpawnPoints[i].position + Random.insideUnitSphere * 1.5f;
-                        spawnPos.y = 0.5f;
+                        if (TryProjectToRoad(spawnPos, out Vector3 roadSpawn)) spawnPos = roadSpawn + Vector3.up * 0.5f;
 
                         // Шанс появления элитного противника растет с дистанцией/сложностью
                         float eliteChance = Mathf.Clamp01((difficultyMultiplier - 1f) * 0.20f);
-                        if (Random.value < eliteChance)
+                        if (allowElites && Random.value < eliteChance)
                         {
                             SpawnEliteEnemy(spawnPos);
                         }
@@ -187,7 +260,7 @@ namespace RogueDrive.Gameplay
 
         void SpawnEliteEnemy(Vector3 pos)
         {
-            pos.y = 0.5f;
+            if (TryProjectToRoad(pos, out Vector3 roadSpawn)) pos = roadSpawn + Vector3.up * 0.5f;
             int roll = Random.Range(0, 3);
             GameObject obj;
 
@@ -231,7 +304,7 @@ namespace RogueDrive.Gameplay
 
                     if (Random.value < 0.65f && cratePrefab != null)
                     {
-                        Instantiate(cratePrefab, pt.position, pt.rotation, transform);
+                        Instantiate(cratePrefab, pt.position, pt.rotation, transform).SetActive(true);
                     }
                     else if (Random.value < 0.25f && enemyPrefabs != null && enemyPrefabs.Length > 0)
                     {
@@ -250,7 +323,7 @@ namespace RogueDrive.Gameplay
 
                     if (Random.value < 0.70f && barrelPrefab != null)
                     {
-                        Instantiate(barrelPrefab, pt.position, pt.rotation, transform);
+                        Instantiate(barrelPrefab, pt.position, pt.rotation, transform).SetActive(true);
                     }
 
                     if (enemyPrefabs != null && enemyPrefabs.Length > 0 && Random.value < 0.75f)
@@ -263,7 +336,7 @@ namespace RogueDrive.Gameplay
 
         void SpawnEnemyAt(GameObject prefab, Vector3 pos)
         {
-            pos.y = 0.5f;
+            if (TryProjectToRoad(pos, out Vector3 roadSpawn)) pos = roadSpawn + Vector3.up * 0.5f;
             if (GameplayPool.Instance != null)
             {
                 GameplayPool.Instance.Spawn(prefab, pos, Quaternion.identity);

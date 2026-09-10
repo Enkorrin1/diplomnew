@@ -12,6 +12,8 @@ namespace RogueDrive.Gameplay.UI
         [Header("References")]
         [SerializeField] private ArcadeCarController car;
         [SerializeField] private GameRunController run;
+        [SerializeField] private bool useSceneUI;
+        [SerializeField] private RogueDrive.UI.SceneTouchButton leftButton, rightButton, gasButton, brakeButton, nitroButton;
 
         [Header("Configuration")]
         [SerializeField] private bool autoDetectMobile = true;
@@ -52,6 +54,16 @@ namespace RogueDrive.Gameplay.UI
 
         private void Update()
         {
+            if (useSceneUI)
+            {
+                if (car == null) car = FindFirstObjectByType<ArcadeCarController>();
+                bool allowed = Time.timeScale > 0f && (run == null || !run.IsGameOver);
+                float steer = allowed ? (rightButton != null && rightButton.Pressed ? 1 : 0) - (leftButton != null && leftButton.Pressed ? 1 : 0) : 0;
+                float throttle = allowed ? (gasButton != null && gasButton.Pressed ? 1 : 0) - (brakeButton != null && brakeButton.Pressed ? 1 : 0) : 0;
+                if (car != null) car.SetVirtualInput(throttle, steer, allowed && nitroButton != null && nitroButton.Pressed);
+                if (Input.GetKeyDown(KeyCode.F1)) PlayerPrefs.SetInt("ShowTouchControls", 1 - PlayerPrefs.GetInt("ShowTouchControls", 0));
+                return;
+            }
             if (car == null)
             {
                 car = FindFirstObjectByType<ArcadeCarController>();
@@ -85,6 +97,7 @@ namespace RogueDrive.Gameplay.UI
 
         private void OnGUI()
         {
+            if (useSceneUI) return;
             EnsureStyles();
 
             // Кнопка включения/выключения тач-интерфейса в углу экрана для отладки

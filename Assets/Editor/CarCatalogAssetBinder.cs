@@ -11,7 +11,7 @@ namespace RogueDrive.EditorTools
     {
         static CarCatalogAssetBinder()
         {
-            EditorApplication.delayCall += BindAllCars;
+            // Rebinding is an explicit menu action: preserve Inspector edits on reload.
         }
 
         [MenuItem("RogueDrive/Cars/Bind 3D Car Models to Catalog")]

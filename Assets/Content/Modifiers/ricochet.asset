@@ -23,11 +23,11 @@ MonoBehaviour:
   RequiredSocket: 0
   LevelPrefabs: []
   Effects:
-  - rid: 8383095785616834990
+  - rid: 8383095785616835179
   references:
     version: 2
     RefIds:
-    - rid: 8383095785616834990
+    - rid: 8383095785616835179
       type: {class: ProjectileEffect, ns: RogueDrive.Modifiers, asm: Assembly-CSharp}
       data:
         BouncesPerLevel: 1

@@ -151,6 +151,7 @@ namespace RogueDrive.Audio
         public void UpdateEngineSound(float speedKmh, float maxSpeedKmh, bool isNitro)
         {
             if (engineSource == null) return;
+            sfxVolume = PlayerPrefs.GetFloat("SfxVolume", sfxVolume);
 
             float speedRatio = maxSpeedKmh > 0f ? Mathf.Clamp01(speedKmh / maxSpeedKmh) : 0f;
 
@@ -159,12 +160,12 @@ namespace RogueDrive.Audio
             if (isNitro) targetPitch *= 1.18f;
 
             engineSource.pitch = Mathf.MoveTowards(engineSource.pitch, targetPitch, Time.deltaTime * 3.5f);
-            engineSource.volume = Mathf.Lerp(engineVolume * 0.7f, engineVolume, speedRatio) * masterVolume;
+            engineSource.volume = Mathf.Lerp(engineVolume * 0.7f, engineVolume, speedRatio) * sfxVolume;
 
             // Гул нитро-ускорения
             if (nitroSource != null)
             {
-                float targetNitroVol = isNitro ? (0.8f * sfxVolume * masterVolume) : 0f;
+                float targetNitroVol = isNitro ? (0.8f * sfxVolume) : 0f;
                 nitroSource.volume = Mathf.MoveTowards(nitroSource.volume, targetNitroVol, Time.deltaTime * 6f);
             }
         }
@@ -226,7 +227,7 @@ namespace RogueDrive.Audio
 
             AudioSource src = GetAvailableSource();
             src.pitch = pitch;
-            src.PlayOneShot(clip, volume * sfxVolume * masterVolume);
+            src.PlayOneShot(clip, volume * PlayerPrefs.GetFloat("SfxVolume", sfxVolume));
         }
 
         #region Procedural Audio Synthesizers

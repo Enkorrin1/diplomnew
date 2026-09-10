@@ -57,6 +57,16 @@ namespace RogueDrive.Gameplay
                 gameObject.AddComponent<RogueDrive.Gameplay.Combat.ComboScoreSystem>();
             }
 
+            // Визуальные эффекты скорости и критического здоровья
+            if (FindFirstObjectByType<RogueDrive.Gameplay.VFX.SpeedLinesOverlay>() == null)
+            {
+                gameObject.AddComponent<RogueDrive.Gameplay.VFX.SpeedLinesOverlay>();
+            }
+            if (FindFirstObjectByType<RogueDrive.Gameplay.VFX.CriticalHealthOverlay>() == null)
+            {
+                gameObject.AddComponent<RogueDrive.Gameplay.VFX.CriticalHealthOverlay>();
+            }
+
             ResetRun();
         }
 
@@ -236,21 +246,11 @@ namespace RogueDrive.Gameplay
 
         public void ReportBossDefeated()
         {
+            if (IsGameOver || IsCampaignVictory)
+                return;
+
             IsCampaignVictory = true;
-            try
-            {
-                var meta = RogueDrive.Meta.SaveService.GetActiveProgress();
-                if (meta != null)
-                {
-                    meta.RegisterRunResult(5, Distance);
-                    if (CoinsCollected > 0) meta.AddCoins(CoinsCollected);
-                    RogueDrive.Meta.SaveService.SaveActive();
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.LogError($"[GameRunController] Ошибка сохранения победы: {ex.Message}");
-            }
+            EndRun("Кампания завершена");
         }
 
         void ResetRun()
@@ -279,6 +279,9 @@ namespace RogueDrive.Gameplay
 
         void EndRun(string reason)
         {
+            if (IsGameOver)
+                return;
+
             IsGameOver = true;
             EndReason = reason;
 

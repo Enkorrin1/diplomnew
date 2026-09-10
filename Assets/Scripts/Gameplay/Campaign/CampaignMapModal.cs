@@ -16,6 +16,7 @@ namespace RogueDrive.Gameplay
         public static int SelectedStartSector = 1;
 
         public bool IsVisible { get; private set; }
+        [SerializeField] private bool useSceneUI;
 
         GUIStyle titleStyle;
         GUIStyle sectorTitleStyle;
@@ -29,7 +30,7 @@ namespace RogueDrive.Gameplay
             if (Instance == null)
             {
                 Instance = this;
-                DontDestroyOnLoad(gameObject);
+                if (!useSceneUI) DontDestroyOnLoad(gameObject);
             }
             else if (Instance != this)
             {
@@ -54,6 +55,7 @@ namespace RogueDrive.Gameplay
 
         private void OnGUI()
         {
+            if (useSceneUI) return;
             if (!IsVisible) return;
 
             EnsureStyles();

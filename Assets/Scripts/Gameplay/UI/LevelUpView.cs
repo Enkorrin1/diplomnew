@@ -36,6 +36,21 @@ namespace RogueDrive.Gameplay
         Texture2D synergyCardBgTex;
 
         public bool IsVisible => isVisible;
+        [SerializeField] private bool useSceneUI;
+        public IReadOnlyList<ModifierDefinition> Offers => currentOffers;
+        public int RemainingRerolls => remainingRerolls;
+        public int OfferLevel(int index) => currentOffers != null && index < currentOffers.Count && currentBuild != null ? currentBuild.GetLevel(currentOffers[index].Id) : 0;
+        public bool OfferCompletesSynergy(int index) => currentOffers != null && index < currentOffers.Count && CheckClosesSynergy(currentOffers[index]);
+        public void Choose(int index)
+        {
+            if (isVisible && currentOffers != null && index >= 0 && index < currentOffers.Count) SelectOffer(currentOffers[index]);
+        }
+        public void Reroll()
+        {
+            if (!isVisible || remainingRerolls <= 0) return;
+            remainingRerolls--;
+            RerollRequested?.Invoke();
+        }
 
         private void Awake()
         {
@@ -70,6 +85,7 @@ namespace RogueDrive.Gameplay
 
         void OnGUI()
         {
+            if (useSceneUI) return;
             if (!isVisible || currentOffers == null || currentOffers.Count == 0)
                 return;
 

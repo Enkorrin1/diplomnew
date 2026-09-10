@@ -51,6 +51,7 @@ namespace RogueDrive.Gameplay
         float baseBodyRollTilt;
         float baseLinearDamping;
         float currentLateralGrip;
+        CarSuspensionUpgradeVisuals suspension;
 
         float throttleInput;
         float steerInput;
@@ -64,6 +65,7 @@ namespace RogueDrive.Gameplay
 
         public float SpeedMps { get; private set; }
         public float SpeedKmh => SpeedMps * 3.6f;
+        public float SteeringAngle => steerInput * 28f;
         public float TopSpeedMps => IsNitroActive ? nitroTopSpeedMps : topSpeedMps;
         public bool IsNitroActive { get; private set; }
         public bool IsGrounded => isGrounded;
@@ -86,6 +88,14 @@ namespace RogueDrive.Gameplay
         public void Configure(GameRunController controller)
         {
             run = controller;
+        }
+
+        public void PlaceAtStart(Vector3 position, Quaternion rotation)
+        {
+            if (body == null) body = GetComponent<Rigidbody>();
+            body.position = position; body.rotation = rotation;
+            body.linearVelocity = Vector3.zero; body.angularVelocity = Vector3.zero;
+            transform.SetPositionAndRotation(position,rotation); lastPosition = position;
         }
 
         public void BindStats(StatBlock stats)
@@ -140,7 +150,7 @@ namespace RogueDrive.Gameplay
             body.useGravity = true;
             body.interpolation = RigidbodyInterpolation.Interpolate;
             body.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
-            body.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+            body.constraints = RigidbodyConstraints.None;
             body.linearDamping = 0.35f;
             body.angularDamping = 2.5f;
             body.centerOfMass = new Vector3(0f, -0.2f, 0f);
@@ -189,6 +199,7 @@ namespace RogueDrive.Gameplay
 
             if (GetComponent<CarSuspensionUpgradeVisuals>() == null)
                 gameObject.AddComponent<CarSuspensionUpgradeVisuals>();
+            suspension = GetComponent<CarSuspensionUpgradeVisuals>();
 
             if (AudioManager.Instance == null)
             {
@@ -214,7 +225,7 @@ namespace RogueDrive.Gameplay
         public void ApplySuspensionUpgrade(int level, float clearance)
         {
             if (chassisCollider != null)
-                chassisCollider.center = baseColliderCenter + Vector3.up * clearance;
+                chassisCollider.center = baseColliderCenter;
 
             if (body != null)
                 body.centerOfMass = baseCenterOfMass - Vector3.up * Mathf.Min(0.12f, level * 0.02f);
@@ -241,6 +252,7 @@ namespace RogueDrive.Gameplay
 
         private void ApplySelectedCarVisualModel()
         {
+            // Resolve the selected car before applying either visual upgrade.
             CarDefinition selectedDef = null;
             GarageCatalog catalog = Resources.Load<GarageCatalog>("GarageCatalog");
 #if UNITY_EDITOR
@@ -275,6 +287,8 @@ namespace RogueDrive.Gameplay
                 Transform existingModel = transform.Find("RealCarModel_3D");
                 if (existingModel != null)
                 {
+                    existingModel.gameObject.SetActive(false);
+                    existingModel.SetParent(null);
                     Destroy(existingModel.gameObject);
                 }
 
@@ -298,6 +312,15 @@ namespace RogueDrive.Gameplay
                 {
                     enhancer.RefreshWheels();
                 }
+
+                // До старта заезда колесный визуал мог быть рассчитан по
+                // временному кузову. После подстановки выбранной модели он
+                // обязан заново взять позиции её штатных колёс.
+                var wheels = GetComponent<CarWheelUpgradeVisuals>();
+                if (wheels == null) wheels = gameObject.AddComponent<CarWheelUpgradeVisuals>();
+                wheels.Configure(catalog.WheelUpgradePrefabs);
+                wheels.RebuildForCurrentCarModel();
+                GetComponent<CarVisualEnhancer>()?.RefreshWheels();
             }
         }
 
@@ -378,12 +401,13 @@ namespace RogueDrive.Gameplay
 
         private void FixedUpdate()
         {
-            CheckGrounded();
+            isGrounded = suspension != null && suspension.Simulate(body);
+            if (isGrounded) lastGroundedTime = Time.time;
             SpeedMps = Vector3.Dot(body.linearVelocity, transform.forward);
 
             // 1. Прижимная сила (Downforce) пропорциональна скорости
             float currentDownforce = downforce * (1f + Mathf.Abs(SpeedMps) / topSpeedMps);
-            body.AddForce(Vector3.down * currentDownforce, ForceMode.Acceleration);
+            if (isGrounded) body.AddForce(Vector3.down * currentDownforce * 0.1f, ForceMode.Acceleration);
 
             bool canDrive = isGrounded || (Time.time - lastGroundedTime < 0.35f);
 
@@ -401,7 +425,6 @@ namespace RogueDrive.Gameplay
             else
             {
                 // В воздухе: дополнительная стабилизация и возможность подруливания
-                body.AddForce(Vector3.down * downforce, ForceMode.Acceleration);
                 ApplySteeringAirborne();
             }
         }
@@ -449,13 +472,16 @@ namespace RogueDrive.Gameplay
             if (Mathf.Abs(steerInput) < 0.05f)
                 return;
 
-            // На месте или очень низкой скорости руление сохраняет чувствительность для маневрирования
+            // Heading changes require longitudinal motion; stopped wheels can
+            // steer without rotating the chassis.
+            if (Mathf.Abs(SpeedMps) < 0.1f)
+                return;
             float speedRatio = Mathf.Clamp01(Mathf.Abs(SpeedMps) / 5f);
-            float speedFactor = Mathf.Lerp(0.45f, 1f, speedRatio);
-            float turnAmount = steerInput * steerSpeed * speedFactor * Time.fixedDeltaTime;
+            float speedFactor = speedRatio;
+            float turnAmount = steerInput * steerSpeed * Mathf.Clamp(PlayerPrefs.GetFloat("SteerSensitivity",1f),.5f,2f) * speedFactor * Time.fixedDeltaTime;
 
             // Инвертируем поворот при движении назад
-            if (SpeedMps < -0.2f)
+            if (SpeedMps < 0f)
                 turnAmount = -turnAmount;
 
             Quaternion turnRotation = Quaternion.Euler(0f, turnAmount, 0f);
@@ -464,10 +490,11 @@ namespace RogueDrive.Gameplay
 
         void ApplySteeringAirborne()
         {
-            if (Mathf.Abs(steerInput) < 0.05f)
+            if (Mathf.Abs(steerInput) < 0.05f || Mathf.Abs(SpeedMps) < 0.1f)
                 return;
 
-            float turnAmount = steerInput * (steerSpeed * 0.45f) * Time.fixedDeltaTime;
+            float turnAmount = steerInput * (steerSpeed * 0.45f) *
+                Mathf.Clamp(SpeedMps / 5f, -1f, 1f) * Time.fixedDeltaTime;
             Quaternion turnRotation = Quaternion.Euler(0f, turnAmount, 0f);
             body.MoveRotation(body.rotation * turnRotation);
         }
@@ -504,6 +531,7 @@ namespace RogueDrive.Gameplay
 
         void UpdateVisualRoll(float dt)
         {
+            if (suspension != null) return;
             if (visualBody == null)
                 return;
 
@@ -532,14 +560,15 @@ namespace RogueDrive.Gameplay
             if (run == null || run.IsGameOver)
                 return;
 
-            TrackObstacle obstacle = targetGo.GetComponent<TrackObstacle>();
+            TrackObstacle obstacle = targetGo.GetComponentInParent<TrackObstacle>();
             if (obstacle == null || !obstacle.TryConsume())
                 return;
 
             // Эффект удара: сотрясение камеры и звук скрежета
             AudioManager.Instance?.PlayCrash(0.9f);
             ArcadeCameraFollow.Instance?.TriggerShake(0.7f, 0.3f);
-            CombatVfxCatalog.Instance?.SpawnRamImpact(targetGo.transform.position, transform.forward);
+            // Ordinary road furniture produces a small impact, not the explosive ram effect.
+            CombatVfxCatalog.Instance?.SpawnBulletHit(targetGo.transform.position, Quaternion.LookRotation(transform.forward));
 
             // Если на полном ходу или на нитро — препятствие сносится легче
             float damage = baseObstacleDamage;

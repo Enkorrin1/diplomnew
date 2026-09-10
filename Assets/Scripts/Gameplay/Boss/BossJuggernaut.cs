@@ -62,7 +62,7 @@ namespace RogueDrive.Gameplay
             col.size = new Vector3(3.8f, 3.2f, 9.5f);
             col.center = new Vector3(0f, 1.6f, 0f);
 
-            BuildBossModel();
+            if (transform.Find("BossVisualModel") == null) BuildBossModel();
         }
 
         private void Start()
@@ -320,26 +320,20 @@ namespace RogueDrive.Gameplay
             // Спавн мега-дропа золота и полного бака топлива
             SpawnVictoryLoot();
 
-            // Фиксация победы в кампании
-            try
-            {
-                var meta = RogueDrive.Meta.SaveService.GetActiveProgress();
-                if (meta != null)
-                {
-                    meta.RegisterRunResult(5, playerCar != null && playerCar.Run != null ? playerCar.Run.Distance : 4000f);
-                    meta.AddCoins(50);
-                    RogueDrive.Meta.SaveService.SaveActive();
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.LogWarning($"[BossJuggernaut] Ошибка сохранения победы: {ex.Message}");
-            }
+            // Награда и запись результата должны пройти ровно один раз через контроллер заезда.
+            GameRunController run = playerCar != null ? playerCar.Run : FindFirstObjectByType<GameRunController>();
+            run?.ReportBossDefeated();
 
             BossDefeated?.Invoke(this);
 
-            // Восстановление нормального масштаба времени через 2.5 секунды
-            Invoke(nameof(RestoreTimeScaleAndNotifyVictory), 0.6f);
+            // Пауза использует замедленное время, поэтому ожидание должно быть реальным, а не scaled time.
+            StartCoroutine(ShowVictoryAfterRealtimeDelay());
+        }
+
+        System.Collections.IEnumerator ShowVictoryAfterRealtimeDelay()
+        {
+            yield return new WaitForSecondsRealtime(0.6f);
+            RestoreTimeScaleAndNotifyVictory();
         }
 
         void RestoreTimeScaleAndNotifyVictory()
@@ -455,7 +449,7 @@ namespace RogueDrive.Gameplay
             cube.transform.SetParent(parent, false);
             cube.transform.localPosition = localPos;
             cube.transform.localScale = localScale;
-            Destroy(cube.GetComponent<Collider>());
+            RemoveModelCollider(cube.GetComponent<Collider>());
             cube.GetComponent<Renderer>().sharedMaterial = mat;
         }
 
@@ -466,8 +460,14 @@ namespace RogueDrive.Gameplay
             wheel.transform.localPosition = localPos;
             wheel.transform.localRotation = Quaternion.Euler(0f, 0f, 90f);
             wheel.transform.localScale = new Vector3(1.2f, 0.35f, 1.2f);
-            Destroy(wheel.GetComponent<Collider>());
+            RemoveModelCollider(wheel.GetComponent<Collider>());
             wheel.GetComponent<Renderer>().sharedMaterial = mat;
+        }
+
+        static void RemoveModelCollider(Collider collider)
+        {
+            if (Application.isPlaying) Destroy(collider);
+            else DestroyImmediate(collider);
         }
     }
 }
