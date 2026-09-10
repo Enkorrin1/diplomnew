@@ -6,15 +6,21 @@ using UnityEngine;
 namespace RogueDrive.EditorTools
 {
     /// <summary>
-    /// Автоматически синхронизирует сцены GarageScene и RogueDrivePrototype
-    /// в настройках сборки (Build Settings / Shared Scene List) при каждом запуске редактора
-    /// или перекомпиляции скриптов.
+    /// Автоматически синхронизирует официальные сцены PC-релиза в Build Settings
+    /// при каждом запуске редактора или перекомпиляции скриптов.
     /// </summary>
     [InitializeOnLoad]
     public static class BuildSettingsAutoSync
     {
-        const string GaragePath = "Assets/Scenes/GarageScene.unity";
-        const string PrototypePath = "Assets/Scenes/RogueDrivePrototype.unity";
+        private static readonly string[] OfficialScenes = new[]
+        {
+            "Assets/Scenes/MainMenuScene.unity",
+            "Assets/Scenes/GarageScene.unity",
+            "Assets/Scenes/Stage1_Outskirts.unity",
+            "Assets/Scenes/Stage2_Wasteland.unity",
+            "Assets/Scenes/Stage3_Industrial.unity",
+            "Assets/Scenes/Stage4_Citadel.unity"
+        };
 
         static BuildSettingsAutoSync()
         {
@@ -25,28 +31,17 @@ namespace RogueDrive.EditorTools
         public static void SyncScenes()
         {
             var scenes = new List<EditorBuildSettingsScene>();
-            const string mainPath = "Assets/Scenes/MainMenuScene.unity";
-            if (!string.IsNullOrEmpty(AssetDatabase.AssetPathToGUID(mainPath)))
-                scenes.Add(new EditorBuildSettingsScene(mainPath, true));
 
-            // Проверяем существование файлов перед добавлением
-            string garageGuid = AssetDatabase.AssetPathToGUID(GaragePath);
-            string protoGuid = AssetDatabase.AssetPathToGUID(PrototypePath);
-
-            if (!string.IsNullOrEmpty(garageGuid))
+            foreach (var path in OfficialScenes)
             {
-                scenes.Add(new EditorBuildSettingsScene(GaragePath, true));
-            }
-
-            if (!string.IsNullOrEmpty(protoGuid))
-            {
-                scenes.Add(new EditorBuildSettingsScene(PrototypePath, true));
+                if (!string.IsNullOrEmpty(AssetDatabase.AssetPathToGUID(path)))
+                {
+                    scenes.Add(new EditorBuildSettingsScene(path, true));
+                }
             }
 
             if (scenes.Count > 0)
             {
-                foreach (var existing in EditorBuildSettings.scenes)
-                    if (existing.path != mainPath && existing.path != GaragePath && existing.path != PrototypePath) scenes.Add(existing);
                 EditorBuildSettings.scenes = scenes.ToArray();
             }
         }

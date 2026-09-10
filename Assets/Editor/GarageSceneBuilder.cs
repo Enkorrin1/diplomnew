@@ -13,7 +13,6 @@ namespace RogueDrive.EditorTools
     public static class GarageSceneBuilder
     {
         const string ScenePath = "Assets/Scenes/GarageScene.unity";
-        const string PrototypeScenePath = "Assets/Scenes/RogueDrivePrototype.unity";
         const string CatalogPath = "Assets/Content/GarageCatalog.asset";
 
         static GarageSceneBuilder()
@@ -258,12 +257,7 @@ namespace RogueDrive.EditorTools
 
             // ── 10. СОХРАНЕНИЕ СЦЕНЫ ──────────────────────────────────────────────────
             EditorSceneManager.SaveScene(scene, ScenePath);
-
-            EditorBuildSettings.scenes = new[]
-            {
-                new EditorBuildSettingsScene(ScenePath, true),
-                new EditorBuildSettingsScene(PrototypeScenePath, true)
-            };
+            BuildSettingsAutoSync.SyncScenes();
 
             AssetDatabase.SaveAssets();
             Selection.activeObject = AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath);

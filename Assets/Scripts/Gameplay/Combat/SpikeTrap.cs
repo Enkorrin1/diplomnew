@@ -1,4 +1,5 @@
 using RogueDrive.Audio;
+using RogueDrive.Gameplay;
 using UnityEngine;
 
 namespace RogueDrive.Gameplay.Combat
@@ -49,18 +50,18 @@ namespace RogueDrive.Gameplay.Combat
                 var col = colliders[i];
                 if (col.CompareTag("Player")) continue;
 
-                var enemyHealth = col.GetComponentInParent<EnemyHealth>() ?? col.GetComponent<EnemyHealth>();
+                var damageable = col.GetComponentInParent<IDamageable>() ?? col.GetComponent<IDamageable>();
                 var raider = col.GetComponentInParent<RaiderVehicleAI>() ?? col.GetComponent<RaiderVehicleAI>();
 
-                if (enemyHealth != null || raider != null)
+                if (damageable != null || raider != null)
                 {
-                    TriggerTrap(enemyHealth, raider);
+                    TriggerTrap(damageable, raider);
                     break;
                 }
             }
         }
 
-        private void TriggerTrap(EnemyHealth enemy, RaiderVehicleAI raider)
+        private void TriggerTrap(IDamageable damageable, RaiderVehicleAI raider)
         {
             isTriggered = true;
 
@@ -75,10 +76,9 @@ namespace RogueDrive.Gameplay.Combat
                 raider.TakeDamage(damage);
                 raider.TriggerSpinout(1.5f);
             }
-
-            if (enemy != null)
+            else if (damageable != null)
             {
-                enemy.TakeDamage(damage);
+                damageable.TakeDamage(damage);
             }
 
             Destroy(gameObject);

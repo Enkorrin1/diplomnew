@@ -117,7 +117,10 @@ namespace RogueDrive.EditorTools
             {
                 "Assets/Scenes/MainMenuScene.unity",
                 "Assets/Scenes/GarageScene.unity",
-                "Assets/Scenes/RogueDrivePrototype.unity"
+                "Assets/Scenes/Stage1_Outskirts.unity",
+                "Assets/Scenes/Stage2_Wasteland.unity",
+                "Assets/Scenes/Stage3_Industrial.unity",
+                "Assets/Scenes/Stage4_Citadel.unity"
             };
 
             var list = new System.Collections.Generic.List<EditorBuildSettingsScene>();

@@ -18,7 +18,7 @@ namespace RogueDrive.EditorTools
         {
             if(EditorApplication.isPlaying) throw new InvalidOperationException("Stop Play mode first.");
             EditorSceneManager.SaveOpenScenes();
-            var scene=EditorSceneManager.OpenScene("Assets/Scenes/RogueDrivePrototype.unity");
+            var scene=EditorSceneManager.OpenScene("Assets/Scenes/Stage1_Outskirts.unity");
             var generator=Object.FindFirstObjectByType<ProceduralTrackGenerator>();
             var existing=new SerializedObject(generator).FindProperty("authoredCampaign").objectReferenceValue;
             if(existing!=null) return; // Never replace an authored map on repeated invocation.

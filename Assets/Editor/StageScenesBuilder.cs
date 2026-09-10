@@ -24,7 +24,7 @@ namespace RogueDrive.EditorTools
                 return;
             }
 
-            const string templatePath = "Assets/Scenes/RogueDrivePrototype.unity";
+            const string templatePath = "Assets/Scenes/Stage1_Outskirts.unity";
             if (!File.Exists(templatePath))
             {
                 Debug.LogError($"[StageScenesBuilder] Шаблонная сцена не найдена: {templatePath}");
@@ -109,9 +109,6 @@ namespace RogueDrive.EditorTools
 
                 scenesList.Add(new EditorBuildSettingsScene(scenePath, true));
             }
-
-            // Добавляем также RogueDrivePrototype как тестовый полигон / Endless
-            AddSceneIfExists(scenesList, templatePath);
 
             // Обновляем EditorBuildSettings
             EditorBuildSettings.scenes = scenesList.ToArray();

@@ -20,7 +20,7 @@ namespace RogueDrive.UI
         [SerializeField] private PauseMenuUI pause;
         [SerializeField] private RunExperienceManager experience;
         [SerializeField] private ComboScoreSystem combo;
-        [SerializeField] private GameObject mainPanel, garagePanel, hudPanel, settingsPanel, aboutPanel, campaignPanel, pausePanel, resultsPanel, levelPanel, touchPanel;
+        [SerializeField] private GameObject mainPanel, garagePanel, hudPanel, settingsPanel, aboutPanel, campaignPanel, pausePanel, resultsPanel, levelPanel;
         [SerializeField] private Text wallet, carInfo, buyCarLabel, resultText, hudText, bannerText, bossText, xpText, comboText;
         [SerializeField] private Button buyCarButton;
         [SerializeField] private Button[] carButtons, upgradeButtons, sectorButtons, offerButtons;
@@ -71,7 +71,6 @@ namespace RogueDrive.UI
             Set(resultsPanel, ended && !campaignOpen);
             Set(levelPanel, choosing && !ended);
             Set(hudPanel, run != null && !ended && !choosing && !paused);
-            Set(touchPanel, run != null && !ended && !choosing && !paused && Application.isMobilePlatform);
             if (wallet != null && progress != null) wallet.text = $"МОНЕТЫ  {progress.Coins}     РЕКОРД  {progress.Data.BestEndlessDistance:0} м";
             if (settingsValues != null && masterSlider != null)
                 settingsValues.text = $"{masterSlider.value:P0}\n{musicSlider.value:P0}\n{effectsSlider.value:P0}\n{steeringSlider.value:0.0}×";
@@ -249,7 +248,7 @@ namespace RogueDrive.UI
                 2 => "Stage2_Wasteland",
                 3 => "Stage3_Industrial",
                 4 => "Stage4_Citadel",
-                _ => "RogueDrivePrototype"
+                _ => "Stage1_Outskirts"
             };
 
             if (Application.CanStreamedLevelBeLoaded(sceneName))
@@ -258,7 +257,7 @@ namespace RogueDrive.UI
             }
             else
             {
-                SceneTransitionManager.SwitchScene("RogueDrivePrototype");
+                SceneTransitionManager.SwitchScene("Stage1_Outskirts");
             }
         }
 

@@ -45,8 +45,6 @@ namespace RogueDrive.Gameplay
             if (Application.isMobilePlatform)
                 Screen.sleepTimeout = SleepTimeout.NeverSleep;
 
-            // TouchControlsUI теперь создаётся только SceneUIView на мобилках;
-            // на PC — не нужен, курсор заблокирован во время заезда.
 
             if (FindFirstObjectByType<RogueDrive.UI.PauseMenuUI>() == null)
             {

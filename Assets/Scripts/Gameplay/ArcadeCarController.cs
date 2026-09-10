@@ -56,10 +56,6 @@ namespace RogueDrive.Gameplay
         float throttleInput;
         float steerInput;
         bool isNitroRequested;
-        float virtualThrottle;
-        float virtualSteer;
-        bool virtualNitro;
-        bool virtualHandbrake;
         bool isHandbrakeActive;
         bool isGrounded;
         float lastGroundedTime;
@@ -77,17 +73,6 @@ namespace RogueDrive.Gameplay
         public float PickupRadius => activeStats != null && activeStats.Get(StatId.PickupRadius) > 0f ? activeStats.Get(StatId.PickupRadius) : 6.5f;
 
         StatBlock activeStats;
-
-        /// <summary>
-        /// Установка сенсорного/виртуального ввода от мобильного интерфейса.
-        /// </summary>
-        public void SetVirtualInput(float throttle, float steer, bool nitro, bool handbrake = false)
-        {
-            virtualThrottle = Mathf.Clamp(throttle, -1f, 1f);
-            virtualSteer = Mathf.Clamp(steer, -1f, 1f);
-            virtualNitro = nitro;
-            virtualHandbrake = handbrake;
-        }
 
         public void Configure(GameRunController controller)
         {
@@ -363,21 +348,15 @@ namespace RogueDrive.Gameplay
                 if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow)) h -= 1f;
             }
 
-            // Объединение с сенсорным виртуальным вводом
-            if (Mathf.Abs(virtualThrottle) > 0.01f) v = virtualThrottle;
-            if (Mathf.Abs(virtualSteer) > 0.01f) h = virtualSteer;
-
             throttleInput = Mathf.Clamp(v, -1f, 1f);
             steerInput = Mathf.Clamp(h, -1f, 1f);
             // Нитро: Shift, ПКМ (правая кнопка мыши), геймпад A / X / RB
             isNitroRequested = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)
                 || Input.GetMouseButton(1)
-                || Input.GetKey(KeyCode.JoystickButton0) || Input.GetKey(KeyCode.JoystickButton2) || Input.GetKey(KeyCode.JoystickButton5)
-                || virtualNitro;
+                || Input.GetKey(KeyCode.JoystickButton0) || Input.GetKey(KeyCode.JoystickButton2) || Input.GetKey(KeyCode.JoystickButton5);
             // Ручной тормоз: Пробел, геймпад B / Circle
             isHandbrakeActive = Input.GetKey(KeyCode.Space)
-                || Input.GetKey(KeyCode.JoystickButton1)
-                || virtualHandbrake;
+                || Input.GetKey(KeyCode.JoystickButton1);
 
             // Ручной тормоз подавляет газ
             if (isHandbrakeActive)

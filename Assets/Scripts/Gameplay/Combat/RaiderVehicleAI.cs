@@ -1,5 +1,6 @@
 using System.Collections;
 using RogueDrive.Audio;
+using RogueDrive.Gameplay;
 using RogueDrive.Gameplay.VFX;
 using UnityEngine;
 
@@ -12,7 +13,7 @@ namespace RogueDrive.Gameplay.Combat
     /// При уничтожении эффектно детонирует и осыпает трассу монетами.
     /// </summary>
     [RequireComponent(typeof(Rigidbody))]
-    public sealed class RaiderVehicleAI : MonoBehaviour
+    public sealed class RaiderVehicleAI : MonoBehaviour, IDamageable
     {
         [Header("Vehicle Stats")]
         [SerializeField] private float maxHealth = 220f;
@@ -76,12 +77,17 @@ namespace RogueDrive.Gameplay.Combat
             }
         }
 
-        public void TakeDamage(float amount)
+        public void TakeDamage(float amount, float slowFactor = 0f, float burnDamage = 0f)
         {
             if (isDead) return;
 
             currentHealth -= amount;
             StartCoroutine(FlashDamageRoutine());
+
+            if (slowFactor > 0f)
+            {
+                TriggerSpinout(slowFactor);
+            }
 
             if (currentHealth <= 0f)
             {

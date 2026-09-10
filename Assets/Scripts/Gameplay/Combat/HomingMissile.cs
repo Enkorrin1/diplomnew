@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using RogueDrive.Audio;
+using RogueDrive.Gameplay;
 using UnityEngine;
 
 namespace RogueDrive.Gameplay.Combat
@@ -104,25 +105,11 @@ namespace RogueDrive.Gameplay.Combat
                 var col = colliders[i];
                 if (col.CompareTag("Player")) continue;
 
-                // Урон зомби-врагам
-                var enemyHealth = col.GetComponentInParent<EnemyHealth>() ?? col.GetComponent<EnemyHealth>();
-                if (enemyHealth != null)
+                // Урон всем целям (рейдеры, зомби, боссы, бочки)
+                var damageable = col.GetComponentInParent<IDamageable>() ?? col.GetComponent<IDamageable>();
+                if (damageable != null)
                 {
-                    enemyHealth.TakeDamage(damage);
-                }
-
-                // Урон машинам рейдеров
-                var raider = col.GetComponentInParent<RaiderVehicleAI>() ?? col.GetComponent<RaiderVehicleAI>();
-                if (raider != null)
-                {
-                    raider.TakeDamage(damage);
-                }
-
-                // Взрывные бочки
-                var barrel = col.GetComponentInParent<ExplosiveBarrel>() ?? col.GetComponent<ExplosiveBarrel>();
-                if (barrel != null)
-                {
-                    barrel.Explode();
+                    damageable.TakeDamage(damage);
                 }
 
                 // Физический отброс Rigidbodies

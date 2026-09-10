@@ -91,7 +91,7 @@ namespace RogueDrive.EditorTools
             }
 
             var activeScene = UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene();
-            string prototypePath = "Assets/Scenes/RogueDrivePrototype.unity";
+            string prototypePath = "Assets/Scenes/Stage1_Outskirts.unity";
 
             if (activeScene.path != prototypePath)
             {

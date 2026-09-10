@@ -93,7 +93,7 @@ namespace RogueDrive.Gameplay.Hub
             string sceneToLoad = targetSceneName;
             if (!Application.CanStreamedLevelBeLoaded(sceneToLoad))
             {
-                sceneToLoad = "RogueDrivePrototype";
+                sceneToLoad = "Stage1_Outskirts";
             }
 
             SceneTransitionManager.SwitchScene(sceneToLoad);

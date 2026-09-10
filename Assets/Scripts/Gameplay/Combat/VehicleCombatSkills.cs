@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using RogueDrive.Audio;
+using RogueDrive.Gameplay;
 using UnityEngine;
 
 namespace RogueDrive.Gameplay.Combat
@@ -106,7 +107,7 @@ namespace RogueDrive.Gameplay.Combat
             // Приоритет 2: зомби-враги
             if (candidateTargets.Count < missileSalvoCount)
             {
-                foreach (var enemy in FindObjectsByType<EnemyHealth>(FindObjectsSortMode.None))
+                foreach (var enemy in FindObjectsByType<EnemyBase>(FindObjectsSortMode.None))
                 {
                     if (enemy != null && enemy.gameObject.activeInHierarchy)
                     {
@@ -216,8 +217,8 @@ namespace RogueDrive.Gameplay.Combat
                 var col = colliders[i];
                 if (col.transform.IsChildOf(transform) || col.gameObject == gameObject) continue;
 
-                // Урон и отброс зомби
-                var enemy = col.GetComponentInParent<EnemyHealth>() ?? col.GetComponent<EnemyHealth>();
+                // Урон и отброс врагов (зомби, разрушаемые объекты)
+                var enemy = col.GetComponentInParent<EnemyBase>() ?? col.GetComponent<EnemyBase>();
                 if (enemy != null)
                 {
                     enemy.TakeDamage(ramDamage);

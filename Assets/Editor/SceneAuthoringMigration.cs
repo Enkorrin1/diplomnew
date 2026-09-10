@@ -31,7 +31,7 @@ namespace RogueDrive.EditorTools
             if (EditorApplication.isPlaying) throw new InvalidOperationException("Stop Play mode before migration.");
             // Save pending author edits before opening the next scene.
             EditorSceneManager.SaveOpenScenes();
-            foreach (string name in new[]{"MainMenuScene", "GarageScene", "RogueDrivePrototype"})
+            foreach (string name in new[]{"MainMenuScene", "GarageScene", "Stage1_Outskirts"})
             {
                 var scene = EditorSceneManager.OpenScene($"Assets/Scenes/{name}.unity");
                 if (scene.GetRootGameObjects().Any(x => x.GetComponentInChildren<SceneUIView>(true) != null)) continue;
@@ -53,7 +53,7 @@ namespace RogueDrive.EditorTools
             canvas.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
             var scaler = canvas.GetComponent<CanvasScaler>(); scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1280,720); scaler.matchWidthOrHeight = .5f;
-            var safe = new GameObject("SafeArea", typeof(RectTransform), typeof(SceneSafeArea)); safe.transform.SetParent(canvas.transform,false);
+            var safe = new GameObject("SafeArea", typeof(RectTransform)); safe.transform.SetParent(canvas.transform,false);
             var safeRect = safe.GetComponent<RectTransform>(); safeRect.anchorMin = Vector2.zero; safeRect.anchorMax = Vector2.one; safeRect.offsetMin = safeRect.offsetMax = Vector2.zero;
             canvasRoot = safe.transform;
             view = canvas.AddComponent<SceneUIView>(); Set(view,"catalog",catalog);
@@ -86,7 +86,7 @@ namespace RogueDrive.EditorTools
         {
             if(EditorApplication.isPlaying) throw new InvalidOperationException("Stop Play mode first.");
             EditorSceneManager.SaveOpenScenes();
-            foreach(string name in new[]{"MainMenuScene","GarageScene","RogueDrivePrototype"})
+            foreach(string name in new[]{"MainMenuScene","GarageScene","Stage1_Outskirts"})
             {
                 var scene=EditorSceneManager.OpenScene($"Assets/Scenes/{name}.unity");
                 var canvas=Object.FindFirstObjectByType<SceneUIView>(); if(canvas==null)throw new Exception("Missing scene UI: "+name);
@@ -187,9 +187,8 @@ namespace RogueDrive.EditorTools
             var run=Object.FindFirstObjectByType<GameRunController>(); var car=Object.FindFirstObjectByType<ArcadeCarController>();
             var hud=Object.FindFirstObjectByType<PrototypeHud>(); var level=Object.FindFirstObjectByType<LevelUpView>();
             var pause=Object.FindFirstObjectByType<PauseMenuUI>() ?? new GameObject("PauseController").AddComponent<PauseMenuUI>();
-            var touch=Object.FindFirstObjectByType<TouchControlsUI>() ?? new GameObject("TouchController").AddComponent<TouchControlsUI>();
             var combo=Object.FindFirstObjectByType<ComboScoreSystem>() ?? new GameObject("ComboController").AddComponent<ComboScoreSystem>();
-            foreach(var c in new MonoBehaviour[]{hud,level,pause,touch,combo}) if(c!=null) Flag(c);
+            foreach(var c in new MonoBehaviour[]{hud,level,pause,combo}) if(c!=null) Flag(c);
             Set(view,"run",run); Set(view,"car",car); Set(view,"hud",hud); Set(view,"levelUp",level); Set(view,"pause",pause); Set(view,"combo",combo);
             Set(view,"experience",Object.FindFirstObjectByType<RunExperienceManager>());
             var h=Panel("HUD",20,18,525,185); Set(view,"hudPanel",h.gameObject);
@@ -214,11 +213,6 @@ namespace RogueDrive.EditorTools
             var offers=new List<Object>(); var texts=new List<Object>();
             for(int i=0;i<3;i++) { var b=Button(l,$"Offer_{i+1}","МОДИФИКАТОР\nОписание\nВЫБРАТЬ",25+i*335,80,320,310); UnityEventTools.AddIntPersistentListener(b.onClick,view.SelectOffer,i); offers.Add(b); texts.Add(b.GetComponentInChildren<Text>()); }
             SetArray(view,"offerButtons",offers); SetArray(view,"offerLabels",texts); Set(view,"rerollButton",Action(l,"Reroll","ОБНОВИТЬ ПРЕДЛОЖЕНИЯ",350,420,340,54,12)); l.gameObject.SetActive(false);
-            var t=Panel("TouchControls",0,0,1280,720,new Color(0,0,0,0)); Set(view,"touchPanel",t.gameObject);
-            string[] fields={"leftButton","rightButton","brakeButton","gasButton","nitroButton"}; string[] names={"ВЛЕВО","ВПРАВО","ТОРМОЗ","ГАЗ","НИТРО"};
-            Vector2[] pos={new Vector2(25,575),new Vector2(155,575),new Vector2(965,575),new Vector2(1110,575),new Vector2(1110,460)};
-            for(int i=0;i<5;i++) { var b=Button(t,fields[i],names[i],pos[i].x,pos[i].y,120,100); Set(touch,fields[i],b.gameObject.AddComponent<SceneTouchButton>()); }
-            Set(touch,"car",car); Set(touch,"run",run); t.gameObject.SetActive(false);
         }
 
         static void BuildSettings()

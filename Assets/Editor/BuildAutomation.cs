@@ -19,9 +19,12 @@ namespace RogueDrive.Editor
 
         private static readonly string[] RequiredScenes = new[]
         {
-            "Assets/Scenes/RogueDrivePrototype.unity",
+            "Assets/Scenes/MainMenuScene.unity",
             "Assets/Scenes/GarageScene.unity",
-            "Assets/Scenes/BossEncounter.unity"
+            "Assets/Scenes/Stage1_Outskirts.unity",
+            "Assets/Scenes/Stage2_Wasteland.unity",
+            "Assets/Scenes/Stage3_Industrial.unity",
+            "Assets/Scenes/Stage4_Citadel.unity"
         };
 
         [MenuItem("RogueDrive/Build/Configure Android Project Settings", priority = 100)]
