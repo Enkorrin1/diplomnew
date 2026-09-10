@@ -52,6 +52,7 @@ namespace RogueDrive.Meta
                 SaveService.SaveActive();
                 _currentWheelVisuals?.RefreshForCurrentProgress(car.Id);
                 _currentSuspensionVisuals?.RefreshForCurrentProgress(car.Id);
+                _currentTuningVisuals?.RefreshTuning(car.Id, _meta);
             }
         }
 
@@ -64,6 +65,7 @@ namespace RogueDrive.Meta
         GameObject _currentCarModel;
         CarWheelUpgradeVisuals _currentWheelVisuals;
         CarSuspensionUpgradeVisuals _currentSuspensionVisuals;
+        RogueDrive.Gameplay.VFX.CarVisualTuning _currentTuningVisuals;
         float _rotationAngle;
         bool _isDragging;
         private RogueDrive.UI.SceneUIView sceneView;
@@ -446,6 +448,7 @@ namespace RogueDrive.Meta
                         // Колёса и клиренс должны меняться в тот же кадр на preview-модели.
                         _currentWheelVisuals?.RefreshForCurrentProgress();
                         _currentSuspensionVisuals?.RefreshForCurrentProgress();
+                        _currentTuningVisuals?.RefreshTuning(carId, _meta);
                     }
                 }
                 GUI.enabled = true;
@@ -597,6 +600,8 @@ namespace RogueDrive.Meta
             _currentWheelVisuals.RefreshForCurrentProgress(carId);
             _currentSuspensionVisuals = _currentCarModel.GetComponent<CarSuspensionUpgradeVisuals>() ?? _currentCarModel.AddComponent<CarSuspensionUpgradeVisuals>();
             _currentSuspensionVisuals.RefreshForCurrentProgress(carId);
+            _currentTuningVisuals = _currentCarModel.GetComponent<RogueDrive.Gameplay.VFX.CarVisualTuning>() ?? _currentCarModel.AddComponent<RogueDrive.Gameplay.VFX.CarVisualTuning>();
+            _currentTuningVisuals.RefreshTuning(carId, _meta);
         }
 
         void BuildPodiumCarModel(Transform parent, CarDefinition car)

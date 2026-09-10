@@ -205,6 +205,9 @@ namespace RogueDrive.Gameplay
                 gameObject.AddComponent<CarSuspensionUpgradeVisuals>();
             suspension = GetComponent<CarSuspensionUpgradeVisuals>();
 
+            if (GetComponent<RogueDrive.Gameplay.Combat.VehicleCombatSkills>() == null)
+                gameObject.AddComponent<RogueDrive.Gameplay.Combat.VehicleCombatSkills>();
+
             if (AudioManager.Instance == null)
             {
                 GameObject audioGo = new GameObject("AudioManager");
@@ -325,6 +328,11 @@ namespace RogueDrive.Gameplay
                 wheels.Configure(catalog.WheelUpgradePrefabs);
                 wheels.RebuildForCurrentCarModel();
                 GetComponent<CarVisualEnhancer>()?.RefreshWheels();
+
+                var tuning = GetComponent<RogueDrive.Gameplay.VFX.CarVisualTuning>();
+                if (tuning == null) tuning = gameObject.AddComponent<RogueDrive.Gameplay.VFX.CarVisualTuning>();
+                var metaProgress = RogueDrive.Meta.SaveService.GetActiveProgress(catalog != null ? catalog.Upgrades : null, catalog != null ? catalog.Cars : null);
+                tuning.RefreshTuning(selectedDef != null ? selectedDef.Id : "light", metaProgress);
             }
         }
 

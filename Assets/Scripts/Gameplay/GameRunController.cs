@@ -58,6 +58,11 @@ namespace RogueDrive.Gameplay
                 gameObject.AddComponent<RogueDrive.Gameplay.Combat.ComboScoreSystem>();
             }
 
+            if (FindFirstObjectByType<RogueDrive.Gameplay.Combat.RaiderSpawner>() == null)
+            {
+                gameObject.AddComponent<RogueDrive.Gameplay.Combat.RaiderSpawner>();
+            }
+
             // Визуальные эффекты скорости и критического здоровья
             if (FindFirstObjectByType<RogueDrive.Gameplay.VFX.SpeedLinesOverlay>() == null)
             {
