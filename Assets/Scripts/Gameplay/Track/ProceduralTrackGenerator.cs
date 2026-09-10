@@ -177,7 +177,7 @@ namespace RogueDrive.Gameplay
                     if (behindDist > 50f && directDist > despawnDistanceBehind)
                     {
                         activeChunks.RemoveAt(i);
-                        Destroy(chunk.gameObject);
+                        SafeDestroy(chunk.gameObject);
                     }
                 }
             }
@@ -895,6 +895,19 @@ namespace RogueDrive.Gameplay
             return ApplyMaterial(wall, col);
         }
 
+        private static void SafeDestroy(UnityEngine.Object obj)
+        {
+            if (obj == null) return;
+            if (Application.isPlaying)
+            {
+                Destroy(obj);
+            }
+            else
+            {
+                DestroyImmediate(obj);
+            }
+        }
+
         void CreateBridgeArch(Transform parent, float z, float width, Color col)
         {
             GameObject arch = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -905,7 +918,7 @@ namespace RogueDrive.Gameplay
             ApplyMaterial(arch, col);
 
             Collider c = arch.GetComponent<Collider>();
-            if (c != null) Destroy(c);
+            if (c != null) SafeDestroy(c);
         }
 
         void CreateCenterDashes(Transform parent, float length, Color col)
@@ -925,7 +938,7 @@ namespace RogueDrive.Gameplay
                 dash.transform.localScale = new Vector3(0.35f, 0.05f, dashLen);
 
                 Collider colComp = dash.GetComponent<Collider>();
-                if (colComp != null) Destroy(colComp);
+                if (colComp != null) SafeDestroy(colComp);
 
                 ApplyMaterial(dash, col);
             }
@@ -1001,7 +1014,7 @@ namespace RogueDrive.Gameplay
                 visual.transform.localRotation = Quaternion.identity;
                 visual.transform.localScale = Vector3.one * 1.15f;
                 Collider[] childCols = visual.GetComponentsInChildren<Collider>(true);
-                for (int i = 0; i < childCols.Length; i++) Destroy(childCols[i]);
+                for (int i = 0; i < childCols.Length; i++) SafeDestroy(childCols[i]);
             }
             else
             {
@@ -1020,7 +1033,7 @@ namespace RogueDrive.Gameplay
                     r.sharedMaterial = m;
                 }
                 Collider bodyCol = body.GetComponent<Collider>();
-                if (bodyCol != null) Destroy(bodyCol);
+                if (bodyCol != null) SafeDestroy(bodyCol);
             }
 
             // Основной коллайдер и логика
@@ -1050,7 +1063,7 @@ namespace RogueDrive.Gameplay
                 pallet.transform.localPosition = Vector3.zero;
                 pallet.transform.localScale = Vector3.one * 0.9f;
                 Collider[] pCols = pallet.GetComponentsInChildren<Collider>(true);
-                for (int i = 0; i < pCols.Length; i++) Destroy(pCols[i]);
+                for (int i = 0; i < pCols.Length; i++) SafeDestroy(pCols[i]);
 
                 // Стильный деревянный ящик припасов поверх поддона
                 GameObject body = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -1067,7 +1080,7 @@ namespace RogueDrive.Gameplay
                     r.sharedMaterial = m;
                 }
                 Collider bodyCol = body.GetComponent<Collider>();
-                if (bodyCol != null) Destroy(bodyCol);
+                if (bodyCol != null) SafeDestroy(bodyCol);
             }
             else
             {
@@ -1085,7 +1098,7 @@ namespace RogueDrive.Gameplay
                     r.sharedMaterial = m;
                 }
                 Collider bodyCol = body.GetComponent<Collider>();
-                if (bodyCol != null) Destroy(bodyCol);
+                if (bodyCol != null) SafeDestroy(bodyCol);
             }
 
             BoxCollider box = crate.AddComponent<BoxCollider>();

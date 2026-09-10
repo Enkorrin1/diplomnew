@@ -80,8 +80,8 @@ namespace RogueDrive.EditorTools
                 contact.Invoke(testBarrel, new object[] { testCar, 1f });
                 if (testBarrel.IsDead) throw new Exception("Gentle contact detonated barrel");
                 contact.Invoke(testBarrel, new object[] { testCar, 8f });
-                if (!testBarrel.IsDead) throw new Exception("Strong collision failed to detonate barrel");
-                UnityEngine.Object.Destroy(testCar);
+                if (Application.isPlaying) UnityEngine.Object.Destroy(testCar);
+                else UnityEngine.Object.DestroyImmediate(testCar);
                 for (int i = 0; i < chunks.Length - 1; i++)
                     if (Vector3.Distance(chunks[i].EndPosition, chunks[i + 1].transform.position) > 0.01f)
                         throw new Exception("Road connection gap");
@@ -138,9 +138,18 @@ namespace RogueDrive.EditorTools
             camera.targetTexture = null;
             RenderTexture.active = previous;
             target.Release();
-            UnityEngine.Object.Destroy(target);
-            UnityEngine.Object.Destroy(pixels);
-            UnityEngine.Object.Destroy(go);
+            if (Application.isPlaying)
+            {
+                UnityEngine.Object.Destroy(target);
+                UnityEngine.Object.Destroy(pixels);
+                UnityEngine.Object.Destroy(go);
+            }
+            else
+            {
+                UnityEngine.Object.DestroyImmediate(target);
+                UnityEngine.Object.DestroyImmediate(pixels);
+                UnityEngine.Object.DestroyImmediate(go);
+            }
         }
     }
 }

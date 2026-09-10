@@ -188,7 +188,16 @@ namespace RogueDrive.Gameplay
             foreach (Collider c in visual.GetComponentsInChildren<Collider>(true)) c.enabled = false;
             foreach (Rigidbody rb in visual.GetComponentsInChildren<Rigidbody>(true)) { rb.isKinematic = true; rb.detectCollisions = false; }
             Renderer[] renderers = visual.GetComponentsInChildren<Renderer>();
-            if (renderers.Length == 0) { Destroy(holder); return null; }
+            if (renderers.Length == 0)
+            {
+#if UNITY_EDITOR
+                if (!Application.isPlaying) DestroyImmediate(holder);
+                else Destroy(holder);
+#else
+                Destroy(holder);
+#endif
+                return null;
+            }
             var tint = new MaterialPropertyBlock();
             tint.SetColor("_Color", new Color(0.73f, 0.70f, 0.59f));
             foreach (Renderer r in renderers) r.SetPropertyBlock(tint);
