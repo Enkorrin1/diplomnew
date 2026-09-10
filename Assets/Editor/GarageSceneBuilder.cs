@@ -1,5 +1,6 @@
 #if UNITY_EDITOR
 using System.IO;
+using RogueDrive.Gameplay.Hub;
 using RogueDrive.Meta;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -27,101 +28,235 @@ namespace RogueDrive.EditorTools
             };
         }
 
-        [MenuItem("RogueDrive/Создать сцену Гаража")]
+        [MenuItem("RogueDrive/Создать сцену Гаража (First-Person Hub)")]
         public static void CreateGarageScene()
         {
-            // Убеждаемся, что контент каталога настроен
             GarageContentBuilder.BuildAllGarageContent();
 
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
-            RenderSettings.ambientLight = new Color(0.14f, 0.16f, 0.22f);
+            RenderSettings.ambientLight = new Color(0.04f, 0.03f, 0.05f);
 
-            // 1. Освещение ангара
-            GameObject dirLight = new GameObject("Key_Directional_Light");
-            Light l1 = dirLight.AddComponent<Light>();
-            l1.type = LightType.Directional;
-            l1.intensity = 1.3f;
-            l1.color = new Color(1f, 0.96f, 0.9f);
-            dirLight.transform.rotation = Quaternion.Euler(38f, -40f, 0f);
+            GameObject garageRoot = new GameObject("GarageHubRoot");
 
-            GameObject spotLight = new GameObject("Podium_Spotlight");
-            Light l2 = spotLight.AddComponent<Light>();
-            l2.type = LightType.Spot;
-            l2.intensity = 3.5f;
-            l2.range = 15f;
-            l2.spotAngle = 60f;
-            l2.color = new Color(0.85f, 0.92f, 1f);
-            spotLight.transform.position = new Vector3(0f, 6.5f, 0f);
-            spotLight.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+            // ── 1. СТРУКТУРА ПОМЕЩЕНИЯ АНГАРА ──────────────────────────────────────────
+            Transform envRoot = new GameObject("Environment").transform;
+            envRoot.SetParent(garageRoot.transform, false);
 
-            // 2. Окружение гаража (пол, стены, подиум)
-            GameObject garageEnv = new GameObject("GarageEnvironment");
+            Color concreteFloor = new Color(0.12f, 0.13f, 0.16f);
+            Color darkWall = new Color(0.14f, 0.16f, 0.20f);
+            Color metalPillar = new Color(0.22f, 0.24f, 0.28f);
+            Color hazardYellow = new Color(0.85f, 0.70f, 0.15f);
 
-            // Бетонный пол
-            CreatePrimitive(PrimitiveType.Cube, "Floor", new Vector3(0f, -0.25f, 0f), new Vector3(30f, 0.5f, 30f), new Color(0.1f, 0.11f, 0.14f), garageEnv.transform);
+            // Пол (с коллайдером)
+            CreateSolidCube("Floor", new Vector3(0f, -0.25f, 0f), new Vector3(26f, 0.5f, 26f), concreteFloor, envRoot);
 
-            // Задняя стена ангара
-            CreatePrimitive(PrimitiveType.Cube, "BackWall", new Vector3(0f, 5f, 10f), new Vector3(30f, 10f, 1f), new Color(0.13f, 0.15f, 0.18f), garageEnv.transform);
+            // Потолок с балками
+            CreateSolidCube("Ceiling", new Vector3(0f, 6.25f, 0f), new Vector3(26f, 0.5f, 26f), darkWall, envRoot);
 
-            // Боковые балки ангара
-            CreatePrimitive(PrimitiveType.Cube, "Pillar_L", new Vector3(-8f, 5f, 8f), new Vector3(1f, 10f, 1f), new Color(0.2f, 0.22f, 0.26f), garageEnv.transform);
-            CreatePrimitive(PrimitiveType.Cube, "Pillar_R", new Vector3(8f, 5f, 8f), new Vector3(1f, 10f, 1f), new Color(0.2f, 0.22f, 0.26f), garageEnv.transform);
+            // Задняя стена
+            CreateSolidCube("Wall_Back", new Vector3(0f, 3f, 12.5f), new Vector3(26f, 6f, 1f), darkWall, envRoot);
 
-            // Реалистичные 3D-декорации мастерской из GarageAssetPack
-            Transform propsRoot = new GameObject("WorkshopProps").transform;
-            propsRoot.SetParent(garageEnv.transform, false);
+            // Боковые стены
+            CreateSolidCube("Wall_Left", new Vector3(-12.5f, 3f, 0f), new Vector3(1f, 6f, 26f), darkWall, envRoot);
+            CreateSolidCube("Wall_Right", new Vector3(12.5f, 3f, 0f), new Vector3(1f, 6f, 26f), darkWall, envRoot);
 
-            // Левая зона: рабочий верстак с инструментами, урна и стопка колес
-            SpawnProp("Assets/GarageAssetPack/Prefabs/WorkbenchFull.prefab", new Vector3(-4.8f, 0f, 3.2f), Quaternion.Euler(0f, 40f, 0f), Vector3.one * 1.15f, propsRoot);
-            SpawnProp("Assets/GarageAssetPack/Prefabs/TrashCan.prefab", new Vector3(-3.2f, 0f, 4.4f), Quaternion.Euler(0f, 15f, 0f), Vector3.one * 1.1f, propsRoot);
-            SpawnProp("Assets/GarageAssetPack/Prefabs/CarWheel.prefab", new Vector3(-4.6f, 0f, 1.8f), Quaternion.Euler(0f, 10f, 0f), Vector3.one * 1.1f, propsRoot);
+            // Передняя стена с проемом для гермоворот
+            CreateSolidCube("Wall_Front_Left", new Vector3(-8.5f, 3f, -12.5f), new Vector3(9f, 6f, 1f), darkWall, envRoot);
+            CreateSolidCube("Wall_Front_Right", new Vector3(8.5f, 3f, -12.5f), new Vector3(9f, 6f, 1f), darkWall, envRoot);
+            CreateSolidCube("Wall_Front_Top", new Vector3(0f, 5.25f, -12.5f), new Vector3(8f, 1.5f, 1f), darkWall, envRoot);
 
-            // Правая зона: складской стеллаж с запчастями, поддон с бочкой, канистра и аккумулятор
-            SpawnProp("Assets/GarageAssetPack/Prefabs/StorageShelfFull.prefab", new Vector3(4.8f, 0f, 3.2f), Quaternion.Euler(0f, -40f, 0f), Vector3.one * 1.15f, propsRoot);
-            SpawnProp("Assets/GarageAssetPack/Prefabs/WoodenPallet.prefab", new Vector3(4.2f, 0f, 1.4f), Quaternion.Euler(0f, -15f, 0f), Vector3.one * 1.1f, propsRoot);
-            SpawnProp("Assets/GarageAssetPack/Prefabs/Barrelfbx.prefab", new Vector3(4.1f, 0.15f, 1.4f), Quaternion.identity, Vector3.one * 1.1f, propsRoot);
-            SpawnProp("Assets/GarageAssetPack/Prefabs/JerrycanLarge.prefab", new Vector3(3.3f, 0f, 1.2f), Quaternion.Euler(0f, 25f, 0f), Vector3.one * 1.1f, propsRoot);
-            SpawnProp("Assets/GarageAssetPack/Prefabs/CarBattery.prefab", new Vector3(3.2f, 0f, 2.0f), Quaternion.Euler(0f, -10f, 0f), Vector3.one * 1.2f, propsRoot);
+            // Опорные стальные колонны
+            CreateSolidCube("Pillar_1", new Vector3(-11.5f, 3f, 11.5f), new Vector3(1.2f, 6f, 1.2f), metalPillar, envRoot);
+            CreateSolidCube("Pillar_2", new Vector3(11.5f, 3f, 11.5f), new Vector3(1.2f, 6f, 1.2f), metalPillar, envRoot);
+            CreateSolidCube("Pillar_3", new Vector3(-11.5f, 3f, -11.5f), new Vector3(1.2f, 6f, 1.2f), metalPillar, envRoot);
+            CreateSolidCube("Pillar_4", new Vector3(11.5f, 3f, -11.5f), new Vector3(1.2f, 6f, 1.2f), metalPillar, envRoot);
 
-            // Задний план: запасные бочки вдоль стены
-            SpawnProp("Assets/GarageAssetPack/Prefabs/Barrelfbx.prefab", new Vector3(-7f, 0f, 7.8f), Quaternion.identity, Vector3.one * 1.15f, propsRoot);
-            SpawnProp("Assets/GarageAssetPack/Prefabs/Barrelfbx.prefab", new Vector3(-6.2f, 0f, 8.2f), Quaternion.identity, Vector3.one * 1.15f, propsRoot);
-            SpawnProp("Assets/GarageAssetPack/Prefabs/Barrelfbx.prefab", new Vector3(6.8f, 0f, 8.0f), Quaternion.identity, Vector3.one * 1.15f, propsRoot);
+            // Дорога за воротами (вид наружу в ночную трассу)
+            CreateSolidCube("Outside_Road", new Vector3(0f, -0.3f, -24f), new Vector3(20f, 0.4f, 22f), new Color(0.08f, 0.09f, 0.11f), envRoot);
 
-            // 3. Круглый вращающийся подиум
-            GameObject podiumBase = CreatePrimitive(PrimitiveType.Cylinder, "PodiumBase", new Vector3(0f, 0.1f, 0f), new Vector3(6.5f, 0.2f, 6.5f), new Color(0.18f, 0.2f, 0.25f), garageEnv.transform);
+            // ── 2. ГЕРМОВОРОТА АНГАРА ─────────────────────────────────────────────────
+            GameObject gateObj = new GameObject("Gate_HeavyDoor");
+            gateObj.transform.SetParent(envRoot, false);
+            gateObj.transform.position = new Vector3(0f, 2.25f, -12.5f);
 
-            // Светящаяся неоновая окантовка подиума
-            GameObject ring = CreatePrimitive(PrimitiveType.Cylinder, "PodiumRing", new Vector3(0f, 0.12f, 0f), new Vector3(6.8f, 0.05f, 6.8f), new Color(0.1f, 0.7f, 1f), garageEnv.transform);
+            GameObject gateVisual = CreateSolidCube("DoorPlate", Vector3.zero, new Vector3(7.8f, 4.5f, 0.4f), new Color(0.18f, 0.20f, 0.25f), gateObj.transform);
+            CreateSolidCube("HazardStripe", new Vector3(0f, -1.8f, -0.25f), new Vector3(7.4f, 0.5f, 0.1f), hazardYellow, gateObj.transform);
 
-            // Точка привязки для вращения машины
+            var gateController = gateObj.AddComponent<GarageGateController>();
+            SerializedObject gateSo = new SerializedObject(gateController);
+            gateSo.FindProperty("gateDoorTransform").objectReferenceValue = gateObj.transform;
+            gateSo.FindProperty("openHeight").floatValue = 5.2f;
+            gateSo.ApplyModifiedProperties();
+
+            // ── 3. ОСВЕЩЕНИЕ АНГАРА (АВАРИЙНЫЙ И ОСНОВНОЙ РЕЖИМЫ) ─────────────────────
+            Transform lightsRoot = new GameObject("Lighting").transform;
+            lightsRoot.SetParent(garageRoot.transform, false);
+
+            // Аварийный красный маяк (горит в темноте)
+            GameObject emergObj = new GameObject("Emergency_RedLight");
+            emergObj.transform.SetParent(lightsRoot, false);
+            emergObj.transform.position = new Vector3(11.2f, 2.8f, 0f);
+            Light emergLight = emergObj.AddComponent<Light>();
+            emergLight.type = LightType.Point;
+            emergLight.color = new Color(1f, 0.15f, 0.15f);
+            emergLight.intensity = 2.5f;
+            emergLight.range = 14f;
+
+            // Основной верхний прожектор подиума
+            GameObject mainSpotObj = new GameObject("Podium_Spotlight");
+            mainSpotObj.transform.SetParent(lightsRoot, false);
+            mainSpotObj.transform.position = new Vector3(0f, 5.8f, 0f);
+            mainSpotObj.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+            Light mainSpot = mainSpotObj.AddComponent<Light>();
+            mainSpot.type = LightType.Spot;
+            mainSpot.color = new Color(1f, 0.95f, 0.88f);
+            mainSpot.intensity = 4.2f;
+            mainSpot.range = 16f;
+            mainSpot.spotAngle = 65f;
+            mainSpot.shadows = LightShadows.Soft;
+
+            // Теплый свет над верстаком
+            GameObject benchLightObj = new GameObject("Workbench_WarmLight");
+            benchLightObj.transform.SetParent(lightsRoot, false);
+            benchLightObj.transform.position = new Vector3(-5.2f, 3.2f, 3.2f);
+            Light benchLight = benchLightObj.AddComponent<Light>();
+            benchLight.type = LightType.Point;
+            benchLight.color = new Color(1f, 0.82f, 0.55f);
+            benchLight.intensity = 2.8f;
+            benchLight.range = 9f;
+            benchLight.shadows = LightShadows.Soft;
+
+            // Мягкий рассеянный свет
+            GameObject dirObj = new GameObject("Key_Directional_Light");
+            dirObj.transform.SetParent(lightsRoot, false);
+            dirObj.transform.rotation = Quaternion.Euler(45f, -35f, 0f);
+            Light dirLight = dirObj.AddComponent<Light>();
+            dirLight.type = LightType.Directional;
+            dirLight.color = new Color(0.7f, 0.85f, 1f);
+            dirLight.intensity = 0.85f;
+            dirLight.shadows = LightShadows.Soft;
+
+            // ── 4. ПОДИУМ И АВТОМОБИЛЬ ───────────────────────────────────────────────
+            Transform podiumRoot = new GameObject("PodiumRoot").transform;
+            podiumRoot.SetParent(garageRoot.transform, false);
+
+            CreateSolidCube("PodiumBase", new Vector3(0f, 0.1f, 0f), new Vector3(6.5f, 0.2f, 6.5f), new Color(0.18f, 0.2f, 0.25f), podiumRoot);
+            GameObject neonRing = CreateSolidCube("NeonRing", new Vector3(0f, 0.12f, 0f), new Vector3(6.8f, 0.05f, 6.8f), new Color(0.1f, 0.8f, 1f), podiumRoot);
+
             GameObject podiumAnchor = new GameObject("PodiumAnchor");
+            podiumAnchor.transform.SetParent(podiumRoot, false);
             podiumAnchor.transform.position = new Vector3(0f, 0.2f, 0f);
 
-            // 4. Камера гаража
-            GameObject camObj = new GameObject("Main Camera");
-            camObj.tag = "MainCamera";
-            camObj.transform.position = new Vector3(0f, 2.2f, -5.8f);
-            camObj.transform.rotation = Quaternion.Euler(15f, 0f, 0f);
-            Camera cam = camObj.AddComponent<Camera>();
-            cam.clearFlags = CameraClearFlags.SolidColor;
-            cam.backgroundColor = new Color(0.06f, 0.07f, 0.1f);
-            cam.fieldOfView = 50f;
-            camObj.AddComponent<AudioListener>();
+            // Интерактивная зона посадки в автомобиль
+            GameObject carTrigger = new GameObject("VehicleBoardingZone");
+            carTrigger.transform.SetParent(podiumAnchor.transform, false);
+            BoxCollider carCol = carTrigger.AddComponent<BoxCollider>();
+            carCol.size = new Vector3(3.5f, 2.2f, 5.0f);
+            carCol.center = new Vector3(0f, 1.1f, 0f);
+            carTrigger.AddComponent<GarageVehicleBoarding>();
 
-            // 5. Контроллер UI Гаража
+            // ── 5. РУБИЛЬНИК ГЕНЕРАТОРА (НА ПРАВОЙ СТЕНЕ) ─────────────────────────────
+            GameObject switchBox = CreateSolidCube("GeneratorSwitchBox", new Vector3(11.9f, 1.8f, 0f), new Vector3(0.35f, 0.7f, 0.5f), new Color(0.25f, 0.28f, 0.32f), envRoot);
+            GameObject handle = CreateSolidCube("SwitchHandle", new Vector3(11.7f, 1.8f, 0f), new Vector3(0.12f, 0.4f, 0.12f), Color.red, switchBox.transform);
+            var genSwitch = switchBox.AddComponent<GarageGeneratorSwitch>();
+            SerializedObject switchSo = new SerializedObject(genSwitch);
+            switchSo.FindProperty("switchHandle").objectReferenceValue = handle.transform;
+            switchSo.ApplyModifiedProperties();
+
+            // ── 6. ВЕРСТАК И КЛЮЧИ ЗАЖИГАНИЯ (СЛЕВА) ─────────────────────────────────
+            Transform propsRoot = new GameObject("WorkshopProps").transform;
+            propsRoot.SetParent(garageRoot.transform, false);
+
+            GameObject workbench = SpawnProp("Assets/GarageAssetPack/Prefabs/WorkbenchFull.prefab", new Vector3(-5.2f, 0f, 3.2f), Quaternion.Euler(0f, 40f, 0f), Vector3.one * 1.15f, propsRoot);
+            if (workbench != null)
+            {
+                BoxCollider wbCol = workbench.AddComponent<BoxCollider>();
+                wbCol.size = new Vector3(2.5f, 1.8f, 1.4f);
+                wbCol.center = new Vector3(0f, 0.9f, 0f);
+                workbench.AddComponent<GarageWorkbenchInteractable>();
+            }
+
+            // Связка ключей на верстаке
+            GameObject keysObj = new GameObject("CarKeysItem");
+            keysObj.transform.SetParent(propsRoot, false);
+            keysObj.transform.position = new Vector3(-5.0f, 1.08f, 3.1f);
+            GameObject keysVisual = CreateSolidCube("KeysFob", Vector3.zero, new Vector3(0.15f, 0.04f, 0.25f), new Color(0.9f, 0.75f, 0.2f), keysObj.transform);
+            CreateSolidCube("KeyBlade", new Vector3(0f, 0f, 0.18f), new Vector3(0.04f, 0.02f, 0.16f), Color.gray, keysVisual.transform);
+            SphereCollider keysCol = keysObj.AddComponent<SphereCollider>();
+            keysCol.radius = 0.5f;
+            keysObj.AddComponent<GarageCarKeys>();
+
+            // Дополнительный декор мастерской
+            SpawnProp("Assets/GarageAssetPack/Prefabs/TrashCan.prefab", new Vector3(-3.5f, 0f, 4.4f), Quaternion.Euler(0f, 15f, 0f), Vector3.one * 1.1f, propsRoot);
+            SpawnProp("Assets/GarageAssetPack/Prefabs/CarWheel.prefab", new Vector3(-4.8f, 0f, 1.8f), Quaternion.Euler(0f, 10f, 0f), Vector3.one * 1.1f, propsRoot);
+            SpawnProp("Assets/GarageAssetPack/Prefabs/StorageShelfFull.prefab", new Vector3(5.2f, 0f, 3.2f), Quaternion.Euler(0f, -40f, 0f), Vector3.one * 1.15f, propsRoot);
+            SpawnProp("Assets/GarageAssetPack/Prefabs/WoodenPallet.prefab", new Vector3(4.5f, 0f, 1.4f), Quaternion.Euler(0f, -15f, 0f), Vector3.one * 1.1f, propsRoot);
+            SpawnProp("Assets/GarageAssetPack/Prefabs/Barrelfbx.prefab", new Vector3(4.4f, 0.15f, 1.4f), Quaternion.identity, Vector3.one * 1.1f, propsRoot);
+            SpawnProp("Assets/GarageAssetPack/Prefabs/JerrycanLarge.prefab", new Vector3(3.6f, 0f, 1.2f), Quaternion.Euler(0f, 25f, 0f), Vector3.one * 1.1f, propsRoot);
+
+            // ── 7. ПЕРСОНАЖ ОТ 1-ГО ЛИЦА ─────────────────────────────────────────────
+            GameObject playerObj = new GameObject("FP_GaragePlayer");
+            playerObj.transform.SetParent(garageRoot.transform, false);
+            playerObj.transform.position = new Vector3(0f, 0.1f, 8.0f);
+            playerObj.transform.rotation = Quaternion.Euler(0f, 180f, 0f); // смотрим в сторону машины и ворот
+
+            CharacterController cc = playerObj.AddComponent<CharacterController>();
+            cc.height = 1.8f;
+            cc.radius = 0.45f;
+            cc.center = new Vector3(0f, 0.9f, 0f);
+
+            var playerCtrl = playerObj.AddComponent<GaragePlayerController>();
+
+            // Голова / Камера игрока
+            GameObject headCamObj = new GameObject("PlayerCamera");
+            headCamObj.tag = "MainCamera";
+            headCamObj.transform.SetParent(playerObj.transform, false);
+            headCamObj.transform.localPosition = new Vector3(0f, 1.65f, 0f);
+
+            Camera headCam = headCamObj.AddComponent<Camera>();
+            headCam.clearFlags = CameraClearFlags.SolidColor;
+            headCam.backgroundColor = new Color(0.04f, 0.05f, 0.07f);
+            headCam.fieldOfView = 65f;
+            headCamObj.AddComponent<AudioListener>();
+
+            var raycaster = headCamObj.AddComponent<GarageInteractionRaycaster>();
+
+            SerializedObject playerSo = new SerializedObject(playerCtrl);
+            playerSo.FindProperty("playerCamera").objectReferenceValue = headCam;
+            playerSo.ApplyModifiedProperties();
+
+            SerializedObject raycasterSo = new SerializedObject(raycaster);
+            raycasterSo.FindProperty("player").objectReferenceValue = playerCtrl;
+            raycasterSo.ApplyModifiedProperties();
+
+            // ── 8. КООРДИНАТОР ПРОЛОГА И АТМОСФЕРА ────────────────────────────────────
+            var prologueMgr = garageRoot.AddComponent<GaragePrologueManager>();
+            SerializedObject prolSo = new SerializedObject(prologueMgr);
+            prolSo.FindProperty("emergencyRedLight").objectReferenceValue = emergLight;
+            SerializedProperty mainLightsProp = prolSo.FindProperty("mainWorkshopLights");
+            mainLightsProp.arraySize = 3;
+            mainLightsProp.GetArrayElementAtIndex(0).objectReferenceValue = mainSpot;
+            mainLightsProp.GetArrayElementAtIndex(1).objectReferenceValue = benchLight;
+            mainLightsProp.GetArrayElementAtIndex(2).objectReferenceValue = dirLight;
+            prolSo.FindProperty("neonPodiumRing").objectReferenceValue = neonRing;
+            prolSo.ApplyModifiedProperties();
+
+            garageRoot.AddComponent<GarageAtmosphereEnhancer>();
+
+            // ── 9. МЕНЕДЖЕР ГАРАЖА ДЛЯ КАТАЛОГА И АВТО ────────────────────────────────
             GameObject managerObj = new GameObject("GarageManager");
+            managerObj.transform.SetParent(garageRoot.transform, false);
             GarageUIController controller = managerObj.AddComponent<GarageUIController>();
 
             GarageCatalog catalog = AssetDatabase.LoadAssetAtPath<GarageCatalog>(CatalogPath);
-            SerializedObject so = new SerializedObject(controller);
-            so.FindProperty("catalog").objectReferenceValue = catalog;
-            so.FindProperty("podiumAnchor").objectReferenceValue = podiumAnchor.transform;
-            so.FindProperty("autoRotationSpeed").floatValue = 18f;
-            so.ApplyModifiedProperties();
+            SerializedObject ctrlSo = new SerializedObject(controller);
+            ctrlSo.FindProperty("catalog").objectReferenceValue = catalog;
+            ctrlSo.FindProperty("podiumAnchor").objectReferenceValue = podiumAnchor.transform;
+            ctrlSo.FindProperty("autoRotationSpeed").floatValue = 15f;
+            ctrlSo.ApplyModifiedProperties();
 
-            // 6. Сохранение сцены и обновление Build Settings
+            // ── 10. СОХРАНЕНИЕ СЦЕНЫ ──────────────────────────────────────────────────
             EditorSceneManager.SaveScene(scene, ScenePath);
 
             EditorBuildSettings.scenes = new[]
@@ -132,19 +267,16 @@ namespace RogueDrive.EditorTools
 
             AssetDatabase.SaveAssets();
             Selection.activeObject = AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath);
-            Debug.Log($"[GarageSceneBuilder] Сцена Гаража успешно создана: {ScenePath} и включена в Build Settings первым номером!");
+            Debug.Log($"[GarageSceneBuilder] Полноценный First-Person Hub гаража успешно создан: {ScenePath}!");
         }
 
-        static GameObject CreatePrimitive(PrimitiveType type, string name, Vector3 pos, Vector3 scale, Color color, Transform parent)
+        static GameObject CreateSolidCube(string name, Vector3 pos, Vector3 scale, Color color, Transform parent)
         {
-            GameObject go = GameObject.CreatePrimitive(type);
+            GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
             go.name = name;
             go.transform.position = pos;
             go.transform.localScale = scale;
             if (parent != null) go.transform.SetParent(parent, true);
-
-            Collider col = go.GetComponent<Collider>();
-            if (col != null) Object.DestroyImmediate(col);
 
             Renderer r = go.GetComponent<Renderer>();
             if (r != null)
