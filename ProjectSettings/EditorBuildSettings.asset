@@ -6,12 +6,6 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Scenes/MainMenuScene.unity
-    guid: 9c956b5126f997a44923a9bbe56f4ec5
-  - enabled: 1
-    path: Assets/Scenes/GarageScene.unity
-    guid: c0d1e2f345678901234567890abcdef1
-  - enabled: 1
     path: Assets/Scenes/RogueDrivePrototype.unity
     guid: e4420668d26443340a41122c28fdc8a0
   m_configObjects: {}

@@ -23,11 +23,11 @@ MonoBehaviour:
   RequiredSocket: 0
   LevelPrefabs: []
   Effects:
-  - rid: 8383095785616835175
+  - rid: 8383095797662089338
   references:
     version: 2
     RefIds:
-    - rid: 8383095785616835175
+    - rid: 8383095797662089338
       type: {class: AuraEffect, ns: RogueDrive.Modifiers, asm: Assembly-CSharp}
       data:
         BehaviourId: chain_lightning

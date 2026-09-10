@@ -202,8 +202,15 @@ namespace RogueDrive.Gameplay
                 Vector3 shootDir = muzzle.forward;
                 if (currentTarget != null)
                 {
-                    // Целимся в центр массы врага (0.6м выше точки опоры)
+                    // Целимся в центр массы врага (0.6м выше точки опоры) с упреждением
                     Vector3 targetCenter = currentTarget.position + Vector3.up * 0.6f;
+                    Rigidbody targetRb = currentTarget.GetComponent<Rigidbody>();
+                    if (targetRb != null && !targetRb.isKinematic)
+                    {
+                        float dist = Vector3.Distance(muzzle.position, targetCenter);
+                        float timeToHit = dist / 45f;
+                        targetCenter += targetRb.linearVelocity * (timeToHit * 0.75f);
+                    }
                     Vector3 toTarget = targetCenter - muzzle.position;
                     if (toTarget.sqrMagnitude > 0.001f)
                     {
@@ -222,7 +229,7 @@ namespace RogueDrive.Gameplay
                 Projectile proj = pObj.GetComponent<Projectile>();
                 if (proj != null)
                 {
-                    proj.Launch(shootDir, dmg, bounces, slow, burn);
+                    proj.Launch(shootDir, dmg, bounces, slow, burn, currentTarget);
                 }
 
                 CombatVfxCatalog.Instance?.SpawnMuzzleFlash(muzzle.position, Quaternion.LookRotation(shootDir));

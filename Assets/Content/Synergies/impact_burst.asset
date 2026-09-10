@@ -19,11 +19,11 @@ MonoBehaviour:
   - ram_plow
   - energy_shield
   Effects:
-  - rid: 8383095785616835182
+  - rid: 8383095797662089346
   references:
     version: 2
     RefIds:
-    - rid: 8383095785616835182
+    - rid: 8383095797662089346
       type: {class: AuraEffect, ns: RogueDrive.Modifiers, asm: Assembly-CSharp}
       data:
         BehaviourId: impact_burst

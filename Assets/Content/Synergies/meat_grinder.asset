@@ -19,11 +19,11 @@ MonoBehaviour:
   - side_saws
   - magnet_bumper
   Effects:
-  - rid: 8383095785616835186
+  - rid: 8383095797662089342
   references:
     version: 2
     RefIds:
-    - rid: 8383095785616835186
+    - rid: 8383095797662089342
       type: {class: AuraEffect, ns: RogueDrive.Modifiers, asm: Assembly-CSharp}
       data:
         BehaviourId: meat_grinder

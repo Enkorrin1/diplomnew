@@ -23,11 +23,11 @@ MonoBehaviour:
   RequiredSocket: 1
   LevelPrefabs: []
   Effects:
-  - rid: 8383095785616835181
+  - rid: 8383095797662089345
   references:
     version: 2
     RefIds:
-    - rid: 8383095785616835181
+    - rid: 8383095797662089345
       type: {class: AuraEffect, ns: RogueDrive.Modifiers, asm: Assembly-CSharp}
       data:
         BehaviourId: shockwave

@@ -23,11 +23,11 @@ MonoBehaviour:
   RequiredSocket: 5
   LevelPrefabs: []
   Effects:
-  - rid: 8383095785616835180
+  - rid: 8383095797662089344
   references:
     version: 2
     RefIds:
-    - rid: 8383095785616835180
+    - rid: 8383095797662089344
       type: {class: StatEffect, ns: RogueDrive.Modifiers, asm: Assembly-CSharp}
       data:
         Target: 7

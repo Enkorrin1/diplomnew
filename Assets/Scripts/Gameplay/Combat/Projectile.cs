@@ -21,6 +21,7 @@ namespace RogueDrive.Gameplay
         Vector3 direction;
         float age;
         Transform lastTarget;
+        Transform trackingTarget;
 
         private void Awake()
         {
@@ -33,7 +34,7 @@ namespace RogueDrive.Gameplay
             rb.useGravity = false;
         }
 
-        public void Launch(Vector3 dir, float damage, int bounces = 0, float slowFactor = 0f, float burnDmg = 0f)
+        public void Launch(Vector3 dir, float damage, int bounces = 0, float slowFactor = 0f, float burnDmg = 0f, Transform target = null)
         {
             direction = dir.normalized;
             currentDamage = damage;
@@ -42,6 +43,11 @@ namespace RogueDrive.Gameplay
             burn = burnDmg;
             age = 0f;
             lastTarget = null;
+            trackingTarget = target;
+            if (direction.sqrMagnitude > 0.001f)
+            {
+                transform.rotation = Quaternion.LookRotation(direction);
+            }
         }
 
         private void Update()
@@ -58,9 +64,64 @@ namespace RogueDrive.Gameplay
             Vector3 currentPos = transform.position;
             float stepDist = speed * dt;
 
-            // Непрерывный SphereCast вдоль траектории полета:
-            // Исключает пропуск коллизий на высокой скорости и надежно поражает врагов
-            if (Physics.SphereCast(currentPos, 0.45f, direction, out RaycastHit hit, stepDist, ~0, QueryTriggerInteraction.Collide))
+            // 1. Активное слежение за целью (Homing / Trajectory correction):
+            // Если враг смещается или маневрирует, пуля динамически доворачивает прямо на него
+            if (trackingTarget != null)
+            {
+                IDamageable d = trackingTarget.GetComponentInParent<IDamageable>();
+                if (d == null || d.IsDead || !trackingTarget.gameObject.activeInHierarchy)
+                {
+                    trackingTarget = null;
+                }
+                else
+                {
+                    Vector3 targetCenter = trackingTarget.position + Vector3.up * 0.6f;
+                    Vector3 toTarget = targetCenter - currentPos;
+                    float distToTarget = toTarget.magnitude;
+
+                    if (distToTarget > 0.05f)
+                    {
+                        Vector3 desiredDir = toTarget / distToTarget;
+                        // Очень быстрая и надежная коррекция курса (до 35 рад/с),
+                        // не позволяющая врагу увернуться от выстрела
+                        direction = Vector3.RotateTowards(direction, desiredDir, 35f * dt, 0f);
+                        transform.rotation = Quaternion.LookRotation(direction);
+
+                        // Гарантированное поражение при подлете вплотную:
+                        // Исключает промах из-за дискретности кадров
+                        if (distToTarget <= Mathf.Max(1.2f, stepDist * 1.5f))
+                        {
+                            Collider targetCol = trackingTarget.GetComponentInChildren<Collider>();
+                            if (targetCol != null && HandleHit(targetCol))
+                            {
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+            else if (age < 1.2f)
+            {
+                // Если цель погибла или не была назначена, подхватываем ближайшего живого врага по курсу
+                Collider[] nearby = Physics.OverlapSphere(currentPos, 4f);
+                for (int i = 0; i < nearby.Length; i++)
+                {
+                    if (nearby[i].GetComponentInParent<ArcadeCarController>() != null) continue;
+                    IDamageable candidate = nearby[i].GetComponentInParent<IDamageable>();
+                    if (candidate != null && !candidate.IsDead)
+                    {
+                        Vector3 toCand = (nearby[i].transform.position - currentPos).normalized;
+                        if (Vector3.Dot(direction, toCand) > 0.5f)
+                        {
+                            trackingTarget = nearby[i].transform;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // 2. Непрерывный SphereCast вдоль траектории полета
+            if (Physics.SphereCast(currentPos, 0.65f, direction, out RaycastHit hit, stepDist, ~0, QueryTriggerInteraction.Collide))
             {
                 if (HandleHit(hit.collider))
                 {
@@ -143,6 +204,7 @@ namespace RogueDrive.Gameplay
                 {
                     direction = newDir.normalized;
                     transform.rotation = Quaternion.LookRotation(direction);
+                    trackingTarget = bestCandidate;
                     return true;
                 }
             }
