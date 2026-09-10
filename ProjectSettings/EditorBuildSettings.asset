@@ -12,9 +12,6 @@ EditorBuildSettings:
     path: Assets/Scenes/GarageScene.unity
     guid: c0d1e2f345678901234567890abcdef1
   - enabled: 1
-    path: Assets/Scenes/RogueDrivePrototype.unity
-    guid: e4420668d26443340a41122c28fdc8a0
-  - enabled: 1
     path: Assets/Scenes/Stage1_Outskirts.unity
     guid: a1111111222233334444555566667771
   - enabled: 1
