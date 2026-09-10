@@ -39,6 +39,11 @@ namespace RogueDrive.Gameplay.Hub
 
             GaragePrologueManager.Instance.PickUpKeys();
 
+            if (Audio.AudioManager.Instance != null)
+            {
+                Audio.AudioManager.Instance.PlayKeysJingle();
+            }
+
             if (visualModel != null)
             {
                 visualModel.SetActive(false);

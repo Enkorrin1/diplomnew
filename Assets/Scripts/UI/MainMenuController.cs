@@ -230,10 +230,10 @@ namespace RogueDrive.UI
             float startY = 160f * scale;
             float spacing = 15f * scale;
 
-            // 1. В ЗАЕЗД
-            if (GUI.Button(new Rect(startX, startY, btnW, btnH), "⚔ В ЗАЕЗД", btnMainStyle))
+            // 1. В УБЕЖИЩЕ / ЗАЕЗД
+            if (GUI.Button(new Rect(startX, startY, btnW, btnH), "▶ В УБЕЖИЩЕ / ЗАЕЗД", btnMainStyle))
             {
-                SceneTransitionManager.SwitchScene("RogueDrivePrototype");
+                SceneTransitionManager.SwitchScene("GarageScene");
             }
 
             // 2. ГАРАЖ

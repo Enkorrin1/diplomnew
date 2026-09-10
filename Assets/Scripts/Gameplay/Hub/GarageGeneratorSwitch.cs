@@ -39,6 +39,11 @@ namespace RogueDrive.Gameplay.Hub
             bool newState = !GaragePrologueManager.Instance.IsPowerOn;
             GaragePrologueManager.Instance.SetPower(newState);
             UpdateVisuals();
+
+            if (Audio.AudioManager.Instance != null)
+            {
+                Audio.AudioManager.Instance.PlaySwitchClick();
+            }
         }
 
         private void UpdateVisuals()

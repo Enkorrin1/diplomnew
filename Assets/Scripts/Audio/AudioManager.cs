@@ -221,6 +221,31 @@ namespace RogueDrive.Audio
             PlaySfx(fanfareClip, 0.95f, 1f);
         }
 
+        public void PlayImpact(float volume = 0.7f)
+        {
+            PlayHit(volume);
+        }
+
+        public void PlayLevelUp()
+        {
+            PlayFanfare();
+        }
+
+        public void PlaySwitchClick()
+        {
+            PlaySfx(hitClip, 0.85f, 1.8f);
+        }
+
+        public void PlayKeysJingle()
+        {
+            PlaySfx(coinClip, 0.9f, 1.4f);
+        }
+
+        public void PlayGateOpen()
+        {
+            PlaySfx(crashClip, 0.75f, 0.6f);
+        }
+
         void PlaySfx(AudioClip clip, float volume, float pitch)
         {
             if (clip == null) return;

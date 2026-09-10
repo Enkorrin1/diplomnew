@@ -48,6 +48,11 @@ namespace RogueDrive.Gameplay.Hub
 
             GaragePrologueManager.Instance.OpenGate();
             isOpening = true;
+
+            if (Audio.AudioManager.Instance != null)
+            {
+                Audio.AudioManager.Instance.PlayGateOpen();
+            }
         }
 
         private void Update()
