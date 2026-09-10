@@ -21,5 +21,5 @@ MonoBehaviour:
   Target: 8
   ValuePerLevel: 0.018
   MaxLevel: 5
-  BaseCost: 260
-  CostGrowth: 1.42
+  BaseCost: 35
+  CostGrowth: 1.35

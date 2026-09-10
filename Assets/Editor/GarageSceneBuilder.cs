@@ -19,9 +19,9 @@ namespace RogueDrive.EditorTools
         {
             EditorApplication.delayCall += () =>
             {
-                if (!File.Exists(ScenePath) && !SessionState.GetBool("GarageScene3DDecorated", false))
+                if (!SessionState.GetBool("GarageScene3DDecorated_BuildV2", false))
                 {
-                    SessionState.SetBool("GarageScene3DDecorated", true);
+                    SessionState.SetBool("GarageScene3DDecorated_BuildV2", true);
                     CreateGarageScene();
                 }
             };
@@ -257,6 +257,7 @@ namespace RogueDrive.EditorTools
 
             // ── 10. СОХРАНЕНИЕ СЦЕНЫ ──────────────────────────────────────────────────
             EditorSceneManager.SaveScene(scene, ScenePath);
+            EditorSceneManager.OpenScene(ScenePath);
             BuildSettingsAutoSync.SyncScenes();
 
             AssetDatabase.SaveAssets();

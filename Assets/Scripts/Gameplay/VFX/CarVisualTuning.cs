@@ -66,14 +66,15 @@ namespace RogueDrive.Gameplay.VFX
 
         private int GetLevel(MetaProgress progress, string carId, string trackIdKeyword)
         {
-            if (progress == null || progress.Data == null) return 0;
+            if (progress == null || progress.Data == null || progress.Data.Upgrades == null) return 0;
 
             // Ищем уровень по ключевому слову в ID улучшения
-            foreach (var kvp in progress.Data.Upgrades)
+            for (int i = 0; i < progress.Data.Upgrades.Count; i++)
             {
-                if (kvp.Key.ToLower().Contains(trackIdKeyword))
+                var entry = progress.Data.Upgrades[i];
+                if ((string.IsNullOrEmpty(entry.CarId) || entry.CarId == carId) && entry.TrackId != null && entry.TrackId.ToLower().Contains(trackIdKeyword))
                 {
-                    return kvp.Value;
+                    return entry.Level;
                 }
             }
             return 0;

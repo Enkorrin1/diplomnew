@@ -206,7 +206,7 @@ namespace RogueDrive.Meta
             // ESC — возврат в Главное меню
             if (Input.GetKeyDown(KeyCode.Escape))
             {
-                SceneTransitionManager.SwitchScene("MainMenuScene");
+                RogueDrive.UI.SceneTransitionManager.SwitchScene("MainMenuScene");
             }
         }
 
@@ -222,6 +222,7 @@ namespace RogueDrive.Meta
         private void OnGUI()
         {
             if (useSceneUI) return;
+            if (FindFirstObjectByType<RogueDrive.Gameplay.Hub.GaragePlayerController>() != null) return;
             EnsureStyles();
             if (_meta == null || catalog == null)
             {

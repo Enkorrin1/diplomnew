@@ -147,7 +147,7 @@ namespace RogueDrive.Gameplay.Hub
 
             if (controller.isGrounded && speed > 0.2f)
             {
-                bobTimer += Time.deltaTime * (speed * 2.2f);
+                bobTimer += Time.deltaTime * (speed * bobFrequency * 0.45f);
                 float bobOffset = Mathf.Sin(bobTimer) * bobAmplitude;
                 playerCamera.transform.localPosition = defaultCameraLocalPos + new Vector3(0f, bobOffset, 0f);
             }

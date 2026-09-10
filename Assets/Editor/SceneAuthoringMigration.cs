@@ -4,7 +4,6 @@ using System.Linq;
 using System.Reflection;
 using RogueDrive.Gameplay;
 using RogueDrive.Gameplay.Combat;
-using RogueDrive.Gameplay.UI;
 using RogueDrive.Meta;
 using RogueDrive.UI;
 using UnityEditor;
