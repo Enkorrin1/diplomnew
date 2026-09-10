@@ -361,8 +361,15 @@ namespace RogueDrive.Gameplay
 
             throttleInput = Mathf.Clamp(v, -1f, 1f);
             steerInput = Mathf.Clamp(h, -1f, 1f);
-            isNitroRequested = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift) || virtualNitro;
-            isHandbrakeActive = Input.GetKey(KeyCode.Space) || virtualHandbrake;
+            // Нитро: Shift, ПКМ (правая кнопка мыши), геймпад A / X / RB
+            isNitroRequested = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)
+                || Input.GetMouseButton(1)
+                || Input.GetKey(KeyCode.JoystickButton0) || Input.GetKey(KeyCode.JoystickButton2) || Input.GetKey(KeyCode.JoystickButton5)
+                || virtualNitro;
+            // Ручной тормоз: Пробел, геймпад B / Circle
+            isHandbrakeActive = Input.GetKey(KeyCode.Space)
+                || Input.GetKey(KeyCode.JoystickButton1)
+                || virtualHandbrake;
 
             // Ручной тормоз подавляет газ
             if (isHandbrakeActive)

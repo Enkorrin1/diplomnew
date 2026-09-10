@@ -75,13 +75,51 @@ namespace RogueDrive.Gameplay
             synergyResolver = synergies;
             isVisible = true;
 
+            // PC: освобождаем курсор для выбора модификаторов
+            if (!Application.isMobilePlatform)
+            {
+                Cursor.lockState = CursorLockMode.None;
+                Cursor.visible = true;
+            }
+
             Time.timeScale = 0f; // Пауза игрового процесса
         }
 
         public void Hide()
         {
             isVisible = false;
+
+            // PC: блокируем курсор обратно при возобновлении заезда
+            if (!Application.isMobilePlatform)
+            {
+                Cursor.lockState = CursorLockMode.Locked;
+                Cursor.visible = false;
+            }
+
             Time.timeScale = 1f; // Возобновление заезда
+        }
+
+        private void Update()
+        {
+            if (!isVisible) return;
+
+            // PC: горячие клавиши выбора модификаторов [1], [2], [3] и реролла [R]
+            if (Input.GetKeyDown(KeyCode.Alpha1) || Input.GetKeyDown(KeyCode.Keypad1))
+            {
+                Choose(0);
+            }
+            else if (Input.GetKeyDown(KeyCode.Alpha2) || Input.GetKeyDown(KeyCode.Keypad2))
+            {
+                Choose(1);
+            }
+            else if (Input.GetKeyDown(KeyCode.Alpha3) || Input.GetKeyDown(KeyCode.Keypad3))
+            {
+                Choose(2);
+            }
+            else if (Input.GetKeyDown(KeyCode.R))
+            {
+                Reroll();
+            }
         }
 
         void OnGUI()

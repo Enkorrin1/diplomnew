@@ -162,10 +162,49 @@ namespace RogueDrive.Meta
                 podiumAnchor.rotation = Quaternion.Euler(0f, _rotationAngle, 0f);
             }
 
+            // PC навигация: переключение машин стрелками влево/вправо или A/D
+            if (Input.GetKeyDown(KeyCode.LeftArrow) || Input.GetKeyDown(KeyCode.A))
+            {
+                if (catalog != null && catalog.Cars.Count > 0)
+                {
+                    int prev = (_selectedCarIndex - 1 + catalog.Cars.Count) % catalog.Cars.Count;
+                    BrowseCar(prev);
+                }
+            }
+            else if (Input.GetKeyDown(KeyCode.RightArrow) || Input.GetKeyDown(KeyCode.D))
+            {
+                if (catalog != null && catalog.Cars.Count > 0)
+                {
+                    int next = (_selectedCarIndex + 1) % catalog.Cars.Count;
+                    BrowseCar(next);
+                }
+            }
+
+            // PC: E — выбрать / купить просматриваемую машину
+            if (Input.GetKeyDown(KeyCode.E))
+            {
+                BuyOrSelectCar();
+            }
+
+            // PC: цифры 1..6 — прокачка соответствующего улучшения
+            for (int k = 0; k < 6; k++)
+            {
+                if (Input.GetKeyDown(KeyCode.Alpha1 + k))
+                {
+                    BuyUpgradeAt(k);
+                }
+            }
+
             // Горячая клавиша старта
             if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.Return))
             {
                 StartRun();
+            }
+
+            // ESC — возврат в Главное меню
+            if (Input.GetKeyDown(KeyCode.Escape))
+            {
+                SceneTransitionManager.SwitchScene("MainMenuScene");
             }
         }
 

@@ -146,7 +146,7 @@ namespace RogueDrive.Gameplay
             obj.transform.localPosition = pos;
             obj.transform.localScale = size;
             var col = obj.GetComponent<Collider>();
-            if (col != null) Destroy(col);
+            RemoveColliderForAuthoredVisual(col);
             obj.GetComponent<Renderer>().sharedMaterial = mat;
             return obj;
         }
@@ -173,7 +173,7 @@ namespace RogueDrive.Gameplay
             obj.transform.localPosition = pos;
             obj.transform.localScale = size;
             var col = obj.GetComponent<Collider>();
-            if (col != null) Destroy(col);
+            RemoveColliderForAuthoredVisual(col);
             obj.GetComponent<Renderer>().sharedMaterial = mat;
         }
 
@@ -191,6 +191,13 @@ namespace RogueDrive.Gameplay
             l.range = 35f;
             l.spotAngle = 60f;
             return l;
+        }
+
+        static void RemoveColliderForAuthoredVisual(Collider collider)
+        {
+            if (collider == null) return;
+            if (Application.isPlaying) Destroy(collider);
+            else DestroyImmediate(collider);
         }
     }
 }

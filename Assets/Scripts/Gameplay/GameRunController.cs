@@ -38,14 +38,15 @@ namespace RogueDrive.Gameplay
 
         private void Awake()
         {
-            // Мобильная оптимизация частоты кадров и предотвращение засыпания экрана
-            Application.targetFrameRate = 60;
-            Screen.sleepTimeout = SleepTimeout.NeverSleep;
+            // PC-first: снимаем ограничение частоты кадров (60/120/144/165+ Hz мониторы)
+            Application.targetFrameRate = -1;
 
-            if (FindFirstObjectByType<RogueDrive.Gameplay.UI.TouchControlsUI>() == null)
-            {
-                gameObject.AddComponent<RogueDrive.Gameplay.UI.TouchControlsUI>();
-            }
+            // На мобильных устройствах оставляем защиту от засыпания экрана
+            if (Application.isMobilePlatform)
+                Screen.sleepTimeout = SleepTimeout.NeverSleep;
+
+            // TouchControlsUI теперь создаётся только SceneUIView на мобилках;
+            // на PC — не нужен, курсор заблокирован во время заезда.
 
             if (FindFirstObjectByType<RogueDrive.UI.PauseMenuUI>() == null)
             {
@@ -65,6 +66,13 @@ namespace RogueDrive.Gameplay
             if (FindFirstObjectByType<RogueDrive.Gameplay.VFX.CriticalHealthOverlay>() == null)
             {
                 gameObject.AddComponent<RogueDrive.Gameplay.VFX.CriticalHealthOverlay>();
+            }
+
+            // PC: блокируем и скрываем курсор мыши во время заезда
+            if (!Application.isMobilePlatform)
+            {
+                Cursor.lockState = CursorLockMode.Locked;
+                Cursor.visible   = false;
             }
 
             ResetRun();

@@ -71,7 +71,7 @@ namespace RogueDrive.UI
             Set(resultsPanel, ended && !campaignOpen);
             Set(levelPanel, choosing && !ended);
             Set(hudPanel, run != null && !ended && !choosing && !paused);
-            Set(touchPanel, run != null && !ended && !choosing && !paused && (Application.isMobilePlatform || PlayerPrefs.GetInt("ShowTouchControls", 0) == 1));
+            Set(touchPanel, run != null && !ended && !choosing && !paused && Application.isMobilePlatform);
             if (wallet != null && progress != null) wallet.text = $"МОНЕТЫ  {progress.Coins}     РЕКОРД  {progress.Data.BestEndlessDistance:0} м";
             if (settingsValues != null && masterSlider != null)
                 settingsValues.text = $"{masterSlider.value:P0}\n{musicSlider.value:P0}\n{effectsSlider.value:P0}\n{steeringSlider.value:0.0}×";
@@ -116,9 +116,20 @@ namespace RogueDrive.UI
                     offerButtons[i].gameObject.SetActive(available);
                     if (!available) continue;
                     var offer = levelUp.Offers[i];
-                    offerLabels[i].text = $"{offer.Rarity} • {offer.Category}\n\n{offer.DisplayName}\nУровень {levelUp.OfferLevel(i) + 1}\n\n{offer.Description}\n\n" + (levelUp.OfferCompletesSynergy(i) ? "СОБИРАЕТ СИНЕРГИЮ!\n" : "") + "ВЫБРАТЬ";
+                    string pickLabel = Application.isMobilePlatform ? "ВЫБРАТЬ" : $"[{i + 1}] ВЫБРАТЬ";
+                    offerLabels[i].text = $"{offer.Rarity} • {offer.Category}\n\n{offer.DisplayName}\nУровень {levelUp.OfferLevel(i) + 1}\n\n{offer.Description}\n\n" + (levelUp.OfferCompletesSynergy(i) ? "СОБИРАЕТ СИНЕРГИЮ!\n" : "") + pickLabel;
                 }
-                if (rerollButton != null) rerollButton.interactable = levelUp.RemainingRerolls > 0;
+                if (rerollButton != null)
+                {
+                    rerollButton.interactable = levelUp.RemainingRerolls > 0;
+                    var rerollTxt = rerollButton.GetComponentInChildren<Text>();
+                    if (rerollTxt != null)
+                    {
+                        rerollTxt.text = Application.isMobilePlatform
+                            ? $"ОБНОВИТЬ КАРТЫ ({levelUp.RemainingRerolls})"
+                            : $"[R] ОБНОВИТЬ КАРТЫ ({levelUp.RemainingRerolls})";
+                    }
+                }
             }
         }
 

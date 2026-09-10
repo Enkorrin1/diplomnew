@@ -61,6 +61,12 @@ namespace RogueDrive.UI
             if (run != null && run.IsGameOver)
             {
                 if (isPaused) ResumeGame();
+                // PC: освобождаем курсор при Game Over для кнопок результата
+                if (!Application.isMobilePlatform)
+                {
+                    Cursor.lockState = CursorLockMode.None;
+                    Cursor.visible   = true;
+                }
                 return;
             }
 
@@ -90,6 +96,12 @@ namespace RogueDrive.UI
             isPaused = true;
             showSettings = false;
             Time.timeScale = 0f;
+            // PC: освобождаем курсор чтобы можно было кликать по кнопкам меню
+            if (!Application.isMobilePlatform)
+            {
+                Cursor.lockState = CursorLockMode.None;
+                Cursor.visible   = true;
+            }
         }
 
         public void ResumeGame()
@@ -97,6 +109,12 @@ namespace RogueDrive.UI
             isPaused = false;
             showSettings = false;
             Time.timeScale = 1f;
+            // PC: снова блокируем курсор в игровом режиме
+            if (!Application.isMobilePlatform)
+            {
+                Cursor.lockState = CursorLockMode.Locked;
+                Cursor.visible   = false;
+            }
         }
 
         private void OnGUI()

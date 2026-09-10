@@ -1,16 +1,20 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using RogueDrive.Gameplay;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using Object = UnityEngine.Object;
 
 namespace RogueDrive.EditorTools
 {
     public static class StageScenesBuilder
     {
+        const BindingFlags PrivateInstance = BindingFlags.Instance | BindingFlags.NonPublic;
+
         [MenuItem("RogueDrive/Build All Stage Scenes")]
         public static void BuildAllStages()
         {
@@ -121,6 +125,118 @@ namespace RogueDrive.EditorTools
             {
                 list.Add(new EditorBuildSettingsScene(path, true));
             }
+        }
+
+        /// <summary>
+        /// Converts the runtime-only stage track into ordinary scene objects.
+        /// The resulting roots can be edited directly in the Hierarchy and are
+        /// also used by ProceduralTrackGenerator at runtime.
+        /// </summary>
+        [MenuItem("RogueDrive/Scene Authoring/Bake All Stage Worlds For Editing")]
+        public static void BakeAllStageWorldsForEditing()
+        {
+            if (EditorApplication.isPlaying)
+            {
+                Debug.LogError("[StageScenesBuilder] Остановите Play mode перед запеканием этапов.");
+                return;
+            }
+
+            EditorSceneManager.SaveOpenScenes();
+            CampaignSceneSettings settings = AssetDatabase.LoadAssetAtPath<CampaignSceneSettings>("Assets/Content/CampaignSceneSettings.asset");
+            BiomeConfig[] biomes = settings != null ? settings.Biomes : BiomeConfig.GetDefaultBiomes();
+            string[] scenes =
+            {
+                "Assets/Scenes/Stage1_Outskirts.unity",
+                "Assets/Scenes/Stage2_Wasteland.unity",
+                "Assets/Scenes/Stage3_Industrial.unity",
+                "Assets/Scenes/Stage4_Citadel.unity"
+            };
+
+            for (int index = 0; index < scenes.Length; index++)
+                BakeStageWorld(scenes[index], index, biomes[Mathf.Min(index, biomes.Length - 1)]);
+
+            AssetDatabase.SaveAssets();
+            Debug.Log("[StageScenesBuilder] Все этапы сохранены как редактируемые объекты сцен.");
+        }
+
+        static void BakeStageWorld(string scenePath, int biomeIndex, BiomeConfig biome)
+        {
+            Scene scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
+            ProceduralTrackGenerator generator = Object.FindFirstObjectByType<ProceduralTrackGenerator>();
+            if (generator == null)
+            {
+                Debug.LogError($"[StageScenesBuilder] Не найден ProceduralTrackGenerator: {scenePath}");
+                return;
+            }
+
+            SerializedObject serializedGenerator = new SerializedObject(generator);
+            SerializedProperty authoredCampaign = serializedGenerator.FindProperty("authoredCampaign");
+            if (authoredCampaign == null)
+                throw new InvalidOperationException("Не найдено поле authoredCampaign.");
+
+            Transform previous = authoredCampaign.objectReferenceValue as Transform;
+            if (previous != null)
+                Object.DestroyImmediate(previous.gameObject);
+
+            GameObject root = new GameObject("AuthoredStageWorld");
+            root.transform.SetParent(generator.transform, false);
+
+            Vector3 position = new Vector3(0f, 0f, 150f);
+            Quaternion rotation = Quaternion.identity;
+            var chunks = new List<TrackChunk>();
+
+            // The layout mirrors the runtime chunk cadence, but is now persisted
+            // in the .unity file so artists can move, replace, or decorate every piece.
+            for (int chunkIndex = 0; chunkIndex < 30; chunkIndex++)
+            {
+                TrackChunk chunk;
+                if (chunkIndex == 5 || chunkIndex == 18)
+                    chunk = CreateChunk(generator, "CreateCurvedChunk", position, rotation, biome, chunkIndex == 5 ? 22f : -22f);
+                else if (chunkIndex == 10 || chunkIndex == 23)
+                    chunk = CreateChunk(generator, "CreateBottleneckChunk", position, rotation, biome);
+                else if (chunkIndex == 15)
+                    chunk = CreateChunk(generator, "CreateForkChunk", position, rotation, biome);
+                else
+                    chunk = CreateChunk(generator, "CreateStraightChunk", position, rotation, biome, 100f, 24f);
+
+                chunk.transform.SetParent(root.transform, true);
+                chunk.name = $"Stage_{biomeIndex + 1:00}_Chunk_{chunkIndex + 1:00}_{chunk.Type}";
+                chunk.gameObject.AddComponent<BakedMapChunk>().Configure(chunkIndex);
+                chunk.ApplyBiome(biome);
+                chunks.Add(chunk);
+                position = chunk.EndPosition;
+                rotation = chunk.EndRotation;
+            }
+
+            GameObject outpostObject = new GameObject("StageFinishOutpost");
+            outpostObject.transform.SetParent(root.transform, false);
+            outpostObject.transform.SetPositionAndRotation(position, rotation);
+            StageFinishOutpost outpost = outpostObject.AddComponent<StageFinishOutpost>();
+            outpost.Configure(biomeIndex + 1, $"Форпост этапа {biomeIndex + 1}");
+            outpost.BuildOutpostStructure();
+
+            serializedGenerator.Update();
+            authoredCampaign.objectReferenceValue = root.transform;
+            serializedGenerator.ApplyModifiedPropertiesWithoutUndo();
+
+            SceneAuthoringMigration.PersistGeneratedAssets(scene.GetRootGameObjects());
+            EditorUtility.SetDirty(generator);
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+        }
+
+        static TrackChunk CreateChunk(ProceduralTrackGenerator generator, string methodName, params object[] suppliedArguments)
+        {
+            MethodInfo method = typeof(ProceduralTrackGenerator).GetMethod(methodName, PrivateInstance);
+            if (method == null)
+                throw new MissingMethodException(typeof(ProceduralTrackGenerator).Name, methodName);
+
+            ParameterInfo[] parameters = method.GetParameters();
+            object[] arguments = new object[parameters.Length];
+            for (int i = 0; i < arguments.Length; i++)
+                arguments[i] = i < suppliedArguments.Length ? suppliedArguments[i] : parameters[i].DefaultValue;
+
+            return (TrackChunk)method.Invoke(generator, arguments);
         }
     }
 }

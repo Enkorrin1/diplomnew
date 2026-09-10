@@ -331,10 +331,14 @@ namespace RogueDrive.UI
             GUI.Label(new Rect(startX, y, labelW, 25f * scale), $"Эффекты (SFX): {Mathf.RoundToInt(sfxVolume * 100)}%", modalTextStyle);
             sfxVolume = GUI.HorizontalSlider(new Rect(startX + labelW, y + 5f, sliderW, 20f), sfxVolume, 0f, 1f);
 
-            // Качество графики
+            // Графика / дисплей
             y += 45f * scale;
-            GUI.Label(new Rect(startX, y, labelW, 25f * scale), "Целевой FPS: 60 (Lock)", modalTextStyle);
-            GUI.Label(new Rect(startX + labelW, y, sliderW, 25f * scale), "<color=#00E5FF>Оптимизировано для Mobile</color>", modalTextStyle);
+            string fpsLabel = Application.isMobilePlatform ? "Целевой FPS: 60" : "FPS: без ограничений";
+            string screenLabel = Application.isMobilePlatform
+                ? "<color=#00E5FF>Mobile</color>"
+                : $"<color=#00E5FF>{(Screen.fullScreen ? "Полный экран" : "Окно")}  F11 — переключить</color>";
+            GUI.Label(new Rect(startX,          y, labelW, 25f * scale), fpsLabel,    modalTextStyle);
+            GUI.Label(new Rect(startX + labelW, y, sliderW, 25f * scale), screenLabel, modalTextStyle);
 
             // Кнопка сохранения
             if (GUI.Button(new Rect(modalRect.x + (w - 200f * scale) / 2f, modalRect.yMax - 55f * scale, 200f * scale, 40f * scale), "СОХРАНИТЬ", btnMainStyle))
