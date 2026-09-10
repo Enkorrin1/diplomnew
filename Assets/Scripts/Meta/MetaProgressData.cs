@@ -6,6 +6,7 @@ namespace RogueDrive.Meta
     [Serializable]
     public struct UpgradeLevelEntry
     {
+        public string CarId;
         public string TrackId;
         public int Level;
     }
@@ -38,27 +39,46 @@ namespace RogueDrive.Meta
 
         public int GetUpgradeLevel(string trackId)
         {
+            string carId = !string.IsNullOrEmpty(SelectedCarId) ? SelectedCarId : "light";
+            return GetUpgradeLevel(carId, trackId);
+        }
+
+        public int GetUpgradeLevel(string carId, string trackId)
+        {
+            if (string.IsNullOrEmpty(carId)) carId = "light";
             for (int i = 0; i < Upgrades.Count; i++)
-                if (Upgrades[i].TrackId == trackId)
+            {
+                string entryCar = string.IsNullOrEmpty(Upgrades[i].CarId) ? "light" : Upgrades[i].CarId;
+                if (entryCar == carId && Upgrades[i].TrackId == trackId)
                     return Upgrades[i].Level;
+            }
 
             return 0;
         }
 
         public void SetUpgradeLevel(string trackId, int level)
         {
+            string carId = !string.IsNullOrEmpty(SelectedCarId) ? SelectedCarId : "light";
+            SetUpgradeLevel(carId, trackId, level);
+        }
+
+        public void SetUpgradeLevel(string carId, string trackId, int level)
+        {
+            if (string.IsNullOrEmpty(carId)) carId = "light";
             for (int i = 0; i < Upgrades.Count; i++)
             {
-                if (Upgrades[i].TrackId != trackId)
-                    continue;
-
-                UpgradeLevelEntry entry = Upgrades[i];
-                entry.Level = level;
-                Upgrades[i] = entry;
-                return;
+                string entryCar = string.IsNullOrEmpty(Upgrades[i].CarId) ? "light" : Upgrades[i].CarId;
+                if (entryCar == carId && Upgrades[i].TrackId == trackId)
+                {
+                    UpgradeLevelEntry entry = Upgrades[i];
+                    entry.CarId = carId;
+                    entry.Level = level;
+                    Upgrades[i] = entry;
+                    return;
+                }
             }
 
-            Upgrades.Add(new UpgradeLevelEntry { TrackId = trackId, Level = level });
+            Upgrades.Add(new UpgradeLevelEntry { CarId = carId, TrackId = trackId, Level = level });
         }
     }
 }

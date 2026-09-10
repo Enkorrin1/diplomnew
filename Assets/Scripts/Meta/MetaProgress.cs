@@ -63,6 +63,7 @@ namespace RogueDrive.Meta
             if (car != null && car.BaseStats != null)
                 _statBuffer.AddRange(car.BaseStats);
 
+            string currentCarId = car != null ? car.Id : "light";
             for (int i = 0; i < _tracks.Count; i++)
             {
                 UpgradeTrack track = _tracks[i];
@@ -70,7 +71,7 @@ namespace RogueDrive.Meta
                 if (track == null)
                     continue;
 
-                int level = _data.GetUpgradeLevel(track.Id);
+                int level = _data.GetUpgradeLevel(currentCarId, track.Id);
 
                 if (level <= 0)
                     continue;
@@ -126,37 +127,55 @@ namespace RogueDrive.Meta
         // --- Покупки ----------------------------------------------------------------
 
         public int GetUpgradeLevel(UpgradeTrack track) =>
-            track == null ? 0 : _data.GetUpgradeLevel(track.Id);
+            track == null ? 0 : _data.GetUpgradeLevel(SelectedCar != null ? SelectedCar.Id : "light", track.Id);
 
-        public bool CanBuyUpgrade(UpgradeTrack track)
+        public int GetUpgradeLevel(string carId, UpgradeTrack track) =>
+            track == null ? 0 : _data.GetUpgradeLevel(carId, track.Id);
+
+        public bool CanBuyUpgrade(UpgradeTrack track) =>
+            CanBuyUpgrade(SelectedCar != null ? SelectedCar.Id : "light", track);
+
+        public bool CanBuyUpgrade(string carId, UpgradeTrack track)
         {
             if (track == null)
                 return false;
 
-            int level = _data.GetUpgradeLevel(track.Id);
+            int level = _data.GetUpgradeLevel(carId, track.Id);
             return level < track.MaxLevel && _data.Coins >= track.GetCost(level);
         }
 
-        public bool BuyUpgrade(UpgradeTrack track)
+        public bool BuyUpgrade(UpgradeTrack track) =>
+            BuyUpgrade(SelectedCar != null ? SelectedCar.Id : "light", track);
+
+        public bool BuyUpgrade(string carId, UpgradeTrack track)
         {
-            if (!CanBuyUpgrade(track))
+            if (string.IsNullOrEmpty(carId)) carId = "light";
+            if (!CanBuyUpgrade(carId, track))
                 return false;
 
-            int level = _data.GetUpgradeLevel(track.Id);
+            int level = _data.GetUpgradeLevel(carId, track.Id);
 
             if (!TrySpend(track.GetCost(level)))
                 return false;
 
-            _data.SetUpgradeLevel(track.Id, level + 1);
+            _data.SetUpgradeLevel(carId, track.Id, level + 1);
             Changed?.Invoke();
             return true;
         }
 
         public bool OwnsCar(string carId) => _data.OwnedCarIds.Contains(carId);
 
+        public bool IsCarUnlocked(CarDefinition car)
+        {
+            if (car == null) return false;
+            if (OwnsCar(car.Id)) return true;
+            int req = car.GetRequiredCampaignLevel();
+            return _data.HighestCampaignLevel >= req;
+        }
+
         public bool BuyCar(CarDefinition car, int cost)
         {
-            if (car == null || OwnsCar(car.Id) || !TrySpend(cost))
+            if (car == null || OwnsCar(car.Id) || !IsCarUnlocked(car) || !TrySpend(cost))
                 return false;
 
             _data.OwnedCarIds.Add(car.Id);

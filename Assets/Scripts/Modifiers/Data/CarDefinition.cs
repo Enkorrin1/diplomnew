@@ -65,7 +65,23 @@ namespace RogueDrive.Modifiers
         }
 
         [Min(0)] public int Price = 0;
+        [SerializeField, Min(1)] public int RequiredCampaignLevel = 1;
         public Color BodyColor = new Color(0.08f, 0.55f, 0.95f);
+
+        public int GetRequiredCampaignLevel()
+        {
+            if (RequiredCampaignLevel > 1) return RequiredCampaignLevel;
+            return Id switch
+            {
+                "light" => 1,
+                "truck" => 2,
+                "suv" => 3,
+                "armored" => 4,
+                "sport" => 5,
+                "police" => 5,
+                _ => 1
+            };
+        }
 
         [Header("Базовые характеристики")]
         public StatValue[] BaseStats =

@@ -125,16 +125,69 @@ namespace RogueDrive.UI
         void RefreshGarage()
         {
             if (garage == null || garage.Progress == null || garage.Catalog == null) return;
-            var meta = garage.Progress; var data = garage.Catalog; var selected = data.Cars[garage.SelectedIndex];
+            var meta = garage.Progress; var data = garage.Catalog;
+            if (garage.SelectedIndex < 0 || garage.SelectedIndex >= data.Cars.Count) return;
+            var selected = data.Cars[garage.SelectedIndex];
+            if (selected == null) return;
             bool owned = meta.OwnsCar(selected.Id), equipped = meta.SelectedCar == selected;
+            bool unlocked = meta.IsCarUnlocked(selected);
             if (carInfo != null) carInfo.text = $"{selected.DisplayName}\nСкорость {selected.GetStat(StatId.Speed,20):0} м/с\nПрочность {selected.GetStat(StatId.MaxHealth,100):0}\nБак {selected.GetStat(StatId.FuelCapacity,100):0}\nМасса {selected.GetStat(StatId.Mass,1200):0} кг";
-            if (buyCarLabel != null) buyCarLabel.text = equipped ? "ВЫБРАН ДЛЯ ЗАЕЗДА" : owned ? "ВЫБРАТЬ АВТОМОБИЛЬ" : $"КУПИТЬ • {selected.Price} МОНЕТ";
-            if (buyCarButton != null) buyCarButton.interactable = !equipped && (owned || meta.Coins >= selected.Price);
+            if (buyCarLabel != null)
+            {
+                if (!unlocked && !owned)
+                {
+                    int reqStage = selected.GetRequiredCampaignLevel() - 1;
+                    buyCarLabel.text = $"🔒 ПРОЙДИТЕ ЭТАП {reqStage}";
+                }
+                else
+                {
+                    buyCarLabel.text = equipped ? "ВЫБРАН ДЛЯ ЗАЕЗДА" : owned ? "ВЫБРАТЬ АВТОМОБИЛЬ" : $"КУПИТЬ • {selected.Price} МОНЕТ";
+                }
+            }
+            if (buyCarButton != null) buyCarButton.interactable = !equipped && (owned || (unlocked && meta.Coins >= selected.Price));
+
+            if (carButtons != null)
+            {
+                for (int i = 0; i < carButtons.Length && i < data.Cars.Count; i++)
+                {
+                    if (carButtons[i] == null) continue;
+                    var c = data.Cars[i];
+                    if (c == null) continue;
+                    bool cOwned = meta.OwnsCar(c.Id);
+                    bool cUnlocked = meta.IsCarUnlocked(c);
+                    bool cEquipped = meta.SelectedCar != null && meta.SelectedCar.Id == c.Id;
+                    string prefix = cEquipped ? "★ " : (cOwned ? "✔ " : (cUnlocked ? "💰 " : "🔒 "));
+                    var txt = carButtons[i].GetComponentInChildren<Text>();
+                    if (txt != null) txt.text = $"{prefix}{c.DisplayName}";
+                }
+            }
+
             for (int i = 0; upgradeButtons != null && i < upgradeButtons.Length && i < data.Upgrades.Count; i++)
             {
-                var track = data.Upgrades[i]; int level = meta.GetUpgradeLevel(track);
-                upgradeLabels[i].text = $"{track.DisplayName}   {level}/{track.MaxLevel}\n" + (!equipped ? "Выберите автомобиль для улучшения" : level >= track.MaxLevel ? "МАКСИМУМ" : $"Бонус +{track.GetBonus(level):0.##}   •   УЛУЧШИТЬ {track.GetCost(level)}");
-                upgradeButtons[i].interactable = equipped && meta.CanBuyUpgrade(track);
+                var track = data.Upgrades[i];
+                if (track == null) continue;
+                int level = meta.GetUpgradeLevel(selected.Id, track);
+                bool canAfford = meta.Coins >= track.GetCost(level);
+                bool isMax = level >= track.MaxLevel;
+                if (upgradeLabels != null && i < upgradeLabels.Length && upgradeLabels[i] != null)
+                {
+                    if (!owned)
+                    {
+                        upgradeLabels[i].text = $"{track.DisplayName}   {level}/{track.MaxLevel}\nАвтомобиль не куплен";
+                    }
+                    else if (isMax)
+                    {
+                        upgradeLabels[i].text = $"{track.DisplayName}   {level}/{track.MaxLevel}\nМАКСИМУМ";
+                    }
+                    else
+                    {
+                        upgradeLabels[i].text = $"{track.DisplayName}   {level}/{track.MaxLevel}\nБонус +{track.GetBonus(level):0.##}   •   УЛУЧШИТЬ {track.GetCost(level)}";
+                    }
+                }
+                if (upgradeButtons[i] != null)
+                {
+                    upgradeButtons[i].interactable = owned && !isMax && canAfford;
+                }
             }
         }
 

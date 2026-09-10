@@ -325,8 +325,7 @@ namespace RogueDrive.Gameplay
                     {
                         meta.AddCoins(CoinsCollected);
                     }
-                    int sectorIdx = IsStageVictory ? (CurrentStageIndex + 1) : Mathf.Clamp(Mathf.FloorToInt(Distance / 1000f) + 1, 1, 4);
-                    if (IsCampaignVictory) sectorIdx = 5;
+                    int sectorIdx = IsCampaignVictory ? 5 : (IsStageVictory ? (CurrentStageIndex + 1) : CurrentStageIndex);
                     meta.RegisterRunResult(sectorIdx, Distance);
                     RogueDrive.Meta.SaveService.SaveActive();
                 }

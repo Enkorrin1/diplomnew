@@ -160,6 +160,7 @@ namespace RogueDrive.EditorTools
             car.BodyColor = bodyColor;
             car.BaseStats = stats;
             car.Sockets = sockets;
+            car.RequiredCampaignLevel = car.GetRequiredCampaignLevel();
 
             EditorUtility.SetDirty(car);
             return car;

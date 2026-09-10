@@ -97,9 +97,11 @@ namespace RogueDrive.Gameplay.VFX
 
         void OnProgressUpdated(MetaProgress _) => RefreshForCurrentProgress();
 
-        public void RefreshForCurrentProgress()
+        public void RefreshForCurrentProgress(string carId = null)
         {
-            int level = SaveService.GetActiveProgress().Data.GetUpgradeLevel("tires");
+            var data = SaveService.GetActiveProgress().Data;
+            string targetCarId = !string.IsNullOrEmpty(carId) ? carId : (!string.IsNullOrEmpty(data.SelectedCarId) ? data.SelectedCarId : "light");
+            int level = data.GetUpgradeLevel(targetCarId, "tires");
             ApplyLevel(level);
         }
 

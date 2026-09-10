@@ -32,8 +32,9 @@ namespace RogueDrive.Meta
         }
         public void BuyOrSelectCar()
         {
-            if (_meta == null || catalog == null) return;
+            if (_meta == null || catalog == null || _selectedCarIndex < 0 || _selectedCarIndex >= catalog.Cars.Count) return;
             var selected = catalog.Cars[_selectedCarIndex];
+            if (selected == null) return;
             if (_meta.OwnsCar(selected.Id) || _meta.BuyCar(selected, selected.Price))
             {
                 _meta.SelectCar(selected.Id);
@@ -44,13 +45,13 @@ namespace RogueDrive.Meta
         public void BuyUpgradeAt(int index)
         {
             if (_meta == null || catalog == null || index < 0 || index >= catalog.Upgrades.Count) return;
-            // Upgrades belong to the equipped car; browsing never spends on another car.
-            if (catalog.Cars[_selectedCarIndex] != _meta.SelectedCar) return;
-            if (_meta.BuyUpgrade(catalog.Upgrades[index]))
+            var car = (_selectedCarIndex >= 0 && _selectedCarIndex < catalog.Cars.Count) ? catalog.Cars[_selectedCarIndex] : _meta.SelectedCar;
+            if (car == null || !_meta.OwnsCar(car.Id)) return;
+            if (_meta.BuyUpgrade(car.Id, catalog.Upgrades[index]))
             {
                 SaveService.SaveActive();
-                _currentWheelVisuals?.RefreshForCurrentProgress();
-                _currentSuspensionVisuals?.RefreshForCurrentProgress();
+                _currentWheelVisuals?.RefreshForCurrentProgress(car.Id);
+                _currentSuspensionVisuals?.RefreshForCurrentProgress(car.Id);
             }
         }
 
@@ -236,12 +237,15 @@ namespace RogueDrive.Meta
 
                 bool isCurrent = (_selectedCarIndex == i);
                 bool isOwned = _meta.OwnsCar(car.Id);
+                bool isUnlocked = _meta.IsCarUnlocked(car);
                 bool isEquipped = (_meta.SelectedCar != null && _meta.SelectedCar.Id == car.Id);
 
-                string prefix = isEquipped ? "★ " : (isOwned ? "✔ " : "🔒 ");
+                string prefix = isEquipped ? "★ " : (isOwned ? "✔ " : (isUnlocked ? "💰 " : "🔒 "));
                 string btnText = $"{prefix}{car.DisplayName}";
 
                 if (isCurrent) GUI.color = new Color(0.3f, 0.85f, 1f);
+                else if (!isUnlocked && !isOwned) GUI.color = new Color(0.7f, 0.7f, 0.7f);
+
                 if (GUI.Button(new Rect(panel.x + 12, tabY, panelW - 24, 34), btnText))
                 {
                     _selectedCarIndex = i;
@@ -274,6 +278,7 @@ namespace RogueDrive.Meta
 
                     // Статус владения / Кнопка покупки
                     bool isOwned = _meta.OwnsCar(currentCar.Id);
+                    bool isUnlocked = _meta.IsCarUnlocked(currentCar);
                     bool isEquipped = (_meta.SelectedCar != null && _meta.SelectedCar.Id == currentCar.Id);
 
                     float actionBtnY = panel.y + panelH - 52;
@@ -289,6 +294,13 @@ namespace RogueDrive.Meta
                             SaveService.SaveActive();
                         }
                     }
+                    else if (!isUnlocked)
+                    {
+                        int reqStage = currentCar.GetRequiredCampaignLevel() - 1;
+                        GUI.enabled = false;
+                        GUI.Box(new Rect(panel.x + 14, actionBtnY, panelW - 28, 38), $"🔒 ТРЕБУЕТСЯ ПРОЙТИ ЭТАП {reqStage}", _statLabelStyle);
+                        GUI.enabled = true;
+                    }
                     else
                     {
                         bool canAfford = _meta.Coins >= currentCar.Price;
@@ -300,6 +312,7 @@ namespace RogueDrive.Meta
                             {
                                 _meta.SelectCar(currentCar.Id);
                                 SaveService.SaveActive();
+                                Update3DCarVisual();
                             }
                         }
                         GUI.enabled = true;
@@ -347,10 +360,15 @@ namespace RogueDrive.Meta
         {
             GUI.Box(new Rect(x, y, w, h), string.Empty);
 
-            int currentLevel = _meta.GetUpgradeLevel(track);
+            CarDefinition inspectedCar = (_selectedCarIndex >= 0 && _selectedCarIndex < catalog.Cars.Count)
+                ? catalog.Cars[_selectedCarIndex] : _meta.SelectedCar;
+            string carId = inspectedCar != null ? inspectedCar.Id : "light";
+            bool isCarOwned = _meta.OwnsCar(carId);
+
+            int currentLevel = _meta.GetUpgradeLevel(carId, track);
             bool isMax = currentLevel >= track.MaxLevel;
             int cost = track.GetCost(currentLevel);
-            bool canAfford = _meta.CanBuyUpgrade(track);
+            bool canAfford = isCarOwned && _meta.Coins >= cost;
 
             // Название и уровень в виде кубиков
             string levelPips = GetLevelPips(currentLevel, track.MaxLevel);
@@ -367,7 +385,13 @@ namespace RogueDrive.Meta
             float btnH = h - 16;
             Rect btnRect = new Rect(x + w - btnW - 8, y + 8, btnW, btnH);
 
-            if (isMax)
+            if (!isCarOwned)
+            {
+                GUI.enabled = false;
+                GUI.Box(btnRect, "НЕ КУПЛЕН", _statLabelStyle);
+                GUI.enabled = true;
+            }
+            else if (isMax)
             {
                 GUI.Box(btnRect, "МАКСИМУМ", _badgeSelectedStyle);
             }
@@ -377,7 +401,7 @@ namespace RogueDrive.Meta
                 string btnLabel = $"УЛУЧШИТЬ\n💰 {cost}";
                 if (GUI.Button(btnRect, btnLabel))
                 {
-                    if (_meta.BuyUpgrade(track))
+                    if (_meta.BuyUpgrade(carId, track))
                     {
                         SaveService.SaveActive();
                         // Колёса и клиренс должны меняться в тот же кадр на preview-модели.
@@ -474,6 +498,11 @@ namespace RogueDrive.Meta
 
         void Update3DCarVisual()
         {
+            CarDefinition car = (_selectedCarIndex >= 0 && _selectedCarIndex < catalog.Cars.Count)
+                ? catalog.Cars[_selectedCarIndex]
+                : (catalog.Cars.Count > 0 ? catalog.Cars[0] : null);
+            string carId = car != null ? car.Id : "light";
+
             if (showcaseModels != null && showcaseModels.Length > 0)
             {
                 for (int i = 0; i < showcaseModels.Length; i++)
@@ -481,8 +510,8 @@ namespace RogueDrive.Meta
                 _currentCarModel = showcaseModels[_selectedCarIndex];
                 _currentWheelVisuals = _currentCarModel.GetComponent<CarWheelUpgradeVisuals>();
                 _currentSuspensionVisuals = _currentCarModel.GetComponent<CarSuspensionUpgradeVisuals>();
-                _currentWheelVisuals?.RefreshForCurrentProgress();
-                _currentSuspensionVisuals?.RefreshForCurrentProgress();
+                _currentWheelVisuals?.RefreshForCurrentProgress(carId);
+                _currentSuspensionVisuals?.RefreshForCurrentProgress(carId);
                 return;
             }
             if (podiumAnchor == null || catalog == null || catalog.Cars.Count == 0)
@@ -494,10 +523,6 @@ namespace RogueDrive.Meta
             }
             _currentWheelVisuals = null;
             _currentSuspensionVisuals = null;
-
-            CarDefinition car = (_selectedCarIndex >= 0 && _selectedCarIndex < catalog.Cars.Count)
-                ? catalog.Cars[_selectedCarIndex]
-                : catalog.Cars[0];
 
             if (car == null) return;
 
@@ -528,10 +553,11 @@ namespace RogueDrive.Meta
                 BuildPodiumCarModel(_currentCarModel.transform, car);
             }
 
-            _currentWheelVisuals = _currentCarModel.AddComponent<CarWheelUpgradeVisuals>();
+            _currentWheelVisuals = _currentCarModel.GetComponent<CarWheelUpgradeVisuals>() ?? _currentCarModel.AddComponent<CarWheelUpgradeVisuals>();
             _currentWheelVisuals.Configure(catalog.WheelUpgradePrefabs);
-            _currentSuspensionVisuals = _currentCarModel.AddComponent<CarSuspensionUpgradeVisuals>();
-            _currentSuspensionVisuals.RefreshForCurrentProgress();
+            _currentWheelVisuals.RefreshForCurrentProgress(carId);
+            _currentSuspensionVisuals = _currentCarModel.GetComponent<CarSuspensionUpgradeVisuals>() ?? _currentCarModel.AddComponent<CarSuspensionUpgradeVisuals>();
+            _currentSuspensionVisuals.RefreshForCurrentProgress(carId);
         }
 
         void BuildPodiumCarModel(Transform parent, CarDefinition car)
