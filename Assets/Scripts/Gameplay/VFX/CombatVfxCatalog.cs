@@ -16,6 +16,12 @@ namespace RogueDrive.Gameplay.VFX
         [SerializeField] private GameObject enemyDeathPrefab;
         [SerializeField] private GameObject ramImpactPrefab;
 
+        [Header("Scale Modifiers")]
+        [SerializeField, Range(0.05f, 2f)] private float muzzleFlashScale = 0.25f;
+        [SerializeField, Range(0.05f, 2f)] private float bulletHitScale = 0.65f;
+        [SerializeField, Range(0.05f, 2f)] private float enemyDeathScale = 1.0f;
+        [SerializeField, Range(0.05f, 2f)] private float ramImpactScale = 1.0f;
+
         private void Awake()
         {
             if (Instance != null && Instance != this)
@@ -33,17 +39,34 @@ namespace RogueDrive.Gameplay.VFX
                 Instance = null;
         }
 
-        public void SpawnMuzzleFlash(Vector3 position, Quaternion rotation) => Spawn(muzzleFlashPrefab, position, rotation, 1.2f);
-        public void SpawnBulletHit(Vector3 position, Quaternion rotation) => Spawn(bulletHitPrefab, position, rotation, 1.5f);
-        public void SpawnEnemyDeath(Vector3 position) => Spawn(enemyDeathPrefab, position + Vector3.up * 0.6f, Quaternion.identity, 3f);
-        public void SpawnRamImpact(Vector3 position, Vector3 direction) => Spawn(ramImpactPrefab, position + Vector3.up * 0.45f, Quaternion.LookRotation(direction.sqrMagnitude > 0.001f ? direction : Vector3.forward), 2.5f);
+        public void SpawnMuzzleFlash(Vector3 position, Quaternion rotation) => Spawn(muzzleFlashPrefab, position, rotation, 0.6f, muzzleFlashScale);
+        public void SpawnBulletHit(Vector3 position, Quaternion rotation) => Spawn(bulletHitPrefab, position, rotation, 1.2f, bulletHitScale);
+        public void SpawnEnemyDeath(Vector3 position) => Spawn(enemyDeathPrefab, position + Vector3.up * 0.6f, Quaternion.identity, 3f, enemyDeathScale);
+        public void SpawnRamImpact(Vector3 position, Vector3 direction) => Spawn(ramImpactPrefab, position + Vector3.up * 0.45f, Quaternion.LookRotation(direction.sqrMagnitude > 0.001f ? direction : Vector3.forward), 2.5f, ramImpactScale);
 
-        static void Spawn(GameObject prefab, Vector3 position, Quaternion rotation, float maxLifetime)
+        static void Spawn(GameObject prefab, Vector3 position, Quaternion rotation, float maxLifetime, float scale = 1f)
         {
             if (prefab == null)
                 return;
 
             GameObject instance = Instantiate(prefab, position, rotation);
+            if (Mathf.Abs(scale - 1f) > 0.001f)
+            {
+                instance.transform.localScale = Vector3.one * scale;
+
+                var particles = instance.GetComponentsInChildren<ParticleSystem>(true);
+                for (int i = 0; i < particles.Length; i++)
+                {
+                    var main = particles[i].main;
+                    main.scalingMode = ParticleSystemScalingMode.Hierarchy;
+                }
+
+                var lights = instance.GetComponentsInChildren<Light>(true);
+                for (int i = 0; i < lights.Length; i++)
+                {
+                    lights[i].range *= scale;
+                }
+            }
             Destroy(instance, maxLifetime);
         }
     }
