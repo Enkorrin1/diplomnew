@@ -113,7 +113,7 @@ namespace RogueDrive.Gameplay.Narrative
             // Посимвольный вывод
             if (displayedCharCount < currentEntry.Text.Length)
             {
-                displayedCharCount += charsPerSecond * Time.deltaTime;
+                displayedCharCount += charsPerSecond * Time.unscaledDeltaTime;
                 if (displayedCharCount > currentEntry.Text.Length)
                 {
                     displayedCharCount = currentEntry.Text.Length;
@@ -121,7 +121,7 @@ namespace RogueDrive.Gameplay.Narrative
             }
             else
             {
-                displayTimer -= Time.deltaTime;
+                displayTimer -= Time.unscaledDeltaTime;
                 if (displayTimer <= 0f)
                 {
                     CompleteCurrentTransmission();

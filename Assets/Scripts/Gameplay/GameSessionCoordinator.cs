@@ -51,6 +51,7 @@ namespace RogueDrive.Gameplay
 
         private void Awake()
         {
+            RogueDrive.Gameplay.Narrative.CasinoCroupierVoice.ResetForRun();
             FindSceneReferences();
             InitializeModifierSession();
             BindCombatAndProgression();
@@ -188,6 +189,8 @@ namespace RogueDrive.Gameplay
             if (runController != null && runController.IsGameOver)
                 return;
 
+            RogueDrive.Gameplay.Narrative.CasinoCroupierVoice.OnArrival(stop, casinoTokens);
+
             if (casinoTokens <= 0)
             {
                 PrototypeHud.Instance?.ShowBiomeNotification(
@@ -224,7 +227,8 @@ namespace RogueDrive.Gameplay
                 ApplyResult = ApplyCasinoResult,
                 Build = session.Build,
                 Synergies = session.Synergies,
-                Generator = session.OfferGenerator
+                Generator = session.OfferGenerator,
+                CarFull = () => sockets != null && sockets.AllOccupied
             };
 
             if (casinoView != null)

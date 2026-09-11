@@ -28,6 +28,9 @@ namespace RogueDrive.Gameplay
         public BuildState Build;
         public SynergyResolver Synergies;
         public IOfferGenerator Generator;
+
+        /// <summary>Все сокеты корпуса заняты (для реплик крупье об улучшениях).</summary>
+        public Func<bool> CarFull;
     }
 
     /// <summary>
@@ -259,6 +262,7 @@ namespace RogueDrive.Gameplay
                 }
 
                 tokens -= CasinoBetRules.Cost(bet);
+                Narrative.CasinoCroupierVoice.OnBet(visit.StopName, bet);
                 UpdateSubtitle(visit, tokens, spin);
                 if (betRoot != null) betRoot.SetActive(false);
                 SetText(footerText, bet == CasinoBet.Standard
@@ -344,6 +348,8 @@ namespace RogueDrive.Gameplay
                 visit.ApplyResult?.Invoke(result);
 
                 ShowResult(result, levelBefore + 1, closesSynergy, bet, pityFired);
+                Narrative.CasinoCroupierVoice.OnResult(visit.StopName, result, levelBefore + 1,
+                    closesSynergy, pityFired, visit.CarFull != null && visit.CarFull());
                 if (result.Rarity == Rarity.Epic || closesSynergy)
                     RogueDrive.Audio.AudioManager.Instance?.PlayLevelUp();
                 else
@@ -370,6 +376,7 @@ namespace RogueDrive.Gameplay
                 yield return null;
 
             routine = null;
+            Narrative.CasinoCroupierVoice.OnLeave(visit.StopName);
             Hide();
         }
 
