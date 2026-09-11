@@ -1,4 +1,5 @@
 using System;
+using RogueDrive.Gameplay.Campaign;
 using UnityEngine;
 
 namespace RogueDrive.Gameplay
@@ -50,6 +51,21 @@ namespace RogueDrive.Gameplay
             }
         }
 
+        private void Start()
+        {
+            if (stageIndex < 4)
+            {
+                var hub = GetComponent<OutpostHubController>();
+                if (hub == null) hub = gameObject.AddComponent<OutpostHubController>();
+                hub.Configure(stageIndex, outpostName);
+            }
+            else
+            {
+                var ending = GetComponent<CitadelEndingSequence>();
+                if (ending == null) ending = gameObject.AddComponent<CitadelEndingSequence>();
+            }
+        }
+
         private void OnTriggerEnter(Collider other)
         {
             if (isPassed) return;
@@ -88,6 +104,23 @@ namespace RogueDrive.Gameplay
                 $"ЭТАП {stageIndex} ПРОЙДЕН! ★",
                 $"{outpostName.ToUpper()} — БЕЗОПАСНАЯ ЗОНА ДОСТИГНУТА! (+{bonusCoins} МОНЕТ)",
                 new Color(0.2f, 1f, 0.4f));
+
+            if (stageIndex < 4)
+            {
+                var hub = GetComponent<OutpostHubController>();
+                if (hub != null)
+                {
+                    hub.OnCarEnteredSafeZone(car);
+                }
+            }
+            else
+            {
+                var ending = GetComponent<CitadelEndingSequence>();
+                if (ending != null)
+                {
+                    ending.TriggerCitadelEnding();
+                }
+            }
 
             // Фиксация победы в контроллере заезда
             GameRunController run = car.Run != null ? car.Run : FindFirstObjectByType<GameRunController>();

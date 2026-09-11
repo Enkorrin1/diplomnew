@@ -8,8 +8,8 @@ using UnityEngine.SceneManagement;
 namespace RogueDrive.UI
 {
     /// <summary>
-    /// Контроллер главного меню: витрина лучшего автомобиля на 3D-подиуме,
-    /// баланс монет, рекорд дистанции, переход в Гараж, Заезд, Настройки и информацию о дипломе.
+    /// РљРѕРЅС‚СЂРѕР»Р»РµСЂ РіР»Р°РІРЅРѕРіРѕ РјРµРЅСЋ: РІРёС‚СЂРёРЅР° Р»СѓС‡С€РµРіРѕ Р°РІС‚РѕРјРѕР±РёР»СЏ РЅР° 3D-РїРѕРґРёСѓРјРµ,
+    /// Р±Р°Р»Р°РЅСЃ РјРѕРЅРµС‚, СЂРµРєРѕСЂРґ РґРёСЃС‚Р°РЅС†РёРё, РїРµСЂРµС…РѕРґ РІ Р“Р°СЂР°Р¶, Р—Р°РµР·Рґ, РќР°СЃС‚СЂРѕР№РєРё Рё РёРЅС„РѕСЂРјР°С†РёСЋ Рѕ РґРёРїР»РѕРјРµ.
     /// </summary>
     public sealed class MainMenuController : MonoBehaviour
     {
@@ -24,32 +24,9 @@ namespace RogueDrive.UI
         private GameObject currentCarModel;
         private float currentAngle;
 
-        private bool showAboutModal = false;
-        private bool showSettingsModal = false;
-
-        // Settings variables
-        private float masterVolume = 0.85f;
-        private float musicVolume = 0.75f;
-        private float sfxVolume = 0.9f;
-
-        // GUI Styles
-        private GUIStyle titleStyle;
-        private GUIStyle subTitleStyle;
-        private GUIStyle btnMainStyle;
-        private GUIStyle btnSecondaryStyle;
-        private GUIStyle statsStyle;
-        private GUIStyle modalBoxStyle;
-        private GUIStyle modalHeaderStyle;
-        private GUIStyle modalTextStyle;
-
-        private Texture2D panelBgTex;
-        private Texture2D btnMainTex;
-        private Texture2D btnSecondaryTex;
-        private Texture2D modalBgTex;
-
         private void Awake()
         {
-            // Защита: MainMenuController должен работать ТОЛЬКО на сцене главного меню
+            // Р—Р°С‰РёС‚Р°: MainMenuController РґРѕР»Р¶РµРЅ СЂР°Р±РѕС‚Р°С‚СЊ РўРћР›Р¬РљРћ РЅР° СЃС†РµРЅРµ РіР»Р°РІРЅРѕРіРѕ РјРµРЅСЋ
             if (!SceneManager.GetActiveScene().name.Contains("MainMenu"))
             {
                 Destroy(gameObject);
@@ -72,10 +49,6 @@ namespace RogueDrive.UI
             IReadOnlyList<UpgradeTrack> tracks = catalog != null ? catalog.Upgrades : Array.Empty<UpgradeTrack>();
             IReadOnlyList<CarDefinition> cars = catalog != null ? catalog.Cars : Array.Empty<CarDefinition>();
             metaProgress = SaveService.GetActiveProgress(tracks, cars);
-
-            masterVolume = PlayerPrefs.GetFloat("MasterVolume", 0.85f);
-            musicVolume = PlayerPrefs.GetFloat("MusicVolume", 0.75f);
-            sfxVolume = PlayerPrefs.GetFloat("SfxVolume", 0.9f);
 
             SetupShowcaseCar();
         }
@@ -119,11 +92,11 @@ namespace RogueDrive.UI
                     currentCarModel.transform.localPosition = Vector3.zero;
                     currentCarModel.transform.localRotation = Quaternion.identity;
 
-                    // Отключаем физику на подиуме
+                    // РћС‚РєР»СЋС‡Р°РµРј С„РёР·РёРєСѓ РЅР° РїРѕРґРёСѓРјРµ
                     Rigidbody rb = currentCarModel.GetComponent<Rigidbody>();
                     if (rb != null) rb.isKinematic = true;
 
-                    // Очищаем лишние скрипты управления
+                    // РћС‡РёС‰Р°РµРј Р»РёС€РЅРёРµ СЃРєСЂРёРїС‚С‹ СѓРїСЂР°РІР»РµРЅРёСЏ
                     MonoBehaviour[] scripts = currentCarModel.GetComponentsInChildren<MonoBehaviour>();
                     for (int i = 0; i < scripts.Length; i++)
                     {
@@ -161,274 +134,6 @@ namespace RogueDrive.UI
                 currentAngle += rotationSpeed * Time.deltaTime;
                 podiumAnchor.rotation = Quaternion.Euler(0f, currentAngle, 0f);
             }
-        }
-
-        private void OnGUI()
-        {
-            if (useSceneUI) return;
-            if (!SceneManager.GetActiveScene().name.Contains("MainMenu"))
-            {
-                return;
-            }
-
-            EnsureStyles();
-
-            float scale = Mathf.Clamp(Screen.height / 720f, 0.85f, 1.5f);
-
-            // Верхняя плашка профиля (Монеты и рекорд)
-            DrawTopBar(scale);
-
-            // Главный заголовок слева
-            DrawTitle(scale);
-
-            // Меню кнопок слева
-            DrawMenuButtons(scale);
-
-            // Модальное окно "Об игре / БГУИР"
-            if (showAboutModal)
-            {
-                DrawAboutModal(scale);
-            }
-
-            // Модальное окно "Настройки"
-            if (showSettingsModal)
-            {
-                DrawSettingsModal(scale);
-            }
-        }
-
-        private void DrawTopBar(float scale)
-        {
-            int coins = metaProgress != null ? metaProgress.Coins : 0;
-            float maxDist = PlayerPrefs.GetFloat("BestDistanceRecord", 0f);
-
-            float barW = 380f * scale;
-            float barH = 50f * scale;
-            Rect topBarRect = new Rect(Screen.width - barW - 20f, 20f, barW, barH);
-
-            GUI.Box(topBarRect, string.Empty, modalBoxStyle);
-            GUI.Label(new Rect(topBarRect.x + 15f, topBarRect.y + 12f, 180f * scale, 30f * scale),
-                $"💰 Монеты: <color=#FFD700><b>{coins}</b></color>", statsStyle);
-            GUI.Label(new Rect(topBarRect.x + 190f * scale, topBarRect.y + 12f, 180f * scale, 30f * scale),
-                $"🏁 Рекорд: <color=#00E5FF><b>{maxDist:F0} м</b></color>", statsStyle);
-        }
-
-        private void DrawTitle(float scale)
-        {
-            float startX = 40f * scale;
-            float startY = 40f * scale;
-
-            GUI.Label(new Rect(startX, startY, 500f * scale, 55f * scale), "ROGUE DRIVE", titleStyle);
-            GUI.Label(new Rect(startX + 2f, startY + 52f * scale, 500f * scale, 30f * scale), "SURVIVAL: DIPLOMA EDITION", subTitleStyle);
-        }
-
-        private void DrawMenuButtons(float scale)
-        {
-            float btnW = 280f * scale;
-            float btnH = 55f * scale;
-            float startX = 40f * scale;
-            float startY = 160f * scale;
-            float spacing = 15f * scale;
-
-            // 1. В УБЕЖИЩЕ / ЗАЕЗД
-            if (GUI.Button(new Rect(startX, startY, btnW, btnH), "▶ В УБЕЖИЩЕ / ЗАЕЗД", btnMainStyle))
-            {
-                SceneTransitionManager.SwitchScene("GarageScene");
-            }
-
-            // 2. ГАРАЖ
-            startY += btnH + spacing;
-            if (GUI.Button(new Rect(startX, startY, btnW, btnH), "🛠 ГАРАЖ И АВТОПАРК", btnSecondaryStyle))
-            {
-                SceneTransitionManager.SwitchScene("GarageScene");
-            }
-
-            // 3. НАСТРОЙКИ
-            startY += btnH + spacing;
-            if (GUI.Button(new Rect(startX, startY, btnW, btnH), "⚙ НАСТРОЙКИ", btnSecondaryStyle))
-            {
-                showSettingsModal = true;
-                showAboutModal = false;
-            }
-
-            // 4. ОБ ИГРЕ / БГУИР ДИПЛОМ
-            startY += btnH + spacing;
-            if (GUI.Button(new Rect(startX, startY, btnW, btnH), "🎓 ОБ ИГРЕ (БГУИР)", btnSecondaryStyle))
-            {
-                showAboutModal = true;
-                showSettingsModal = false;
-            }
-
-            // 5. ВЫХОД
-            startY += btnH + spacing;
-            if (GUI.Button(new Rect(startX, startY, btnW, btnH * 0.8f), "ВЫХОД", btnSecondaryStyle))
-            {
-#if UNITY_EDITOR
-                UnityEditor.EditorApplication.isPlaying = false;
-#else
-                Application.Quit();
-#endif
-            }
-        }
-
-        private void DrawAboutModal(float scale)
-        {
-            float w = 550f * scale;
-            float h = 420f * scale;
-            Rect modalRect = new Rect((Screen.width - w) / 2f, (Screen.height - h) / 2f, w, h);
-
-            GUI.Box(modalRect, string.Empty, modalBoxStyle);
-
-            float y = modalRect.y + 20f * scale;
-            GUI.Label(new Rect(modalRect.x, y, w, 35f * scale), "ДИПЛОМНЫЙ ПРОЕКТ БГУИР", modalHeaderStyle);
-
-            y += 45f * scale;
-            string text =
-                "<b>Тема:</b> Разработка кроссплатформенной игры жанра Action Survival Roguelite с процедурной генерацией и балансировкой методом Монте-Карло\n\n" +
-                "<b>Учреждение:</b> Белорусский государственный университет информатики и радиоэлектроники (БГУИР, Минск 2026)\n" +
-                "<b>Стек:</b> Unity 6 LTS (URP), C# 9.0, PhysX, Python Matplotlib\n" +
-                "<b>Особенности:</b>\n" +
-                " • Аркадная физика 4 типов автомобилей и процедурные трассы\n" +
-                " • 360° авто-турель, боевые ауры и 3-фазный босс «Джаггернаут»\n" +
-                " • Автономная симуляция баланса Монте-Карло (6000+ заездов)\n" +
-                " • Процедурный синтезатор звука и адаптивный мультитач Android";
-
-            GUI.Label(new Rect(modalRect.x + 25f * scale, y, w - 50f * scale, 260f * scale), text, modalTextStyle);
-
-            if (GUI.Button(new Rect(modalRect.x + (w - 180f * scale) / 2f, modalRect.yMax - 55f * scale, 180f * scale, 40f * scale), "ЗАКРЫТЬ", btnSecondaryStyle))
-            {
-                showAboutModal = false;
-            }
-        }
-
-        private void DrawSettingsModal(float scale)
-        {
-            float w = 500f * scale;
-            float h = 380f * scale;
-            Rect modalRect = new Rect((Screen.width - w) / 2f, (Screen.height - h) / 2f, w, h);
-
-            GUI.Box(modalRect, string.Empty, modalBoxStyle);
-
-            float y = modalRect.y + 20f * scale;
-            GUI.Label(new Rect(modalRect.x, y, w, 35f * scale), "НАСТРОЙКИ ИГРЫ", modalHeaderStyle);
-
-            y += 50f * scale;
-            float labelW = 180f * scale;
-            float sliderW = 200f * scale;
-            float startX = modalRect.x + 35f * scale;
-
-            // Общая громкость
-            GUI.Label(new Rect(startX, y, labelW, 25f * scale), $"Общая громкость: {Mathf.RoundToInt(masterVolume * 100)}%", modalTextStyle);
-            masterVolume = GUI.HorizontalSlider(new Rect(startX + labelW, y + 5f, sliderW, 20f), masterVolume, 0f, 1f);
-
-            // Музыка
-            y += 45f * scale;
-            GUI.Label(new Rect(startX, y, labelW, 25f * scale), $"Музыка (BGM): {Mathf.RoundToInt(musicVolume * 100)}%", modalTextStyle);
-            musicVolume = GUI.HorizontalSlider(new Rect(startX + labelW, y + 5f, sliderW, 20f), musicVolume, 0f, 1f);
-
-            // Звуковые эффекты
-            y += 45f * scale;
-            GUI.Label(new Rect(startX, y, labelW, 25f * scale), $"Эффекты (SFX): {Mathf.RoundToInt(sfxVolume * 100)}%", modalTextStyle);
-            sfxVolume = GUI.HorizontalSlider(new Rect(startX + labelW, y + 5f, sliderW, 20f), sfxVolume, 0f, 1f);
-
-            // Графика / дисплей
-            y += 45f * scale;
-            string fpsLabel = Application.isMobilePlatform ? "Целевой FPS: 60" : "FPS: без ограничений";
-            string screenLabel = Application.isMobilePlatform
-                ? "<color=#00E5FF>Mobile</color>"
-                : $"<color=#00E5FF>{(Screen.fullScreen ? "Полный экран" : "Окно")}  F11 — переключить</color>";
-            GUI.Label(new Rect(startX,          y, labelW, 25f * scale), fpsLabel,    modalTextStyle);
-            GUI.Label(new Rect(startX + labelW, y, sliderW, 25f * scale), screenLabel, modalTextStyle);
-
-            // Кнопка сохранения
-            if (GUI.Button(new Rect(modalRect.x + (w - 200f * scale) / 2f, modalRect.yMax - 55f * scale, 200f * scale, 40f * scale), "СОХРАНИТЬ", btnMainStyle))
-            {
-                PlayerPrefs.SetFloat("MasterVolume", masterVolume);
-                PlayerPrefs.SetFloat("MusicVolume", musicVolume);
-                PlayerPrefs.SetFloat("SfxVolume", sfxVolume);
-                PlayerPrefs.Save();
-                AudioListener.volume = masterVolume;
-                showSettingsModal = false;
-            }
-        }
-
-        private void EnsureStyles()
-        {
-            if (panelBgTex == null) panelBgTex = MakeColorTex(new Color(0.06f, 0.08f, 0.12f, 0.85f));
-            if (btnMainTex == null) btnMainTex = MakeColorTex(new Color(0.12f, 0.65f, 0.38f, 0.95f));
-            if (btnSecondaryTex == null) btnSecondaryTex = MakeColorTex(new Color(0.14f, 0.18f, 0.26f, 0.9f));
-            if (modalBgTex == null) modalBgTex = MakeColorTex(new Color(0.04f, 0.05f, 0.08f, 0.95f));
-
-            if (titleStyle == null)
-            {
-                titleStyle = new GUIStyle(GUI.skin.label)
-                {
-                    fontSize = 44,
-                    fontStyle = FontStyle.Bold,
-                    normal = { textColor = new Color(0.95f, 0.75f, 0.15f) }
-                };
-
-                subTitleStyle = new GUIStyle(GUI.skin.label)
-                {
-                    fontSize = 18,
-                    fontStyle = FontStyle.Bold,
-                    normal = { textColor = new Color(0.35f, 0.85f, 1f) }
-                };
-
-                btnMainStyle = new GUIStyle(GUI.skin.button)
-                {
-                    fontSize = 18,
-                    fontStyle = FontStyle.Bold,
-                    alignment = TextAnchor.MiddleCenter,
-                    normal = { background = btnMainTex, textColor = Color.white }
-                };
-
-                btnSecondaryStyle = new GUIStyle(GUI.skin.button)
-                {
-                    fontSize = 15,
-                    fontStyle = FontStyle.Bold,
-                    alignment = TextAnchor.MiddleCenter,
-                    normal = { background = btnSecondaryTex, textColor = new Color(0.85f, 0.90f, 0.95f) }
-                };
-
-                statsStyle = new GUIStyle(GUI.skin.label)
-                {
-                    fontSize = 15,
-                    alignment = TextAnchor.MiddleLeft,
-                    richText = true,
-                    normal = { textColor = Color.white }
-                };
-
-                modalBoxStyle = new GUIStyle(GUI.skin.box)
-                {
-                    normal = { background = modalBgTex }
-                };
-
-                modalHeaderStyle = new GUIStyle(GUI.skin.label)
-                {
-                    fontSize = 22,
-                    fontStyle = FontStyle.Bold,
-                    alignment = TextAnchor.MiddleCenter,
-                    normal = { textColor = new Color(1f, 0.8f, 0.2f) }
-                };
-
-                modalTextStyle = new GUIStyle(GUI.skin.label)
-                {
-                    fontSize = 14,
-                    wordWrap = true,
-                    richText = true,
-                    normal = { textColor = new Color(0.9f, 0.9f, 0.95f) }
-                };
-            }
-        }
-
-        private Texture2D MakeColorTex(Color col)
-        {
-            Texture2D tex = new Texture2D(2, 2);
-            Color[] p = new Color[] { col, col, col, col };
-            tex.SetPixels(p);
-            tex.Apply();
-            return tex;
         }
 
         private void EnsureEnvironment()
@@ -507,10 +212,6 @@ namespace RogueDrive.UI
             {
                 Destroy(currentCarModel);
             }
-            if (panelBgTex != null) Destroy(panelBgTex);
-            if (btnMainTex != null) Destroy(btnMainTex);
-            if (btnSecondaryTex != null) Destroy(btnSecondaryTex);
-            if (modalBgTex != null) Destroy(modalBgTex);
         }
     }
 }

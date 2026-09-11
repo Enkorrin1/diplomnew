@@ -15,6 +15,7 @@ namespace RogueDrive.Gameplay.Combat
     {
         public static ComboScoreSystem Instance { get; private set; }
         [SerializeField] private bool useSceneUI = true;
+        public bool UseSceneUI => useSceneUI;
         public string Banner => bannerTimer > 0f ? activeBannerText : string.Empty;
 
         [Header("References")]
@@ -35,10 +36,6 @@ namespace RogueDrive.Gameplay.Combat
         private float currentDriftTime = 0f;
         private bool isDrifting = false;
 
-        // GUI
-        private GUIStyle comboTitleStyle;
-        private GUIStyle comboSubStyle;
-        private Texture2D bannerBgTex;
 
         private void Awake()
         {
@@ -224,44 +221,6 @@ namespace RogueDrive.Gameplay.Combat
         {
             comboCount = 0;
             comboTimer = 0f;
-        }
-
-        private void OnGUI()
-        {
-            if (useSceneUI) return;
-            EnsureStyles();
-
-            if (bannerTimer <= 0f || string.IsNullOrEmpty(activeBannerText))
-                return;
-
-            float baseW = 420f;
-            float baseH = 55f;
-            float w = baseW * bannerScale;
-            float h = baseH * bannerScale;
-
-            Rect bannerRect = new Rect((Screen.width - w) / 2f, 95f, w, h);
-
-            Color prevCol = GUI.color;
-            GUI.color = new Color(0.04f, 0.05f, 0.08f, Mathf.Clamp01(bannerTimer * 1.5f) * 0.85f);
-            GUI.DrawTexture(bannerRect, Texture2D.whiteTexture);
-
-            GUI.color = activeBannerColor;
-            comboTitleStyle.fontSize = Mathf.RoundToInt(22f * bannerScale);
-            GUI.Label(bannerRect, activeBannerText, comboTitleStyle);
-
-            GUI.color = prevCol;
-        }
-
-        private void EnsureStyles()
-        {
-            if (comboTitleStyle == null)
-            {
-                comboTitleStyle = new GUIStyle(GUI.skin.label)
-                {
-                    alignment = TextAnchor.MiddleCenter,
-                    fontStyle = FontStyle.Bold
-                };
-            }
         }
     }
 }

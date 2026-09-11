@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using RogueDrive.Audio;
 using RogueDrive.Gameplay;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace RogueDrive.Gameplay.Combat
 {
@@ -12,20 +13,28 @@ namespace RogueDrive.Gameplay.Combat
     /// — [Q]   Сброс шипов и мин под колеса (Spike / Mine Drop)
     /// — [F]   Кинетический таран (Kinetic Ram Blast)
     /// — Шкала Адреналина: дрифт и нитро ускоряют откат всех способностей в 3 раза.
+    /// Переведена на современный UGUI Canvas (полностью без OnGUI).
     /// </summary>
     [RequireComponent(typeof(ArcadeCarController))]
     public sealed class VehicleCombatSkills : MonoBehaviour
     {
         [Header("Cooldowns (Base Seconds)")]
         [SerializeField] private float missileBaseCooldown = 5.0f;
-        [SerializeField] private float spikeBaseCooldown = 6.5f;
-        [SerializeField] private float ramBaseCooldown = 7.5f;
+        [SerializeField] private float spikeBaseCooldown = 7.0f;
+        [SerializeField] private float ramBaseCooldown = 6.0f;
 
-        [Header("Skill Parameters")]
-        [SerializeField] private int missileSalvoCount = 3;
+        [Header("Missile Specs")]
+        [SerializeField] private int missileSalvoCount = 2;
+        [SerializeField] private float missileDamage = 65f;
+
+        [Header("Spike Specs")]
+        [SerializeField] private float spikeDamage = 45f;
+        [SerializeField] private float spikeSlowDuration = 3.0f;
+
+        [Header("Ram Specs")]
         [SerializeField] private float ramImpulseForce = 1800f;
-        [SerializeField] private float ramDamage = 140f;
-        [SerializeField] private float ramRadius = 6.0f;
+        [SerializeField] private float ramRadius = 5.5f;
+        [SerializeField] private float ramDamage = 110f;
 
         private ArcadeCarController car;
         private Rigidbody body;
@@ -34,13 +43,13 @@ namespace RogueDrive.Gameplay.Combat
         private float spikeTimer;
         private float ramTimer;
 
-        // UI Styles
-        private GUIStyle skillBoxReady;
-        private GUIStyle skillBoxCooldown;
-        private GUIStyle adrenalineStyle;
-        private Texture2D readyBgTex;
-        private Texture2D cdBgTex;
-        private Texture2D adrenalineBgTex;
+        // UGUI Elements
+        private Canvas skillsCanvas;
+        private GameObject skillsRoot;
+        private Text missileText;
+        private Text spikeText;
+        private Text ramText;
+        private GameObject adrenalineBadge;
 
         public bool IsMissileReady => missileTimer <= 0f;
         public bool IsSpikeReady => spikeTimer <= 0f;
@@ -86,6 +95,8 @@ namespace RogueDrive.Gameplay.Combat
             {
                 TriggerKineticRam();
             }
+
+            UpdateSkillsUI();
         }
 
         public void TriggerMissiles()
@@ -154,7 +165,7 @@ namespace RogueDrive.Gameplay.Combat
                 if (col != null) col.isTrigger = true;
 
                 HomingMissile missile = missileObj.AddComponent<HomingMissile>();
-                missile.Launch(chosenTarget);
+                missile.Launch(chosenTarget, missileDamage);
 
                 yield return new WaitForSeconds(0.08f);
             }
@@ -182,7 +193,7 @@ namespace RogueDrive.Gameplay.Combat
             if (col != null) col.isTrigger = true;
 
             SpikeTrap trap = spikeObj.AddComponent<SpikeTrap>();
-            trap.Configure();
+            trap.Configure(spikeDamage, spikeSlowDuration);
 
             if (AudioManager.Instance != null)
             {
@@ -242,117 +253,145 @@ namespace RogueDrive.Gameplay.Combat
             }
         }
 
-        private void OnGUI()
+        private void UpdateSkillsUI()
         {
-            if (car != null && car.Run != null && car.Run.IsGameOver) return;
-            if (Time.timeScale <= 0f) return;
-
-            EnsureStyles();
-
-            // Отображение 3 слотов способностей в правом нижнем углу
-            float boxW = 140f;
-            float boxH = 46f;
-            float margin = 18f;
-            float spacing = 8f;
-
-            float totalW = boxW * 3f + spacing * 2f;
-            float startX = Screen.width - totalW - margin;
-            float y = Screen.height - boxH - margin;
-
-            // Слот 1: Ракеты
-            DrawSkillBox(new Rect(startX, y, boxW, boxH), "[ЛКМ] РАКЕТЫ", IsMissileReady, missileTimer);
-
-            // Слот 2: Шипы
-            DrawSkillBox(new Rect(startX + (boxW + spacing), y, boxW, boxH), "[Q] ШИПЫ / МИНА", IsSpikeReady, spikeTimer);
-
-            // Слот 3: Таран
-            DrawSkillBox(new Rect(startX + (boxW + spacing) * 2f, y, boxW, boxH), "[F] ТАРАН", IsRamReady, ramTimer);
-
-            // Индикатор Адреналина
-            if (IsAdrenalineActive)
+            if (car != null && car.Run != null && car.Run.IsGameOver)
             {
-                float adW = 280f;
-                float adH = 24f;
-                float adX = Screen.width - adW - margin;
-                float adY = y - adH - 6f;
-                GUI.Box(new Rect(adX, adY, adW, adH), "⚡ АДРЕНАЛИН: ОТКАТ x3", adrenalineStyle);
+                if (skillsRoot != null && skillsRoot.activeSelf) skillsRoot.SetActive(false);
+                return;
+            }
+
+            BuildUIIfNeeded();
+
+            if (skillsRoot != null && !skillsRoot.activeSelf) skillsRoot.SetActive(true);
+
+            if (missileText != null)
+            {
+                missileText.text = IsMissileReady ? "[ЛКМ] РАКЕТЫ\n<color=#55FF77>ГОТОВО</color>" : $"[ЛКМ] РАКЕТЫ\n<color=#FFAA44>{missileTimer:0.0} с</color>";
+            }
+
+            if (spikeText != null)
+            {
+                spikeText.text = IsSpikeReady ? "[Q] ШИПЫ\n<color=#55FF77>ГОТОВО</color>" : $"[Q] ШИПЫ\n<color=#FFAA44>{spikeTimer:0.0} с</color>";
+            }
+
+            if (ramText != null)
+            {
+                ramText.text = IsRamReady ? "[F] ТАРАН\n<color=#55FF77>ГОТОВО</color>" : $"[F] ТАРАН\n<color=#FFAA44>{ramTimer:0.0} с</color>";
+            }
+
+            if (adrenalineBadge != null)
+            {
+                adrenalineBadge.SetActive(IsAdrenalineActive);
             }
         }
 
-        private void DrawSkillBox(Rect rect, string label, bool isReady, float timer)
+        private void BuildUIIfNeeded()
         {
-            if (isReady)
-            {
-                GUI.Box(rect, label + "\n<color=#55FF77>ГОТОВО</color>", skillBoxReady);
-            }
-            else
-            {
-                GUI.Box(rect, label + $"\n<color=#FFAA44>{timer:0.0} с</color>", skillBoxCooldown);
-            }
+            if (skillsCanvas != null) return;
+
+            GameObject canvasObj = new GameObject("CombatSkills_Canvas");
+            skillsCanvas = canvasObj.AddComponent<Canvas>();
+            skillsCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            skillsCanvas.sortingOrder = 40;
+
+            var scaler = canvasObj.AddComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920, 1080);
+            scaler.matchWidthOrHeight = 0.5f;
+
+            Font standardFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf") ?? 
+                               Resources.GetBuiltinResource<Font>("Arial.ttf");
+
+            skillsRoot = new GameObject("SkillsRoot");
+            skillsRoot.transform.SetParent(canvasObj.transform, false);
+
+            var rootRect = skillsRoot.AddComponent<RectTransform>();
+            rootRect.anchorMin = new Vector2(1f, 0f);
+            rootRect.anchorMax = new Vector2(1f, 0f);
+            rootRect.pivot = new Vector2(1f, 0f);
+            rootRect.anchoredPosition = new Vector2(-24f, 24f);
+            rootRect.sizeDelta = new Vector2(460f, 65f);
+
+            missileText = CreateSlot(skillsRoot.transform, standardFont, new Vector2(0f, 0f), new Vector2(140f, 54f));
+            spikeText = CreateSlot(skillsRoot.transform, standardFont, new Vector2(150f, 0f), new Vector2(140f, 54f));
+            ramText = CreateSlot(skillsRoot.transform, standardFont, new Vector2(300f, 0f), new Vector2(140f, 54f));
+
+            // Адреналин бэдж
+            adrenalineBadge = new GameObject("AdrenalineBadge");
+            adrenalineBadge.transform.SetParent(skillsRoot.transform, false);
+            var adImg = adrenalineBadge.AddComponent<Image>();
+            adImg.color = new Color(0.24f, 0.16f, 0.04f, 0.95f);
+            adImg.raycastTarget = false;
+
+            var adRect = adrenalineBadge.GetComponent<RectTransform>();
+            adRect.anchorMin = new Vector2(0f, 1f);
+            adRect.anchorMax = new Vector2(1f, 1f);
+            adRect.pivot = new Vector2(0.5f, 0f);
+            adRect.anchoredPosition = new Vector2(0f, 6f);
+            adRect.sizeDelta = new Vector2(0f, 26f);
+
+            GameObject adTextObj = new GameObject("Text");
+            adTextObj.transform.SetParent(adrenalineBadge.transform, false);
+            var adText = adTextObj.AddComponent<Text>();
+            if (standardFont != null) adText.font = standardFont;
+            adText.fontSize = 12;
+            adText.fontStyle = FontStyle.Bold;
+            adText.alignment = TextAnchor.MiddleCenter;
+            adText.color = new Color(1f, 0.85f, 0.2f);
+            adText.text = "⚡ АДРЕНАЛИН: ОТКАТ x3";
+            adText.raycastTarget = false;
+
+            var atRect = adTextObj.GetComponent<RectTransform>();
+            atRect.anchorMin = Vector2.zero;
+            atRect.anchorMax = Vector2.one;
+            atRect.offsetMin = Vector2.zero;
+            atRect.offsetMax = Vector2.zero;
+
+            adrenalineBadge.SetActive(false);
         }
 
-        private void EnsureStyles()
+        private Text CreateSlot(Transform parent, Font font, Vector2 anchoredPos, Vector2 size)
         {
-            if (readyBgTex == null)
-            {
-                readyBgTex = MakeTex(new Color(0.08f, 0.16f, 0.12f, 0.90f));
-            }
-            if (cdBgTex == null)
-            {
-                cdBgTex = MakeTex(new Color(0.14f, 0.10f, 0.08f, 0.90f));
-            }
-            if (adrenalineBgTex == null)
-            {
-                adrenalineBgTex = MakeTex(new Color(0.24f, 0.16f, 0.04f, 0.95f));
-            }
+            GameObject slotObj = new GameObject("SkillSlot");
+            slotObj.transform.SetParent(parent, false);
 
-            if (skillBoxReady == null)
-            {
-                skillBoxReady = new GUIStyle(GUI.skin.box)
-                {
-                    normal = { background = readyBgTex, textColor = Color.white },
-                    alignment = TextAnchor.MiddleCenter,
-                    fontSize = 12,
-                    fontStyle = FontStyle.Bold
-                };
-            }
+            var img = slotObj.AddComponent<Image>();
+            img.color = new Color(0.08f, 0.12f, 0.16f, 0.92f);
+            img.raycastTarget = false;
 
-            if (skillBoxCooldown == null)
-            {
-                skillBoxCooldown = new GUIStyle(GUI.skin.box)
-                {
-                    normal = { background = cdBgTex, textColor = new Color(0.85f, 0.85f, 0.85f) },
-                    alignment = TextAnchor.MiddleCenter,
-                    fontSize = 12,
-                    fontStyle = FontStyle.Bold
-                };
-            }
+            var rect = slotObj.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0f, 0f);
+            rect.anchorMax = new Vector2(0f, 0f);
+            rect.pivot = new Vector2(0f, 0f);
+            rect.anchoredPosition = anchoredPos;
+            rect.sizeDelta = size;
 
-            if (adrenalineStyle == null)
-            {
-                adrenalineStyle = new GUIStyle(GUI.skin.box)
-                {
-                    normal = { background = adrenalineBgTex, textColor = new Color(1f, 0.85f, 0.2f) },
-                    alignment = TextAnchor.MiddleCenter,
-                    fontSize = 11,
-                    fontStyle = FontStyle.Bold
-                };
-            }
-        }
+            GameObject textObj = new GameObject("Text");
+            textObj.transform.SetParent(slotObj.transform, false);
+            var text = textObj.AddComponent<Text>();
+            if (font != null) text.font = font;
+            text.fontSize = 12;
+            text.fontStyle = FontStyle.Bold;
+            text.alignment = TextAnchor.MiddleCenter;
+            text.color = Color.white;
+            text.raycastTarget = false;
 
-        private Texture2D MakeTex(Color col)
-        {
-            Texture2D tex = new Texture2D(1, 1);
-            tex.SetPixel(0, 0, col);
-            tex.Apply();
-            return tex;
+            var tRect = textObj.GetComponent<RectTransform>();
+            tRect.anchorMin = Vector2.zero;
+            tRect.anchorMax = Vector2.one;
+            tRect.offsetMin = new Vector2(4f, 2f);
+            tRect.offsetMax = new Vector2(-4f, -2f);
+
+            return text;
         }
 
         private void OnDestroy()
         {
-            if (readyBgTex != null) Destroy(readyBgTex);
-            if (cdBgTex != null) Destroy(cdBgTex);
-            if (adrenalineBgTex != null) Destroy(adrenalineBgTex);
+            if (skillsCanvas != null)
+            {
+                Destroy(skillsCanvas.gameObject);
+            }
         }
     }
 }

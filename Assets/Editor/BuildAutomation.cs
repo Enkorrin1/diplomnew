@@ -27,7 +27,7 @@ namespace RogueDrive.Editor
             "Assets/Scenes/Stage4_Citadel.unity"
         };
 
-        [MenuItem("RogueDrive/Build/Configure Android Project Settings", priority = 100)]
+        [MenuItem("RogueDrive/Сборка проекта (Build)/Настроить параметры Android", priority = 12)]
         public static void ConfigureAndroidSettings()
         {
             Debug.Log("[BuildAutomation] Настройка параметров Android для дипломной сборки...");
@@ -53,7 +53,7 @@ namespace RogueDrive.Editor
             Debug.Log($"[BuildAutomation] ✅ Настройки Android применены: Package={PackageName}, Orientation=Landscape, MinSDK=24.");
         }
 
-        [MenuItem("RogueDrive/Build/Build Windows Standalone (Release)", priority = 110)]
+        [MenuItem("RogueDrive/Сборка проекта (Build)/Собрать Windows Standalone (Release)", priority = 10)]
         public static void BuildWindowsStandalone()
         {
             string outputDir = Path.Combine(Directory.GetCurrentDirectory(), "Builds", "Windows");
@@ -85,7 +85,7 @@ namespace RogueDrive.Editor
             }
         }
 
-        [MenuItem("RogueDrive/Build/Build Android APK (Release)", priority = 120)]
+        [MenuItem("RogueDrive/Сборка проекта (Build)/Собрать Android APK (Release)", priority = 11)]
         public static void BuildAndroidApk()
         {
             ConfigureAndroidSettings();

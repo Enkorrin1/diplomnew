@@ -88,6 +88,10 @@ MonoBehaviour:
   ContactDamage: 3.5
   RamFuelPenalty: 3
   RamChanceAtFullBlock: 0.35
+  CasinoStopDistances:
+  - 1000
+  - 2000
+  - 3000
   ExperiencePerKill: 1
   ExperienceToNextLevel:
     serializedVersion: 2

@@ -6,9 +6,9 @@ using RogueDrive.Modifiers;
 namespace RogueDrive.Gameplay
 {
     /// <summary>
-    /// Экран выбора модификатора «1 из 3» при повышении уровня заезда.
-    /// Ставит заезд на паузу, отображает карточки предложенных бафов,
-    /// подсвечивает синергии и передает выбор в ModifierService.
+    /// Р­РєСЂР°РЅ РІС‹Р±РѕСЂР° РјРѕРґРёС„РёРєР°С‚РѕСЂР° В«1 РёР· 3В» РїСЂРё РїРѕРІС‹С€РµРЅРёРё СѓСЂРѕРІРЅСЏ Р·Р°РµР·РґР°.
+    /// РЎС‚Р°РІРёС‚ Р·Р°РµР·Рґ РЅР° РїР°СѓР·Сѓ, РѕС‚РѕР±СЂР°Р¶Р°РµС‚ РєР°СЂС‚РѕС‡РєРё РїСЂРµРґР»РѕР¶РµРЅРЅС‹С… Р±Р°С„РѕРІ,
+    /// РїРѕРґСЃРІРµС‡РёРІР°РµС‚ СЃРёРЅРµСЂРіРёРё Рё РїРµСЂРµРґР°РµС‚ РІС‹Р±РѕСЂ РІ ModifierService.
     /// </summary>
     public sealed class LevelUpView : MonoBehaviour
     {
@@ -24,19 +24,10 @@ namespace RogueDrive.Gameplay
 
         int remainingRerolls = 1;
 
-        GUIStyle titleStyle;
-        GUIStyle cardTitleStyle;
-        GUIStyle cardDescStyle;
-        GUIStyle rarityStyle;
-        GUIStyle synergyBadgeStyle;
-        GUIStyle buttonStyle;
-
-        Texture2D overlayTex;
-        Texture2D cardBgTex;
-        Texture2D synergyCardBgTex;
 
         public bool IsVisible => isVisible;
         [SerializeField] private bool useSceneUI = true;
+        public bool UseSceneUI => useSceneUI;
         public IReadOnlyList<ModifierDefinition> Offers => currentOffers;
         public int RemainingRerolls => remainingRerolls;
         public int OfferLevel(int index) => currentOffers != null && index < currentOffers.Count && currentBuild != null ? currentBuild.GetLevel(currentOffers[index].Id) : 0;
@@ -62,10 +53,6 @@ namespace RogueDrive.Gameplay
         {
             if (Instance == this)
                 Instance = null;
-
-            if (overlayTex != null) Destroy(overlayTex);
-            if (cardBgTex != null) Destroy(cardBgTex);
-            if (synergyCardBgTex != null) Destroy(synergyCardBgTex);
         }
 
         public void Show(IReadOnlyList<ModifierDefinition> offers, BuildState build, SynergyResolver synergies)
@@ -75,35 +62,35 @@ namespace RogueDrive.Gameplay
             synergyResolver = synergies;
             isVisible = true;
 
-            // PC: освобождаем курсор для выбора модификаторов
+            // PC: РѕСЃРІРѕР±РѕР¶РґР°РµРј РєСѓСЂСЃРѕСЂ РґР»СЏ РІС‹Р±РѕСЂР° РјРѕРґРёС„РёРєР°С‚РѕСЂРѕРІ
             if (!Application.isMobilePlatform)
             {
                 Cursor.lockState = CursorLockMode.None;
                 Cursor.visible = true;
             }
 
-            Time.timeScale = 0f; // Пауза игрового процесса
+            Time.timeScale = 0f; // РџР°СѓР·Р° РёРіСЂРѕРІРѕРіРѕ РїСЂРѕС†РµСЃСЃР°
         }
 
         public void Hide()
         {
             isVisible = false;
 
-            // PC: блокируем курсор обратно при возобновлении заезда
+            // PC: Р±Р»РѕРєРёСЂСѓРµРј РєСѓСЂСЃРѕСЂ РѕР±СЂР°С‚РЅРѕ РїСЂРё РІРѕР·РѕР±РЅРѕРІР»РµРЅРёРё Р·Р°РµР·РґР°
             if (!Application.isMobilePlatform)
             {
                 Cursor.lockState = CursorLockMode.Locked;
                 Cursor.visible = false;
             }
 
-            Time.timeScale = 1f; // Возобновление заезда
+            Time.timeScale = 1f; // Р’РѕР·РѕР±РЅРѕРІР»РµРЅРёРµ Р·Р°РµР·РґР°
         }
 
         private void Update()
         {
             if (!isVisible) return;
 
-            // PC: горячие клавиши выбора модификаторов [1], [2], [3] и реролла [R]
+            // PC: РіРѕСЂСЏС‡РёРµ РєР»Р°РІРёС€Рё РІС‹Р±РѕСЂР° РјРѕРґРёС„РёРєР°С‚РѕСЂРѕРІ [1], [2], [3] Рё СЂРµСЂРѕР»Р»Р° [R]
             if (Input.GetKeyDown(KeyCode.Alpha1) || Input.GetKeyDown(KeyCode.Keypad1))
             {
                 Choose(0);
@@ -122,105 +109,7 @@ namespace RogueDrive.Gameplay
             }
         }
 
-        void OnGUI()
-        {
-            if (useSceneUI) return;
-            if (!isVisible || currentOffers == null || currentOffers.Count == 0)
-                return;
-
-            EnsureStyles();
-
-            // 1. Полупрозрачный темный фон
-            GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), overlayTex);
-
-            // 2. Заголовок экрана
-            float topY = Screen.height * 0.12f;
-            GUI.Label(new Rect(0, topY, Screen.width, 40f), "НОВЫЙ УРОВЕНЬ ЗАЕЗДА!", titleStyle);
-
-            // 3. Вычисление позиций 3 карточек
-            int cardCount = currentOffers.Count;
-            float cardWidth = Mathf.Min(260f, (Screen.width - 80f) / cardCount);
-            float cardHeight = 360f;
-            float spacing = 24f;
-            float totalWidth = (cardWidth * cardCount) + (spacing * (cardCount - 1));
-            float startX = (Screen.width - totalWidth) * 0.5f;
-            float cardY = (Screen.height - cardHeight) * 0.5f;
-
-            for (int i = 0; i < cardCount; i++)
-            {
-                ModifierDefinition def = currentOffers[i];
-                float x = startX + i * (cardWidth + spacing);
-                Rect cardRect = new Rect(x, cardY, cardWidth, cardHeight);
-
-                DrawCard(cardRect, def);
-            }
-
-            // 4. Кнопка бесплатного / рекламного реролла снизу
-            if (remainingRerolls > 0)
-            {
-                float rerollW = 280f;
-                float rerollH = 40f;
-                Rect rerollRect = new Rect((Screen.width - rerollW) * 0.5f, cardY + cardHeight + 25f, rerollW, rerollH);
-
-                if (GUI.Button(rerollRect, $"ОБНОВИТЬ КАРТЫ (ОСТАЛОСЬ: {remainingRerolls})", buttonStyle))
-                {
-                    remainingRerolls--;
-                    RerollRequested?.Invoke();
-                }
-            }
-        }
-
-        void DrawCard(Rect rect, ModifierDefinition def)
-        {
-            bool closesSynergy = CheckClosesSynergy(def);
-            Texture2D bg = closesSynergy ? synergyCardBgTex : cardBgTex;
-            GUI.DrawTexture(rect, bg);
-
-            float pad = 14f;
-            float innerW = rect.width - pad * 2f;
-            float curY = rect.y + 16f;
-
-            // Редкость (цветной бейдж)
-            Color rarityCol = GetRarityColor(def.Rarity);
-            GUI.contentColor = rarityCol;
-            GUI.Label(new Rect(rect.x + pad, curY, innerW, 20f), $"{def.Rarity.ToString().ToUpper()} • {def.Category}", rarityStyle);
-            GUI.contentColor = Color.white;
-            curY += 26f;
-
-            // Название модификатора
-            GUI.Label(new Rect(rect.x + pad, curY, innerW, 36f), def.DisplayName, cardTitleStyle);
-            curY += 40f;
-
-            // Уровень (текущий -> будущий)
-            int curLevel = currentBuild != null ? currentBuild.GetLevel(def.Id) : 0;
-            string levelText = curLevel > 0 ? $"Уровень: {curLevel} ➔ {curLevel + 1}" : "Новый модификатор";
-            if (def.RequiresSocket)
-            {
-                levelText += $"\nСокет: {def.RequiredSocket}";
-            }
-            GUI.Label(new Rect(rect.x + pad, curY, innerW, 34f), levelText, cardDescStyle);
-            curY += 40f;
-
-            // Бейдж синергии
-            if (closesSynergy)
-            {
-                GUI.Label(new Rect(rect.x + pad, curY, innerW, 28f), "⚡ СОБИРАЕТ СИНЕРГИЮ!", synergyBadgeStyle);
-                curY += 32f;
-            }
-
-            // Описание эффекта
-            GUI.Label(new Rect(rect.x + pad, curY, innerW, 110f), def.Description, cardDescStyle);
-
-            // Кнопка выбора внизу карточки
-            float btnH = 42f;
-            Rect btnRect = new Rect(rect.x + pad, rect.y + rect.height - btnH - 16f, innerW, btnH);
-            if (GUI.Button(btnRect, "ВЫБРАТЬ", buttonStyle))
-            {
-                SelectOffer(def);
-            }
-        }
-
-        bool CheckClosesSynergy(ModifierDefinition candidate)
+        private bool CheckClosesSynergy(ModifierDefinition candidate)
         {
             if (candidate == null || currentBuild == null || synergyResolver == null)
                 return false;
@@ -228,13 +117,13 @@ namespace RogueDrive.Gameplay
             return synergyResolver.WouldActivate(currentBuild, candidate.Id);
         }
 
-        void SelectOffer(ModifierDefinition def)
+        private void SelectOffer(ModifierDefinition def)
         {
             Hide();
             OfferSelected?.Invoke(def);
         }
 
-        Color GetRarityColor(Rarity r)
+        public Color GetRarityColor(Rarity r)
         {
             switch (r)
             {
@@ -242,71 +131,6 @@ namespace RogueDrive.Gameplay
                 case Rarity.Epic: return new Color(0.95f, 0.4f, 1f);
                 default: return new Color(0.85f, 0.85f, 0.85f);
             }
-        }
-
-        void EnsureStyles()
-        {
-            if (titleStyle != null)
-                return;
-
-            titleStyle = new GUIStyle(GUI.skin.label)
-            {
-                alignment = TextAnchor.MiddleCenter,
-                fontSize = 26,
-                fontStyle = FontStyle.Bold,
-                normal = { textColor = new Color(1f, 0.82f, 0.2f) }
-            };
-
-            cardTitleStyle = new GUIStyle(GUI.skin.label)
-            {
-                alignment = TextAnchor.UpperLeft,
-                fontSize = 17,
-                fontStyle = FontStyle.Bold,
-                wordWrap = true,
-                normal = { textColor = Color.white }
-            };
-
-            cardDescStyle = new GUIStyle(GUI.skin.label)
-            {
-                alignment = TextAnchor.UpperLeft,
-                fontSize = 13,
-                wordWrap = true,
-                normal = { textColor = new Color(0.88f, 0.9f, 0.94f) }
-            };
-
-            rarityStyle = new GUIStyle(GUI.skin.label)
-            {
-                alignment = TextAnchor.UpperLeft,
-                fontSize = 12,
-                fontStyle = FontStyle.Bold
-            };
-
-            synergyBadgeStyle = new GUIStyle(GUI.skin.label)
-            {
-                alignment = TextAnchor.MiddleCenter,
-                fontSize = 12,
-                fontStyle = FontStyle.Bold,
-                normal = { textColor = new Color(1f, 0.88f, 0.1f) }
-            };
-
-            buttonStyle = new GUIStyle(GUI.skin.button)
-            {
-                alignment = TextAnchor.MiddleCenter,
-                fontSize = 14,
-                fontStyle = FontStyle.Bold
-            };
-
-            overlayTex = MakeTex(new Color(0.04f, 0.05f, 0.08f, 0.88f));
-            cardBgTex = MakeTex(new Color(0.14f, 0.16f, 0.22f, 0.96f));
-            synergyCardBgTex = MakeTex(new Color(0.22f, 0.2f, 0.14f, 0.98f));
-        }
-
-        Texture2D MakeTex(Color col)
-        {
-            Texture2D tex = new Texture2D(1, 1);
-            tex.SetPixel(0, 0, col);
-            tex.Apply();
-            return tex;
         }
     }
 }

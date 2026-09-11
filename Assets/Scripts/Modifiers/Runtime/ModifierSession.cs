@@ -53,7 +53,7 @@ namespace RogueDrive.Modifiers
 
             IOfferGenerator generator = weighting != null
                 ? new WeightedOfferGenerator(catalog, sockets, unlocks, random, weighting, synergies)
-                : (IOfferGenerator)new UniformOfferGenerator(catalog, sockets, unlocks, random);
+                : (IOfferGenerator)new UniformOfferGenerator(catalog, sockets, unlocks, random, synergies);
 
             return new ModifierSession(build, effects, context, service, generator, synergies);
         }

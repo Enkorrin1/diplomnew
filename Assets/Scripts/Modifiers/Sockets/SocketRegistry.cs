@@ -42,6 +42,23 @@ namespace RogueDrive.Modifiers
             return false;
         }
 
+        public bool AllOccupied
+        {
+            get
+            {
+                if (_slots.Length == 0)
+                    return false;
+
+                EnsureOccupancy();
+
+                for (int i = 0; i < _slots.Length; i++)
+                    if (_slots[i].Type != SocketType.None && !_occupied[i])
+                        return false;
+
+                return true;
+            }
+        }
+
         public void Mount(ModifierDefinition definition, int level)
         {
             if (definition == null || !definition.RequiresSocket)

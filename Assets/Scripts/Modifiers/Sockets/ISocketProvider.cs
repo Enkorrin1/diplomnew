@@ -11,6 +11,12 @@ namespace RogueDrive.Modifiers
         bool HasFree(SocketType type);
         void Mount(ModifierDefinition definition, int level);
         void Reset();
+
+        /// <summary>
+        /// Все сокеты корпуса заняты. Ложь для машины без сокетов, иначе правило
+        /// укомплектованной машины заблокировало бы весь пул.
+        /// </summary>
+        bool AllOccupied { get; }
     }
 
     /// <summary>
@@ -47,6 +53,25 @@ namespace RogueDrive.Modifiers
             _capacity.TryGetValue(type, out int capacity);
             _used.TryGetValue(type, out int used);
             return used < capacity;
+        }
+
+        public bool AllOccupied
+        {
+            get
+            {
+                if (_capacity.Count == 0)
+                    return false;
+
+                foreach (KeyValuePair<SocketType, int> pair in _capacity)
+                {
+                    _used.TryGetValue(pair.Key, out int used);
+
+                    if (used < pair.Value)
+                        return false;
+                }
+
+                return true;
+            }
         }
 
         public void Mount(ModifierDefinition definition, int level)

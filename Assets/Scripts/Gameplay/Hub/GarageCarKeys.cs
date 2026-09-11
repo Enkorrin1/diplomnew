@@ -52,15 +52,16 @@ namespace RogueDrive.Gameplay.Hub
             {
                 itemHighlightLight.enabled = false;
             }
+            var col = GetComponent<Collider>();
+            if (col != null) col.enabled = false;
         }
 
-        private void Update()
+#if UNITY_EDITOR
+        private void OnDrawGizmos()
         {
-            // Легкое покачивание и подсветка ключей
-            if (visualModel != null && visualModel.activeSelf)
-            {
-                transform.Rotate(Vector3.up * (45f * Time.deltaTime));
-            }
+            Gizmos.color = new Color(1f, 0.85f, 0.2f, 0.8f);
+            Gizmos.DrawWireSphere(transform.position, 0.25f);
         }
+#endif
     }
 }

@@ -40,11 +40,30 @@ namespace RogueDrive.Simulation
 
         public float TopModifierShare;
 
+        /// <summary>
+        /// Скорость сборки: средний номер выбора и медианная дистанция, на которых
+        /// замкнулась первая синергия (по заездам, где она вообще замкнулась).
+        /// Отвечает на вопрос «алгоритм просто облегчает игру или ускоряет сборку билда».
+        /// </summary>
+        public float MeanPicksToFirstSynergy;
+        public float MedianDistanceToFirstSynergy;
+
+        /// <summary>Доля заездов, в которых сработала гарантия от невезения.</summary>
+        public float PityTriggerRate;
+
+        /// <summary>Экономика жетонов (только агенты казино): средние потраченные и пропавшие.</summary>
+        public float MeanTokensSpent;
+        public float MeanTokensWasted;
+        public float MeanRareBets;
+        public float MeanSynergyBets;
+
         public static string CsvHeader =>
             "configuration;generator;agent;runs;completion_rate;median_distance;distance_stddev;" +
             "synergy_rate;mean_synergies;distinct_builds;entropy;normalized_entropy;" +
             "distinct_modifiers;modifier_entropy;normalized_modifier_entropy;" +
-            "modifier_concentration;top_modifier_share";
+            "modifier_concentration;top_modifier_share;" +
+            "mean_picks_to_first_synergy;median_distance_to_first_synergy;pity_trigger_rate;" +
+            "mean_tokens_spent;mean_tokens_wasted;mean_rare_bets;mean_synergy_bets";
 
         public string ToCsvRow()
         {
@@ -67,7 +86,14 @@ namespace RogueDrive.Simulation
             b.Append(ModifierEntropy.ToString("F4", c)).Append(';');
             b.Append(NormalizedModifierEntropy.ToString("F4", c)).Append(';');
             b.Append(ModifierConcentration.ToString("F4", c)).Append(';');
-            b.Append(TopModifierShare.ToString("F4", c));
+            b.Append(TopModifierShare.ToString("F4", c)).Append(';');
+            b.Append(MeanPicksToFirstSynergy.ToString("F3", c)).Append(';');
+            b.Append(MedianDistanceToFirstSynergy.ToString("F1", c)).Append(';');
+            b.Append(PityTriggerRate.ToString("F4", c)).Append(';');
+            b.Append(MeanTokensSpent.ToString("F3", c)).Append(';');
+            b.Append(MeanTokensWasted.ToString("F3", c)).Append(';');
+            b.Append(MeanRareBets.ToString("F3", c)).Append(';');
+            b.Append(MeanSynergyBets.ToString("F3", c));
 
             return b.ToString();
         }
@@ -96,11 +122,15 @@ namespace RogueDrive.Simulation
             metrics.Agent = results[0].Agent;
 
             var distances = new List<float>(results.Count);
+            var firstSynergyDistances = new List<float>();
             var signatureCounts = new Dictionary<string, int>();
 
             int completed = 0;
             int withSynergy = 0;
             int synergyTotal = 0;
+            int withPity = 0;
+            long picksToFirstTotal = 0;
+            long tokensSpent = 0, tokensWasted = 0, rareBets = 0, synergyBets = 0;
 
             for (int i = 0; i < results.Count; i++)
             {
@@ -116,6 +146,20 @@ namespace RogueDrive.Simulation
 
                 synergyTotal += result.SynergyCount;
 
+                if (result.PicksToFirstSynergy >= 0)
+                {
+                    picksToFirstTotal += result.PicksToFirstSynergy;
+                    firstSynergyDistances.Add(result.DistanceAtFirstSynergy);
+                }
+
+                if (result.PityTriggers > 0)
+                    withPity++;
+
+                tokensSpent += result.TokensSpent;
+                tokensWasted += result.TokensWasted;
+                rareBets += result.RareBets;
+                synergyBets += result.SynergyBets;
+
                 string signature = string.IsNullOrEmpty(result.BuildSignature)
                     ? "(empty)"
                     : result.BuildSignature;
@@ -127,6 +171,19 @@ namespace RogueDrive.Simulation
             metrics.CompletionRate = completed / (float)results.Count;
             metrics.SynergyRate = withSynergy / (float)results.Count;
             metrics.MeanSynergies = synergyTotal / (float)results.Count;
+
+            if (firstSynergyDistances.Count > 0)
+            {
+                metrics.MeanPicksToFirstSynergy = picksToFirstTotal / (float)firstSynergyDistances.Count;
+                firstSynergyDistances.Sort();
+                metrics.MedianDistanceToFirstSynergy = Median(firstSynergyDistances);
+            }
+
+            metrics.PityTriggerRate = withPity / (float)results.Count;
+            metrics.MeanTokensSpent = tokensSpent / (float)results.Count;
+            metrics.MeanTokensWasted = tokensWasted / (float)results.Count;
+            metrics.MeanRareBets = rareBets / (float)results.Count;
+            metrics.MeanSynergyBets = synergyBets / (float)results.Count;
 
             distances.Sort();
             metrics.MedianDistance = Median(distances);

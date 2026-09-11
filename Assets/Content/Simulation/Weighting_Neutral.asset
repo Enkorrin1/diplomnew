@@ -17,6 +17,8 @@ MonoBehaviour:
   - 1
   - 1
   SynergyBonus: 1
+  PityThreshold: 0
+  LockNewModulesWhenSocketsFull: 0
   StackFalloff:
     serializedVersion: 2
     m_Curve:

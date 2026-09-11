@@ -34,12 +34,6 @@ namespace RogueDrive.Gameplay.Combat
         private Renderer[] renderers;
         private Color[] originalColors;
 
-        // UI Health Bar
-        private static GUIStyle hpBgStyle;
-        private static GUIStyle hpFillStyle;
-        private static Texture2D hpBgTex;
-        private static Texture2D hpFillTex;
-
         public float Health => currentHealth;
         public float MaxHealth => maxHealth;
         public bool IsDead => isDead;
@@ -242,43 +236,6 @@ namespace RogueDrive.Gameplay.Combat
                 {
                     renderers[i].material.color = originalColors[i];
                 }
-            }
-        }
-
-        private void OnGUI()
-        {
-            if (isDead || Camera.main == null) return;
-
-            // 3D полоска здоровья над машиной
-            Vector3 screenPos = Camera.main.WorldToScreenPoint(transform.position + Vector3.up * 2.4f);
-            if (screenPos.z <= 0f) return;
-
-            EnsureHpStyles();
-
-            float barW = 80f;
-            float barH = 8f;
-            float x = screenPos.x - barW * 0.5f;
-            float y = Screen.height - screenPos.y;
-
-            GUI.Box(new Rect(x, y, barW, barH), string.Empty, hpBgStyle);
-            float fillPct = Mathf.Clamp01(currentHealth / maxHealth);
-            GUI.Box(new Rect(x, y, barW * fillPct, barH), string.Empty, hpFillStyle);
-        }
-
-        private static void EnsureHpStyles()
-        {
-            if (hpBgTex == null)
-            {
-                hpBgTex = new Texture2D(1, 1);
-                hpBgTex.SetPixel(0, 0, new Color(0.1f, 0.1f, 0.1f, 0.85f));
-                hpBgTex.Apply();
-
-                hpFillTex = new Texture2D(1, 1);
-                hpFillTex.SetPixel(0, 0, new Color(0.95f, 0.25f, 0.2f, 0.95f));
-                hpFillTex.Apply();
-
-                hpBgStyle = new GUIStyle { normal = { background = hpBgTex } };
-                hpFillStyle = new GUIStyle { normal = { background = hpFillTex } };
             }
         }
     }

@@ -17,8 +17,6 @@ namespace RogueDrive.UI
 
         private float currentAlpha = 0f;
         private bool isTransitioning = false;
-        private Texture2D blackTexture;
-        private GUIStyle fadeStyle;
 
         private void Awake()
         {
@@ -145,14 +143,6 @@ namespace RogueDrive.UI
             }
             currentAlpha = 0f;
             isTransitioning = false;
-        }
-
-        private void OnDestroy()
-        {
-            if (blackTexture != null)
-            {
-                Destroy(blackTexture);
-            }
         }
 
         private void LateUpdate()

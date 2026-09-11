@@ -17,10 +17,12 @@ namespace RogueDrive.Gameplay.Combat
 
         private bool isTriggered;
         private float aliveTime;
+        private float slowDuration = 1.5f;
 
-        public void Configure(float bonusDamage = 0f)
+        public void Configure(float bonusDamage = 0f, float customSlowDuration = 1.5f)
         {
             damage += bonusDamage;
+            slowDuration = customSlowDuration;
         }
 
         private void Start()
@@ -74,7 +76,7 @@ namespace RogueDrive.Gameplay.Combat
             if (raider != null)
             {
                 raider.TakeDamage(damage);
-                raider.TriggerSpinout(1.5f);
+                raider.TriggerSpinout(slowDuration);
             }
             else if (damageable != null)
             {

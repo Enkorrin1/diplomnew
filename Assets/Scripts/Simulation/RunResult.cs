@@ -24,14 +24,31 @@ namespace RogueDrive.Simulation
         public int ModifierCount;
         public string BuildSignature;
 
+        /// <summary>Номер выбора, на котором замкнулась первая синергия; −1, если синергий не было.</summary>
+        public int PicksToFirstSynergy;
+
+        /// <summary>Дистанция, на которой замкнулась первая синергия; −1, если синергий не было.</summary>
+        public float DistanceAtFirstSynergy;
+
+        /// <summary>Жетоны казино: потрачено и пропало непотраченными (только агенты казино).</summary>
+        public int TokensSpent;
+        public int TokensWasted;
+        public int RareBets;
+        public int SynergyBets;
+
+        /// <summary>Сколько раз гарантия от невезения вмешалась в выборку.</summary>
+        public int PityTriggers;
+
         public static string CsvHeader =>
             "seed;generator;agent;configuration;completed;distance;time;kills;levels;" +
-            "health_left;fuel_left;synergies;modifiers;build";
+            "health_left;fuel_left;synergies;modifiers;build;" +
+            "picks_to_first_synergy;distance_at_first_synergy;tokens_spent;tokens_wasted;" +
+            "rare_bets;synergy_bets;pity_triggers";
 
         public string ToCsvRow()
         {
             var culture = CultureInfo.InvariantCulture;
-            var builder = new StringBuilder(160);
+            var builder = new StringBuilder(200);
 
             builder.Append(Seed).Append(';');
             builder.Append(Generator).Append(';');
@@ -46,7 +63,14 @@ namespace RogueDrive.Simulation
             builder.Append(FuelLeft.ToString("F1", culture)).Append(';');
             builder.Append(SynergyCount).Append(';');
             builder.Append(ModifierCount).Append(';');
-            builder.Append(BuildSignature);
+            builder.Append(BuildSignature).Append(';');
+            builder.Append(PicksToFirstSynergy).Append(';');
+            builder.Append(DistanceAtFirstSynergy.ToString("F1", culture)).Append(';');
+            builder.Append(TokensSpent).Append(';');
+            builder.Append(TokensWasted).Append(';');
+            builder.Append(RareBets).Append(';');
+            builder.Append(SynergyBets).Append(';');
+            builder.Append(PityTriggers);
 
             return builder.ToString();
         }

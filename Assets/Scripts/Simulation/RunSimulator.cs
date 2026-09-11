@@ -37,13 +37,27 @@ namespace RogueDrive.Simulation
     {
         Random,
         Priority,
-        SynergySeeking
+        SynergySeeking,
+
+        /// <summary>
+        /// Игровая схема «казино»: игрок не выбирает, применяется первый элемент
+        /// взвешенной выборки. Жетоны копятся за уровни и тратятся в пунктах на
+        /// трассе обычной ставкой. Поведение игрока исключено, измеряется только генератор.
+        /// </summary>
+        Casino,
+
+        /// <summary>Та же схема казино, но жетоны ставятся по жадной политике ставок.</summary>
+        CasinoBettor
     }
 
     /// <summary>
     /// Прогон одного заезда без отрисовки. Отбор и применение модификаторов
     /// выполняются штатными классами системы, поэтому измеряется та же логика,
     /// которая работает в игре.
+    ///
+    /// Для агентов казино воспроизводится игровая схема прогрессии: уровень даёт
+    /// жетон, жетоны тратятся при пересечении отметок пунктов-казино, непотраченные
+    /// к концу заезда жетоны пропадают.
     /// </summary>
     public sealed class RunSimulator
     {
@@ -60,15 +74,25 @@ namespace RogueDrive.Simulation
             var agentRandom = new SeededRandom(seed ^ 0x27d4eb2f);
 
             ISimulationAgent agent = CreateAgent(setup.Agent, session, agentRandom);
+            ICasinoPolicy casino = agent as ICasinoPolicy;
             IRunModel model = new AnalyticRunModel(setup.Difficulty, modelRandom);
 
             RunContext context = session.Context;
             context.CampaignLevel = setup.Difficulty.LevelLength > 0f ? 1 : 0;
 
+            float[] stops = casino != null && setup.Difficulty.CasinoStopDistances != null
+                ? setup.Difficulty.CasinoStopDistances
+                : new float[0];
+            int nextStop = 0;
+
             float experience = 0f;
             int levels = 0;
             int killsSinceStart = 0;
             float time = 0f;
+
+            var tally = new CasinoTally();
+            int picksToFirstSynergy = -1;
+            float distanceAtFirstSynergy = -1f;
 
             var triggerCounters = new Dictionary<int, int>();
 
@@ -92,8 +116,28 @@ namespace RogueDrive.Simulation
                     experience -= ExperienceThreshold(setup.Difficulty, levels);
                     levels++;
 
+                    if (casino != null)
+                    {
+                        tally.Tokens++;
+                        continue;
+                    }
+
+                    // Пул исчерпан — заезд продолжается без новых модификаторов
                     if (!OfferAndApply(session, agent, setup.OffersPerLevel))
                         break;
+                }
+
+                // Пункты казино: жетоны тратятся при пересечении отметки
+                while (casino != null && nextStop < stops.Length && context.Distance >= stops[nextStop])
+                {
+                    nextStop++;
+                    SpendTokens(session, casino, tally);
+                }
+
+                if (picksToFirstSynergy < 0 && session.Build.ActiveSynergies.Count > 0)
+                {
+                    picksToFirstSynergy = session.Build.TotalPicks;
+                    distanceAtFirstSynergy = context.Distance;
                 }
             }
 
@@ -114,8 +158,63 @@ namespace RogueDrive.Simulation
                 FuelLeft = Mathf.Max(0f, context.Fuel),
                 SynergyCount = session.Build.ActiveSynergies.Count,
                 ModifierCount = session.Build.Levels.Count,
-                BuildSignature = session.Build.Signature()
+                BuildSignature = session.Build.Signature(),
+                PicksToFirstSynergy = picksToFirstSynergy,
+                DistanceAtFirstSynergy = distanceAtFirstSynergy,
+                TokensSpent = tally.Spent,
+                TokensWasted = tally.Tokens,
+                RareBets = tally.RareBets,
+                SynergyBets = tally.SynergyBets,
+                PityTriggers = session.OfferGenerator.PityTriggers
             };
+        }
+
+        sealed class CasinoTally
+        {
+            public int Tokens;
+            public int Spent;
+            public int RareBets;
+            public int SynergyBets;
+        }
+
+        /// <summary>Визит в казино: все накопленные жетоны тратятся по политике ставок.</summary>
+        static void SpendTokens(ModifierSession session, ICasinoPolicy policy, CasinoTally tally)
+        {
+            while (tally.Tokens > 0)
+            {
+                CasinoBet bet = policy.ChooseBet(tally.Tokens, session);
+                int cost = CasinoBetRules.Cost(bet);
+
+                if (cost > tally.Tokens)
+                {
+                    bet = CasinoBet.Standard;
+                    cost = 1;
+                }
+
+                IReadOnlyList<ModifierDefinition> offers = session.OfferGenerator.Generate(
+                    session.Build, session.Context, 1, OfferConstraint.ForBet(bet));
+
+                if (offers.Count == 0)
+                {
+                    if (bet == CasinoBet.Standard)
+                        return; // пул исчерпан — остаток жетонов пропадает
+
+                    // Под ставку кандидатов не нашлось — обычный спин
+                    offers = session.OfferGenerator.Generate(session.Build, session.Context, 1);
+                    if (offers.Count == 0)
+                        return;
+
+                    bet = CasinoBet.Standard;
+                    cost = 1;
+                }
+
+                session.Service.Apply(offers[0]);
+                tally.Tokens -= cost;
+                tally.Spent += cost;
+
+                if (bet == CasinoBet.RareGuaranteed) tally.RareBets++;
+                else if (bet == CasinoBet.SynergyHunt) tally.SynergyBets++;
+            }
         }
 
         static bool OfferAndApply(ModifierSession session, ISimulationAgent agent, int offersPerLevel)
@@ -182,6 +281,12 @@ namespace RogueDrive.Simulation
 
                 case AgentKind.SynergySeeking:
                     return new SynergySeekingAgent(session.Synergies, new PriorityAgent());
+
+                case AgentKind.Casino:
+                    return new CasinoAgent();
+
+                case AgentKind.CasinoBettor:
+                    return new CasinoBettorAgent();
 
                 default:
                     return new PriorityAgent();

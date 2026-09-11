@@ -19,7 +19,7 @@ namespace RogueDrive.EditorTools
             };
         }
 
-        [MenuItem("RogueDrive/Graphics/Fix All Material Shaders")]
+        [MenuItem("RogueDrive/Инструменты/Исправить шейдеры материалов (Fix Shaders)", priority = 30)]
         public static void FixAllMaterials()
         {
             if (EditorApplication.isPlayingOrWillChangePlaymode)
@@ -81,7 +81,6 @@ namespace RogueDrive.EditorTools
             }
         }
 
-        [MenuItem("RogueDrive/Graphics/Fix Scene Car and Turret Models")]
         public static void FixSceneCarAndTurret()
         {
             if (EditorApplication.isPlayingOrWillChangePlaymode)

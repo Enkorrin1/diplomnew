@@ -34,6 +34,11 @@ namespace RogueDrive.Simulation
         [Tooltip("Вероятность столкновения в секунду при полностью перекрытой трассе.")]
         [Range(0f, 1f)] public float RamChanceAtFullBlock = 0.35f;
 
+        [Header("Казино")]
+        [Tooltip("Отметки дистанции, на которых стоят пункты-казино. Агенты казино тратят жетоны " +
+                 "только здесь; жетоны, накопленные после последнего пункта, пропадают.")]
+        public float[] CasinoStopDistances = { 1000f, 2000f, 3000f };
+
         [Header("Опыт")]
         public float ExperiencePerKill = 1f;
 

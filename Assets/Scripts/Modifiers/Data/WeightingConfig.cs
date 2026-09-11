@@ -4,7 +4,8 @@ namespace RogueDrive.Modifiers
 {
     /// <summary>
     /// Коэффициенты алгоритма взвешивания. Варьируемый параметр эксперимента:
-    /// w(i) = w_base(rarity) * k_stack(level) * k_syn * k_role.
+    /// w(i) = w_base(rarity) * k_stack(level) * k_syn * k_role,
+    /// плюс два правила пула: гарантия синергии и укомплектованная машина.
     /// </summary>
     [CreateAssetMenu(fileName = "WeightingConfig", menuName = "RogueDrive/Weighting Config")]
     public class WeightingConfig : ScriptableObject
@@ -25,6 +26,14 @@ namespace RogueDrive.Modifiers
         [Min(1f)] public float RoleCompensation = 1.8f;
         [Range(0f, 1f)] public float LowResourceThreshold = 0.35f;
 
+        [Header("Правила пула")]
+        [Tooltip("Гарантия от невезения: после стольких выборов подряд без синергии следующая выборка " +
+                 "обязана содержать замыкающий кандидат. Ноль — выключено.")]
+        [Min(0)] public int PityThreshold = 4;
+
+        [Tooltip("Когда все сокеты корпуса заняты, предлагаются только улучшения уже установленных модулей.")]
+        public bool LockNewModulesWhenSocketsFull = true;
+
         public float GetRarityWeight(Rarity rarity)
         {
             if (RarityWeights == null || RarityWeights.Length == 0)
@@ -38,10 +47,19 @@ namespace RogueDrive.Modifiers
             return StackFalloff == null ? 1f : Mathf.Max(0f, StackFalloff.Evaluate(currentLevel));
         }
 
+        public PoolRules GetPoolRules()
+        {
+            return new PoolRules
+            {
+                PityThreshold = Mathf.Max(0, PityThreshold),
+                LockNewModulesWhenSocketsFull = LockNewModulesWhenSocketsFull
+            };
+        }
+
         /// <summary>
-        /// Нейтральная конфигурация: все коэффициенты равны единице, взвешенный
-        /// генератор становится эквивалентен равновероятному. Контрольная точка
-        /// эксперимента и нижняя граница ряда промежуточных настроек.
+        /// Нейтральная конфигурация: все коэффициенты равны единице, правила пула
+        /// выключены, взвешенный генератор становится эквивалентен равновероятному.
+        /// Контрольная точка эксперимента и нижняя граница ряда промежуточных настроек.
         /// </summary>
         public static WeightingConfig CreateNeutral()
         {
@@ -52,6 +70,8 @@ namespace RogueDrive.Modifiers
             config.RoleCompensation = 1f;
             config.LowResourceThreshold = 0f;
             config.StackFalloff = AnimationCurve.Constant(0f, 16f, 1f);
+            config.PityThreshold = 0;
+            config.LockNewModulesWhenSocketsFull = false;
             return config;
         }
     }

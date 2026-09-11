@@ -9,11 +9,12 @@ namespace RogueDrive.Modifiers
     ///
     /// Экспериментальная группа. При нейтральной конфигурации вырождается
     /// в равновероятную выборку, что даёт непрерывный ряд промежуточных настроек.
+    /// Правила пула (гарантия синергии, укомплектованная машина) берутся из той же
+    /// конфигурации, поэтому абляция любого элемента алгоритма сводится к правке ассета.
     /// </summary>
     public sealed class WeightedOfferGenerator : OfferGeneratorBase
     {
         readonly WeightingConfig _config;
-        readonly SynergyResolver _synergies;
 
         public WeightedOfferGenerator(ModifierCatalog catalog,
                                       ISocketProvider sockets,
@@ -21,10 +22,9 @@ namespace RogueDrive.Modifiers
                                       IRandomSource random,
                                       WeightingConfig config,
                                       SynergyResolver synergies)
-            : base(catalog, sockets, unlocks, random)
+            : base(catalog, sockets, unlocks, random, synergies, config != null ? config.GetPoolRules() : PoolRules.Disabled)
         {
             _config = config;
-            _synergies = synergies;
         }
 
         protected override float GetWeight(ModifierDefinition definition, BuildState build, RunContext context)
@@ -39,12 +39,6 @@ namespace RogueDrive.Modifiers
                 weight *= _config.RoleCompensation;
 
             return weight;
-        }
-
-        /// <summary>Добавление кандидата замкнёт хотя бы одну ещё не активную синергию.</summary>
-        bool ClosesSynergy(ModifierDefinition definition, BuildState build)
-        {
-            return _synergies != null && _synergies.WouldActivate(build, definition.Id);
         }
 
         /// <summary>

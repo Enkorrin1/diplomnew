@@ -20,6 +20,8 @@ namespace RogueDrive.UI
         [SerializeField] private PauseMenuUI pause;
         [SerializeField] private RunExperienceManager experience;
         [SerializeField] private ComboScoreSystem combo;
+        [SerializeField] private BuffCasinoView casino;
+        [SerializeField] private GameSessionCoordinator sessionCoordinator;
         [SerializeField] private GameObject mainPanel, garagePanel, hudPanel, settingsPanel, aboutPanel, campaignPanel, pausePanel, resultsPanel, levelPanel;
         [SerializeField] private Text wallet, carInfo, buyCarLabel, resultText, hudText, bannerText, bossText, xpText, comboText;
         [SerializeField] private Button buyCarButton;
@@ -53,6 +55,8 @@ namespace RogueDrive.UI
             if (experience == null) experience = FindFirstObjectByType<RunExperienceManager>();
             if (combo == null) combo = FindFirstObjectByType<ComboScoreSystem>();
             if (garage == null) garage = FindFirstObjectByType<GarageUIController>();
+            if (casino == null) casino = FindFirstObjectByType<BuffCasinoView>();
+            if (sessionCoordinator == null) sessionCoordinator = FindFirstObjectByType<GameSessionCoordinator>();
         }
 
         void Update() => Refresh();
@@ -61,16 +65,17 @@ namespace RogueDrive.UI
         {
             if (run == null || pause == null || combo == null) ResolveMissingReferences();
             bool choosing = levelUp != null && levelUp.IsVisible;
+            bool gambling = casino != null && casino.IsVisible;
             bool paused = pause != null && pause.IsPaused;
             bool ended = run != null && run.IsGameOver;
             if (run != null && !paused) settingsOpen = false;
             Set(settingsPanel, settingsOpen);
             Set(aboutPanel, aboutOpen);
             Set(campaignPanel, campaignOpen);
-            Set(pausePanel, paused && !settingsOpen && !choosing && !ended);
+            Set(pausePanel, paused && !settingsOpen && !choosing && !gambling && !ended);
             Set(resultsPanel, ended && !campaignOpen);
             Set(levelPanel, choosing && !ended);
-            Set(hudPanel, run != null && !ended && !choosing && !paused);
+            Set(hudPanel, run != null && !ended && !choosing && !gambling && !paused);
             if (wallet != null && progress != null) wallet.text = $"МОНЕТЫ  {progress.Coins}     РЕКОРД  {progress.Data.BestEndlessDistance:0} м";
             if (settingsValues != null && masterSlider != null)
                 settingsValues.text = $"{masterSlider.value:P0}\n{musicSlider.value:P0}\n{effectsSlider.value:P0}\n{steeringSlider.value:0.0}×";
@@ -106,7 +111,15 @@ namespace RogueDrive.UI
             var boss = hud != null ? hud.ActiveBoss : null;
             if (bossBar != null) { bossBar.gameObject.SetActive(boss != null && !boss.IsDead); if (boss != null) Fill(bossBar, boss.CurrentHealth, boss.MaxHealth); }
             if (bossText != null) bossText.text = boss != null && !boss.IsDead ? $"{boss.BossTitle} — {boss.Phase}\n{boss.CurrentHealth:0}/{boss.MaxHealth:0}" : "";
-            if (experience != null) { Fill(xpBar, experience.CurrentXp, experience.RequiredXp); if (xpText != null) xpText.text = $"УРОВЕНЬ {experience.CurrentLevel}    ОПЫТ {experience.CurrentXp:0}/{experience.RequiredXp:0}"; }
+            if (experience != null)
+            {
+                Fill(xpBar, experience.CurrentXp, experience.RequiredXp);
+                if (xpText != null)
+                {
+                    int tokens = sessionCoordinator != null ? sessionCoordinator.CasinoTokens : 0;
+                    xpText.text = $"УРОВЕНЬ {experience.CurrentLevel}    ОПЫТ {experience.CurrentXp:0}/{experience.RequiredXp:0}    ЖЕТОНЫ КАЗИНО: {tokens}";
+                }
+            }
             if (choosing && offerButtons != null)
             {
                 for (int i = 0; i < offerButtons.Length; i++)

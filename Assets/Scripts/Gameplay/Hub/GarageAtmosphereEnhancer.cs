@@ -8,11 +8,16 @@ namespace RogueDrive.Gameplay.Hub
     /// </summary>
     public sealed class GarageAtmosphereEnhancer : MonoBehaviour
     {
-        private ParticleSystem dustParticles;
+        [Header("Atmosphere")]
+        [SerializeField] private ParticleSystem dustParticles;
+        [SerializeField] private bool createDustAtRuntime = false;
 
         private void Start()
         {
-            CreateDustParticles();
+            if (createDustAtRuntime)
+            {
+                CreateDustParticles();
+            }
             SetupLightingAndFog();
         }
 

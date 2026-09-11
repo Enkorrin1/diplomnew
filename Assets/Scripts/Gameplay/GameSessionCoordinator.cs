@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using RogueDrive.Modifiers;
@@ -8,7 +9,11 @@ namespace RogueDrive.Gameplay
     /// <summary>
     /// Главный координатор сессии заезда.
     /// Связывает данные модификаторов, физический автомобиль, авто-турель,
-    /// систему опыта, генератор предложений и интерфейс повышения уровня.
+    /// систему опыта, генератор предложений и придорожное казино.
+    ///
+    /// Схема прогрессии: опыт с зомби → уровень → жетон казино. Жетоны копятся,
+    /// а тратятся только в промежуточных пунктах на трассе (<see cref="BuffCasinoStop"/>),
+    /// где слот-машина сама выдаёт случайный модификатор из взвешенного пула.
     /// </summary>
     public sealed class GameSessionCoordinator : MonoBehaviour
     {
@@ -22,12 +27,27 @@ namespace RogueDrive.Gameplay
         [SerializeField] private AutoTurret turret;
         [SerializeField] private GameRunController runController;
         [SerializeField] private RunExperienceManager experienceManager;
-        [SerializeField] private LevelUpView levelUpView;
+        [SerializeField] private BuffCasinoView casinoView;
+
+        [Header("Casino")]
+        [Tooltip("Сколько кандидатов прокручивает барабан за одно вращение (первый — выпавший).")]
+        [SerializeField, Range(3, 12)] private int reelSize = 8;
+        [Tooltip("Задержка между въездом в пункт и открытием казино, сек.")]
+        [SerializeField, Min(0f)] private float casinoOpenDelay = 0.8f;
 
         ModifierSession session;
+        ISocketProvider sockets;
         int killCounter;
+        int casinoTokens;
+        bool fullCarAnnounced;
+        Coroutine casinoOpening;
 
         public ModifierSession Session => session;
+
+        /// <summary>Накопленные, но ещё не потраченные жетоны казино (по одному за уровень).</summary>
+        public int CasinoTokens => casinoTokens;
+
+        public bool IsCasinoOpen => casinoView != null && casinoView.IsVisible;
 
         private void Awake()
         {
@@ -39,29 +59,19 @@ namespace RogueDrive.Gameplay
         private void OnEnable()
         {
             EnemyBase.AnyEnemyKilled += HandleEnemyKilled;
+            BuffCasinoStop.StopReached += HandleCasinoStopReached;
 
             if (experienceManager != null)
                 experienceManager.LevelUp += HandleLevelUp;
-
-            if (levelUpView != null)
-            {
-                levelUpView.OfferSelected += HandleOfferSelected;
-                levelUpView.RerollRequested += HandleRerollRequested;
-            }
         }
 
         private void OnDisable()
         {
             EnemyBase.AnyEnemyKilled -= HandleEnemyKilled;
+            BuffCasinoStop.StopReached -= HandleCasinoStopReached;
 
             if (experienceManager != null)
                 experienceManager.LevelUp -= HandleLevelUp;
-
-            if (levelUpView != null)
-            {
-                levelUpView.OfferSelected -= HandleOfferSelected;
-                levelUpView.RerollRequested -= HandleRerollRequested;
-            }
         }
 
         void FindSceneReferences()
@@ -74,8 +84,10 @@ namespace RogueDrive.Gameplay
                 runController = FindFirstObjectByType<GameRunController>();
             if (experienceManager == null)
                 experienceManager = FindFirstObjectByType<RunExperienceManager>();
-            if (levelUpView == null)
-                levelUpView = FindFirstObjectByType<LevelUpView>();
+            if (casinoView == null)
+                casinoView = FindFirstObjectByType<BuffCasinoView>();
+            if (casinoView == null)
+                Debug.LogWarning("[GameSessionCoordinator] В сцене нет BuffCasinoView — бафы в казино будут выдаваться без анимации.");
         }
 
         void InitializeModifierSession()
@@ -101,7 +113,7 @@ namespace RogueDrive.Gameplay
                 }
             }
 
-            ISocketProvider sockets = carController != null && carController.Sockets != null
+            sockets = carController != null && carController.Sockets != null
                 ? (ISocketProvider)carController.Sockets
                 : new HeadlessSocketProvider(carDefinition);
 
@@ -144,6 +156,7 @@ namespace RogueDrive.Gameplay
                 Debug.Log($"[Modifier Applied] {def.DisplayName} (Уровень {level})");
                 if (carController != null) carController.BindStats(session.Effects.Stats);
                 if (runController != null) runController.BindStats(session.Effects.Stats);
+                AnnounceFullCarOnce();
             };
 
             session.Service.SynergyActivated += (syn) =>
@@ -153,51 +166,133 @@ namespace RogueDrive.Gameplay
             };
         }
 
-        int pendingLevelUps;
-
+        /// <summary>Новый уровень = один жетон казино. Выбор бафа откладывается до ближайшего пункта.</summary>
         void HandleLevelUp(int newLevel)
         {
-            if (session == null || levelUpView == null)
+            if (session == null)
                 return;
 
-            if (levelUpView.IsVisible)
+            casinoTokens++;
+            RogueDrive.Audio.AudioManager.Instance?.PlayCoin();
+            PrototypeHud.Instance?.ShowBiomeNotification(
+                $"УРОВЕНЬ {newLevel} — ЖЕТОН КАЗИНО +1",
+                $"ЖЕТОНОВ: {casinoTokens}. ОБМЕНЯЙТЕ НА БАФ В БЛИЖАЙШЕМ ПУНКТЕ-КАЗИНО",
+                new Color(1f, 0.85f, 0.2f));
+        }
+
+        void HandleCasinoStopReached(BuffCasinoStop stop, ArcadeCarController car)
+        {
+            if (session == null || stop == null)
+                return;
+
+            if (runController != null && runController.IsGameOver)
+                return;
+
+            if (casinoTokens <= 0)
             {
-                pendingLevelUps++;
+                PrototypeHud.Instance?.ShowBiomeNotification(
+                    stop.StopName.ToUpperInvariant(),
+                    "НЕТ ЖЕТОНОВ — НАБЕРИТЕ ОПЫТ С ЗОМБИ ДО СЛЕДУЮЩЕГО ПУНКТА",
+                    new Color(1f, 0.3f, 0.85f));
                 return;
             }
 
-            IReadOnlyList<ModifierDefinition> offers = session.OfferGenerator.Generate(
-                session.Build, session.Context, 3);
-
-            levelUpView.Show(offers, session.Build, session.Synergies);
+            if (casinoOpening != null) StopCoroutine(casinoOpening);
+            casinoOpening = StartCoroutine(OpenCasinoRoutine(stop));
         }
 
-        void HandleOfferSelected(ModifierDefinition def)
+        IEnumerator OpenCasinoRoutine(BuffCasinoStop stop)
+        {
+            // Даём машине проехать под аркой, затем пауза и слот-машина
+            if (casinoOpenDelay > 0f)
+                yield return new WaitForSeconds(casinoOpenDelay);
+
+            casinoOpening = null;
+
+            if (runController != null && runController.IsGameOver)
+                yield break;
+
+            int spins = casinoTokens;
+            casinoTokens = 0;
+
+            var visit = new CasinoVisit
+            {
+                StopName = stop.StopName,
+                Tokens = spins,
+                DrawReel = DrawCasinoReel,
+                BetAvailable = IsBetAvailable,
+                ApplyResult = ApplyCasinoResult,
+                Build = session.Build,
+                Synergies = session.Synergies,
+                Generator = session.OfferGenerator
+            };
+
+            if (casinoView != null)
+            {
+                casinoView.Show(visit);
+            }
+            else
+            {
+                // Нет экрана казино — выдаём бафы сразу обычными спинами
+                var names = new List<string>();
+                for (int i = 0; i < spins; i++)
+                {
+                    IReadOnlyList<ModifierDefinition> reel = DrawCasinoReel(CasinoBet.Standard);
+                    if (reel.Count == 0) break;
+                    ApplyCasinoResult(reel[0]);
+                    names.Add(reel[0].DisplayName);
+                }
+                PrototypeHud.Instance?.ShowBiomeNotification(
+                    stop.StopName.ToUpperInvariant(),
+                    names.Count > 0 ? "ВЫПАЛО: " + string.Join(", ", names) : "ПУЛ МОДИФИКАТОРОВ ИСЧЕРПАН",
+                    new Color(1f, 0.3f, 0.85f));
+            }
+        }
+
+        /// <summary>
+        /// Барабан одного вращения: взвешенная выборка без возвращения из пула,
+        /// суженного ставкой. Первый элемент — выпавший модификатор, остальные
+        /// лишь декорируют прокрутку.
+        /// </summary>
+        IReadOnlyList<ModifierDefinition> DrawCasinoReel(CasinoBet bet)
+        {
+            IReadOnlyList<ModifierDefinition> offers = session.OfferGenerator.Generate(
+                session.Build, session.Context, reelSize, OfferConstraint.ForBet(bet));
+
+            // Генератор переиспользует внутренний список — копируем
+            var copy = new List<ModifierDefinition>(offers.Count);
+            for (int i = 0; i < offers.Count; i++) copy.Add(offers[i]);
+            return copy;
+        }
+
+        bool IsBetAvailable(CasinoBet bet)
+        {
+            return session != null
+                && session.OfferGenerator.HasCandidates(session.Build, session.Context, OfferConstraint.ForBet(bet));
+        }
+
+        void ApplyCasinoResult(ModifierDefinition def)
         {
             if (session == null || def == null)
                 return;
 
             session.Service.Apply(def);
-
-            if (pendingLevelUps > 0)
-            {
-                pendingLevelUps--;
-                IReadOnlyList<ModifierDefinition> offers = session.OfferGenerator.Generate(
-                    session.Build, session.Context, 3);
-
-                levelUpView.Show(offers, session.Build, session.Synergies);
-            }
         }
 
-        void HandleRerollRequested()
+        /// <summary>
+        /// Все сокеты корпуса заняты: с этого момента казино выдаёт только улучшения
+        /// уже установленных модулей (правило пула LockNewModulesWhenSocketsFull).
+        /// </summary>
+        void AnnounceFullCarOnce()
         {
-            if (session == null || levelUpView == null)
+            if (fullCarAnnounced || sockets == null || !sockets.AllOccupied)
                 return;
 
-            IReadOnlyList<ModifierDefinition> offers = session.OfferGenerator.Generate(
-                session.Build, session.Context, 3);
-
-            levelUpView.Show(offers, session.Build, session.Synergies);
+            fullCarAnnounced = true;
+            PrototypeHud.Instance?.ShowBiomeNotification(
+                "МАШИНА УКОМПЛЕКТОВАНА",
+                "ВСЕ СОКЕТЫ ЗАНЯТЫ — КАЗИНО ТЕПЕРЬ ВЫДАЁТ ТОЛЬКО УЛУЧШЕНИЯ УСТАНОВЛЕННЫХ МОДУЛЕЙ",
+                new Color(0.95f, 0.75f, 0.2f));
         }
 
         void HandleEnemyKilled(EnemyBase enemy)

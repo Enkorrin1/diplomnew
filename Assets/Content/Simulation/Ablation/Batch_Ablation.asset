@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a5ec46fe8817a574a93119951c3f6825, type: 3}
+  m_Name: Batch_Ablation
+  m_EditorClassIdentifier: 
+  Catalog: {fileID: 11400000, guid: a33969816c8f4244aadaf55bfafe3ad1, type: 2}
+  Car: {fileID: 11400000, guid: fd78a758e838cf741a979c701d88a0fc, type: 2}
+  Difficulty: {fileID: 11400000, guid: 935c6da882946d34788201056b104ef2, type: 2}
+  Variants:
+  - Name: full
+    Config: {fileID: 11400000, guid: fe0e4fe126a4d5944ba125bec0037f76, type: 2}
+  - Name: no_w_base
+    Config: {fileID: 11400000, guid: 87ebf377a4f0f804fa18c3c282c0d355, type: 2}
+  - Name: no_k_stack
+    Config: {fileID: 11400000, guid: 9c7046f0037464e47a05c3307507b865, type: 2}
+  - Name: no_k_syn
+    Config: {fileID: 11400000, guid: bc4007a4c83461d428bddf3ac48ae1ba, type: 2}
+  - Name: no_k_role
+    Config: {fileID: 11400000, guid: c67abc311ab39d442aff2bbe385dd172, type: 2}
+  - Name: no_pity
+    Config: {fileID: 11400000, guid: f23c5938f69e47347b2c770b9b663bcc, type: 2}
+  - Name: no_lock
+    Config: {fileID: 11400000, guid: 658d92842d1e77a47af739e647eb105c, type: 2}
+  - Name: uniform
+    Config: {fileID: 0}
+  Agents: 030000000400000001000000
+  RunsPerVariant: 1000
+  BaseSeed: 20260907
+  StepSeconds: 0.25
+  MaxRunSeconds: 600
+  OffersPerLevel: 3
+  OutputDirectory: Simulation/Output/Ablation

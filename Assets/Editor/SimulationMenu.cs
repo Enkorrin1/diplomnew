@@ -9,7 +9,7 @@ namespace RogueDrive.EditorTools
     /// </summary>
     public static class SimulationMenu
     {
-        [MenuItem("RogueDrive/Запустить серию прогонов %#r")]
+        [MenuItem("RogueDrive/Симуляция баланса/Запустить выделенную серию %#r", priority = 21)]
         static void RunSelectedBatch()
         {
             var batch = Selection.activeObject as SimulationBatch;
@@ -48,13 +48,13 @@ namespace RogueDrive.EditorTools
             }
         }
 
-        [MenuItem("RogueDrive/Симуляция/Запустить выделенную серию %#r", true)]
+        [MenuItem("RogueDrive/Симуляция баланса/Запустить выделенную серию %#r", true)]
         static bool ValidateRunSelectedBatch()
         {
             return Selection.activeObject is SimulationBatch;
         }
 
-        [MenuItem("RogueDrive/Симуляция/Запустить базовую серию (12,000 заездов)")]
+        [MenuItem("RogueDrive/Симуляция баланса/Запустить базовую серию (12,000 заездов)", priority = 20)]
         public static void RunBaselineBatch()
         {
             var batch = AssetDatabase.LoadAssetAtPath<SimulationBatch>("Assets/Content/Simulation/Batch_Baseline.asset");

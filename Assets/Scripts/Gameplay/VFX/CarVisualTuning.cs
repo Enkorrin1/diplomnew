@@ -13,7 +13,6 @@ namespace RogueDrive.Gameplay.VFX
     public sealed class CarVisualTuning : MonoBehaviour
     {
         private Transform tuningRoot;
-        private LineRenderer laserSight;
 
         public void RefreshTuning(string carId, MetaProgress progress)
         {
@@ -146,27 +145,7 @@ namespace RogueDrive.Gameplay.VFX
             // Спаренный пламегаситель
             CreateMeshPart("HeavyMuzzle_L", new Vector3(-0.08f, 0.12f, 0.95f), new Vector3(0.08f, 0.08f, 0.35f), gunMetal, turretEnhance);
             CreateMeshPart("HeavyMuzzle_R", new Vector3(0.08f, 0.12f, 0.95f), new Vector3(0.08f, 0.08f, 0.35f), gunMetal, turretEnhance);
-
-            // Лазерный целеуказатель
-            if (level >= 2)
-            {
-                GameObject laserObj = new GameObject("LaserSight_Beam");
-                laserObj.transform.SetParent(turretEnhance, false);
-                laserObj.transform.localPosition = new Vector3(0.14f, 0.10f, 0.6f);
-
-                laserSight = laserObj.AddComponent<LineRenderer>();
-                laserSight.useWorldSpace = false;
-                laserSight.startWidth = 0.035f;
-                laserSight.endWidth = 0.015f;
-                laserSight.positionCount = 2;
-                laserSight.SetPosition(0, Vector3.zero);
-                laserSight.SetPosition(1, Vector3.forward * 30f);
-
-                var laserMat = new Material(Shader.Find("Mobile/Particles/Additive") ?? Shader.Find("Particles/Standard Unlit") ?? Shader.Find("Standard"));
-                laserSight.sharedMaterial = laserMat;
-                laserSight.startColor = new Color(1f, 0.1f, 0.1f, 0.85f);
-                laserSight.endColor = new Color(1f, 0.1f, 0.1f, 0.1f);
-            }
+            // Лазерный целеуказатель отключен для чистоты визуала
         }
 
         private void AttachWheelSpikes()

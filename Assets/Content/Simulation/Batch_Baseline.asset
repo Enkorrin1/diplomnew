@@ -24,7 +24,7 @@ MonoBehaviour:
     Config: {fileID: 11400000, guid: 3c3002a19721fc948a63cb754649aba3, type: 2}
   - Name: Strong
     Config: {fileID: 11400000, guid: a0329a219404e8b409df0ad56054a524, type: 2}
-  Agents: 000000000100000002000000
+  Agents: 0000000001000000020000000300000004000000
   RunsPerVariant: 1000
   BaseSeed: 20260907
   StepSeconds: 0.25

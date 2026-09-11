@@ -29,10 +29,6 @@ namespace RogueDrive.Gameplay.Hub
         [Header("Audio")]
         [SerializeField] private AudioSource ambientSource;
 
-        private float bannerTimer;
-        private string bannerMessage = string.Empty;
-        private GUIStyle bannerStyle;
-        private Texture2D bannerBgTex;
 
         public bool IsPowerOn => isPowerOn;
         public bool HasCarKeys => hasCarKeys;
@@ -73,13 +69,14 @@ namespace RogueDrive.Gameplay.Hub
         private void OnDestroy()
         {
             if (Instance == this) Instance = null;
-            if (bannerBgTex != null) Destroy(bannerBgTex);
         }
 
         public void ShowNotification(string message, float duration = 4.5f)
         {
-            bannerMessage = message;
-            bannerTimer = duration;
+            if (GarageInteractionUI.Instance != null)
+            {
+                GarageInteractionUI.Instance.ShowBanner(message, duration);
+            }
         }
 
         public void SetPower(bool enabled)
@@ -93,6 +90,7 @@ namespace RogueDrive.Gameplay.Hub
             {
                 ShowNotification("ПИТАНИЕ ПОДАНО! Найдите ключи зажигания на верстаке");
                 if (Audio.AudioManager.Instance != null) Audio.AudioManager.Instance.PlayLevelUp();
+                RogueDrive.Gameplay.Narrative.RadioTransmissionSystem.Instance?.PlayGeneratorOnline();
             }
         }
 
@@ -147,49 +145,6 @@ namespace RogueDrive.Gameplay.Hub
             RenderSettings.ambientLight = isPowerOn
                 ? new Color(0.24f, 0.26f, 0.32f)
                 : new Color(0.04f, 0.02f, 0.03f);
-        }
-
-        private void Update()
-        {
-            if (bannerTimer > 0f)
-            {
-                bannerTimer -= Time.deltaTime;
-            }
-        }
-
-        private void OnGUI()
-        {
-            if (bannerTimer <= 0f || string.IsNullOrEmpty(bannerMessage)) return;
-
-            EnsureStyles();
-
-            float w = Mathf.Min(600f, Screen.width - 40f);
-            float h = 42f;
-            float x = (Screen.width - w) * 0.5f;
-            float y = 28f;
-
-            GUI.Box(new Rect(x, y, w, h), bannerMessage, bannerStyle);
-        }
-
-        private void EnsureStyles()
-        {
-            if (bannerBgTex == null)
-            {
-                bannerBgTex = new Texture2D(1, 1);
-                bannerBgTex.SetPixel(0, 0, new Color(0.08f, 0.12f, 0.18f, 0.92f));
-                bannerBgTex.Apply();
-            }
-
-            if (bannerStyle == null)
-            {
-                bannerStyle = new GUIStyle(GUI.skin.box)
-                {
-                    normal = { background = bannerBgTex, textColor = new Color(0.35f, 0.95f, 1f) },
-                    alignment = TextAnchor.MiddleCenter,
-                    fontSize = 14,
-                    fontStyle = FontStyle.Bold
-                };
-            }
         }
     }
 }
