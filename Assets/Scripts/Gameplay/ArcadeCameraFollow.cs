@@ -57,6 +57,11 @@ namespace RogueDrive.Gameplay
 
             if (target != null)
                 currentYaw = target.eulerAngles.y;
+
+            if (GetComponent<VFX.CameraPostProcessEffects>() == null)
+            {
+                gameObject.AddComponent<VFX.CameraPostProcessEffects>();
+            }
         }
 
         private void OnDestroy()

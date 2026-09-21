@@ -36,7 +36,12 @@ namespace RogueDrive.Modifiers
                 weight *= _config.SynergyBonus;
 
             if (CompensatesWeakness(definition, context))
-                weight *= _config.RoleCompensation;
+            {
+                float ddaFactor = Gameplay.Difficulty.DynamicDifficultyManager.Instance != null
+                    ? Gameplay.Difficulty.DynamicDifficultyManager.Instance.DefenseDraftWeightMultiplier
+                    : 1.0f;
+                weight *= _config.RoleCompensation * ddaFactor;
+            }
 
             return weight;
         }

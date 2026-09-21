@@ -17,6 +17,7 @@ namespace RogueDrive.Gameplay.Combat
         [SerializeField] private bool useSceneUI = true;
         public bool UseSceneUI => useSceneUI;
         public string Banner => bannerTimer > 0f ? activeBannerText : string.Empty;
+        public int ComboCount => comboCount;
 
         [Header("References")]
         [SerializeField] private GameRunController run;

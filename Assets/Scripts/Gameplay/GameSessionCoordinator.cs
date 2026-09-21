@@ -34,11 +34,16 @@ namespace RogueDrive.Gameplay
         [SerializeField, Range(3, 12)] private int reelSize = 8;
         [Tooltip("Задержка между въездом в пункт и открытием казино, сек.")]
         [SerializeField, Min(0f)] private float casinoOpenDelay = 0.8f;
+        [Tooltip("Курс обмена непотраченных жетонов на монеты на финише этапа.")]
+        [SerializeField, Min(0)] private int coinsPerUnspentToken = 10;
 
         ModifierSession session;
         ISocketProvider sockets;
         int killCounter;
         int casinoTokens;
+
+        /// <summary>Жетоны, сознательно пронесённые мимо прошлого пункта: за них начислит банк.</summary>
+        int bankedTokens;
         bool fullCarAnnounced;
         Coroutine casinoOpening;
 
@@ -64,6 +69,8 @@ namespace RogueDrive.Gameplay
 
             if (experienceManager != null)
                 experienceManager.LevelUp += HandleLevelUp;
+            if (runController != null)
+                runController.StageFinishing += HandleStageFinishing;
         }
 
         private void OnDisable()
@@ -73,6 +80,8 @@ namespace RogueDrive.Gameplay
 
             if (experienceManager != null)
                 experienceManager.LevelUp -= HandleLevelUp;
+            if (runController != null)
+                runController.StageFinishing -= HandleStageFinishing;
         }
 
         void FindSceneReferences()
@@ -123,6 +132,57 @@ namespace RogueDrive.Gameplay
             int seed = Random.Range(1, 1000000);
 
             session = ModifierSession.Create(modifierCatalog, baseStats, sockets, unlocks, seed, weightingConfig);
+
+            // Перенос билда с предыдущего этапа кампании
+            string carId = carDefinition != null ? carDefinition.Id : null;
+            restoredModifiers = CampaignCarryOver.Restore(carId, CurrentStageFromScene(), session);
+        }
+
+        int restoredModifiers;
+
+        static int CurrentStageFromScene()
+        {
+            string name = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name ?? string.Empty;
+            for (int i = 1; i <= 4; i++)
+                if (name.StartsWith("Stage" + i)) return i;
+            return Mathf.Clamp(CampaignMapModal.SelectedStartSector, 1, 4);
+        }
+
+        private void Start()
+        {
+            if (restoredModifiers > 0)
+            {
+                PrototypeHud.Instance?.ShowBiomeNotification(
+                    "БИЛД ПЕРЕНЕСЁН",
+                    $"С ПРОШЛОГО ЭТАПА УСТАНОВЛЕНО МОДУЛЕЙ: {restoredModifiers}. СИНЕРГИЙ: {session.Build.ActiveSynergies.Count}",
+                    new Color(0.4f, 0.9f, 1f));
+            }
+        }
+
+        /// <summary>
+        /// Финиш этапа: непотраченные жетоны обмениваются на монеты, билд запоминается
+        /// для следующего этапа. Вызывается до закрытия заезда, пока монеты ещё начисляются.
+        /// </summary>
+        void HandleStageFinishing(int stageIndex)
+        {
+            if (session == null)
+                return;
+
+            if (casinoTokens > 0 && runController != null && coinsPerUnspentToken > 0)
+            {
+                int coins = casinoTokens * coinsPerUnspentToken;
+                runController.AddCoins(coins);
+                PrototypeHud.Instance?.ShowBiomeNotification(
+                    "ЖЕТОНЫ ОБМЕНЯНЫ",
+                    $"{casinoTokens} НЕПОТРАЧЕННЫХ ЖЕТОНОВ → +{coins} МОНЕТ",
+                    new Color(1f, 0.85f, 0.2f));
+                casinoTokens = 0;
+            }
+
+            if (stageIndex < 4)
+                CampaignCarryOver.Store(carDefinition != null ? carDefinition.Id : null, session.Build, stageIndex);
+            else
+                CampaignCarryOver.Clear();
         }
 
         void BindCombatAndProgression()
@@ -215,20 +275,37 @@ namespace RogueDrive.Gameplay
             if (runController != null && runController.IsGameOver)
                 yield break;
 
-            int spins = casinoTokens;
+            CasinoBetPricing pricing = weightingConfig != null ? weightingConfig.BetPricing : CasinoBetPricing.Default;
+
+            // Банк казино: за жетоны, пронесённые мимо прошлого пункта, начисляется надбавка
+            int bonus = pricing.CarryOverBonus(bankedTokens);
+            bankedTokens = 0;
+
+            int spins = casinoTokens + bonus;
             casinoTokens = 0;
+
+            if (bonus > 0)
+            {
+                PrototypeHud.Instance?.ShowBiomeNotification(
+                    "БАНК КАЗИНО",
+                    $"ЗА ПРОНЕСЁННЫЕ ЖЕТОНЫ НАЧИСЛЕНО +{bonus}",
+                    new Color(0.3f, 1f, 0.7f));
+            }
 
             var visit = new CasinoVisit
             {
                 StopName = stop.StopName,
                 Tokens = spins,
+                CarryOverBonus = bonus,
                 DrawReel = DrawCasinoReel,
                 BetAvailable = IsBetAvailable,
                 ApplyResult = ApplyCasinoResult,
+                ReturnTokens = ReturnCasinoTokens,
                 Build = session.Build,
                 Synergies = session.Synergies,
                 Generator = session.OfferGenerator,
-                CarFull = () => sockets != null && sockets.AllOccupied
+                CarFull = () => sockets != null && sockets.AllOccupied,
+                Pricing = pricing
             };
 
             if (casinoView != null)
@@ -239,13 +316,17 @@ namespace RogueDrive.Gameplay
             {
                 // Нет экрана казино — выдаём бафы сразу обычными спинами
                 var names = new List<string>();
+                int left = spins;
                 for (int i = 0; i < spins; i++)
                 {
                     IReadOnlyList<ModifierDefinition> reel = DrawCasinoReel(CasinoBet.Standard);
                     if (reel.Count == 0) break;
                     ApplyCasinoResult(reel[0]);
                     names.Add(reel[0].DisplayName);
+                    left--;
                 }
+
+                ReturnCasinoTokens(left);
                 PrototypeHud.Instance?.ShowBiomeNotification(
                     stop.StopName.ToUpperInvariant(),
                     names.Count > 0 ? "ВЫПАЛО: " + string.Join(", ", names) : "ПУЛ МОДИФИКАТОРОВ ИСЧЕРПАН",
@@ -267,6 +348,25 @@ namespace RogueDrive.Gameplay
             var copy = new List<ModifierDefinition>(offers.Count);
             for (int i = 0; i < offers.Count; i++) copy.Add(offers[i]);
             return copy;
+        }
+
+        /// <summary>
+        /// Игрок ушёл с пункта, не потратив всё: жетоны остаются при нём и попадают
+        /// в банк. На следующем пункте за них начислится надбавка, а если пункта
+        /// больше не будет — обменяются на монеты на финише этапа.
+        /// </summary>
+        void ReturnCasinoTokens(int tokens)
+        {
+            if (tokens <= 0)
+                return;
+
+            casinoTokens += tokens;
+            bankedTokens = casinoTokens;
+
+            PrototypeHud.Instance?.ShowBiomeNotification(
+                "ЖЕТОНЫ СОХРАНЕНЫ",
+                $"{tokens} ЖЕТОНОВ В БАНКЕ — НА СЛЕДУЮЩЕМ ПУНКТЕ КАЗИНО ДОПЛАТИТ",
+                new Color(0.3f, 1f, 0.7f));
         }
 
         bool IsBetAvailable(CasinoBet bet)

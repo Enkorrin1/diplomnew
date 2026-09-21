@@ -8,6 +8,7 @@ namespace RogueDrive.Modifiers
     /// </summary>
     public sealed class ModifierSession
     {
+        public ModifierCatalog Catalog { get; private set; }
         public BuildState Build { get; }
         public EffectContext Effects { get; }
         public RunContext Context { get; }
@@ -55,7 +56,7 @@ namespace RogueDrive.Modifiers
                 ? new WeightedOfferGenerator(catalog, sockets, unlocks, random, weighting, synergies)
                 : (IOfferGenerator)new UniformOfferGenerator(catalog, sockets, unlocks, random, synergies);
 
-            return new ModifierSession(build, effects, context, service, generator, synergies);
+            return new ModifierSession(build, effects, context, service, generator, synergies) { Catalog = catalog };
         }
     }
 }

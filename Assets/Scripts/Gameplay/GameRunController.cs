@@ -22,6 +22,12 @@ namespace RogueDrive.Gameplay
         public event Action<int> CoinsChanged;
         public event Action<string> RunEnded;
 
+        /// <summary>
+        /// Этап или кампания пройдены, заезд ещё не закрыт: последний момент, когда можно
+        /// начислить монеты (конвертация непотраченных жетонов) и сохранить билд для переноса.
+        /// </summary>
+        public event Action<int> StageFinishing;
+
         public float Health { get; private set; }
         public float Fuel { get; private set; }
         public float Nitro { get; private set; }
@@ -69,6 +75,21 @@ namespace RogueDrive.Gameplay
             if (FindFirstObjectByType<RogueDrive.Gameplay.VFX.CriticalHealthOverlay>() == null)
             {
                 gameObject.AddComponent<RogueDrive.Gameplay.VFX.CriticalHealthOverlay>();
+            }
+
+            // Динамическая сложность (DDA), погода и пост-процессинг
+            if (FindFirstObjectByType<RogueDrive.Gameplay.Difficulty.DynamicDifficultyManager>() == null)
+            {
+                gameObject.AddComponent<RogueDrive.Gameplay.Difficulty.DynamicDifficultyManager>();
+            }
+            if (FindFirstObjectByType<RogueDrive.Gameplay.Track.TrackWeatherHazardManager>() == null)
+            {
+                gameObject.AddComponent<RogueDrive.Gameplay.Track.TrackWeatherHazardManager>();
+            }
+            Camera mainCam = Camera.main;
+            if (mainCam != null && mainCam.GetComponent<RogueDrive.Gameplay.VFX.CameraPostProcessEffects>() == null)
+            {
+                mainCam.gameObject.AddComponent<RogueDrive.Gameplay.VFX.CameraPostProcessEffects>();
             }
 
             // PC: блокируем и скрываем курсор мыши во время заезда
@@ -266,6 +287,7 @@ namespace RogueDrive.Gameplay
             IsStageVictory = true;
             CurrentStageIndex = stageIndex;
             AddCoins(50);
+            StageFinishing?.Invoke(stageIndex);
             EndRun($"Этап {stageIndex} пройден!");
         }
 
@@ -277,6 +299,7 @@ namespace RogueDrive.Gameplay
             IsCampaignVictory = true;
             IsStageVictory = true;
             CurrentStageIndex = 4;
+            StageFinishing?.Invoke(4);
             EndRun("Кампания завершена");
         }
 

@@ -20,7 +20,15 @@ namespace RogueDrive.Simulation
     /// </summary>
     public interface ICasinoPolicy
     {
-        CasinoBet ChooseBet(int tokens, ModifierSession session);
+        /// <param name="carFull">Все сокеты заняты — ставки идут со скидкой.</param>
+        CasinoBet ChooseBet(int tokens, ModifierSession session, CasinoBetPricing pricing, bool carFull);
+
+        /// <summary>
+        /// Уйти с пункта, не потратив оставшиеся жетоны. Пронесённые жетоны попадают
+        /// в банк казино и на следующем пункте дают начисление, а на финише этапа —
+        /// монеты. Ложь означает прежнее поведение: тратить всё до последнего жетона.
+        /// </summary>
+        bool HoldTokens(int tokens, ModifierSession session, CasinoBetPricing pricing, bool lastStop);
     }
 
     /// <summary>Случайный выбор: нижняя граница качества решений.</summary>
@@ -57,7 +65,9 @@ namespace RogueDrive.Simulation
             return offers.Count == 0 ? -1 : 0;
         }
 
-        public CasinoBet ChooseBet(int tokens, ModifierSession session) => CasinoBet.Standard;
+        public CasinoBet ChooseBet(int tokens, ModifierSession session, CasinoBetPricing pricing, bool carFull) => CasinoBet.Standard;
+
+        public bool HoldTokens(int tokens, ModifierSession session, CasinoBetPricing pricing, bool lastStop) => false;
     }
 
     /// <summary>
@@ -74,19 +84,64 @@ namespace RogueDrive.Simulation
             return offers.Count == 0 ? -1 : 0;
         }
 
-        public CasinoBet ChooseBet(int tokens, ModifierSession session)
+        public CasinoBet ChooseBet(int tokens, ModifierSession session, CasinoBetPricing pricing, bool carFull)
+        {
+            return CasinoBetHeuristics.Greedy(tokens, session, pricing, carFull);
+        }
+
+        public bool HoldTokens(int tokens, ModifierSession session, CasinoBetPricing pricing, bool lastStop) => false;
+    }
+
+    /// <summary>Общая жадная политика ставок: самая узкая доступная ставка.</summary>
+    static class CasinoBetHeuristics
+    {
+        public static CasinoBet Greedy(int tokens, ModifierSession session, CasinoBetPricing pricing, bool carFull)
         {
             IOfferGenerator generator = session.OfferGenerator;
+            pricing = pricing ?? CasinoBetPricing.Default;
 
-            if (tokens >= CasinoBetRules.Cost(CasinoBet.SynergyHunt)
+            if (tokens >= pricing.Cost(CasinoBet.SynergyHunt, carFull)
                 && generator.HasCandidates(session.Build, session.Context, OfferConstraint.ForBet(CasinoBet.SynergyHunt)))
                 return CasinoBet.SynergyHunt;
 
-            if (tokens >= CasinoBetRules.Cost(CasinoBet.RareGuaranteed)
+            if (tokens >= pricing.Cost(CasinoBet.RareGuaranteed, carFull)
                 && generator.HasCandidates(session.Build, session.Context, OfferConstraint.ForBet(CasinoBet.RareGuaranteed)))
                 return CasinoBet.RareGuaranteed;
 
             return CasinoBet.Standard;
+        }
+    }
+
+    /// <summary>
+    /// Вкладчик: ставит только тогда, когда жетонов хватает на суженный пул, а остаток
+    /// проносит мимо пункта — на следующем пункте банк казино начислит за него надбавку.
+    /// Проверяет, окупается ли отложенный спин по сравнению с немедленным обычным.
+    /// </summary>
+    public sealed class CasinoBankerAgent : ISimulationAgent, ICasinoPolicy
+    {
+        public string Name => "casino_banker";
+
+        public int Choose(IReadOnlyList<ModifierDefinition> offers, RunContext context)
+        {
+            return offers.Count == 0 ? -1 : 0;
+        }
+
+        public CasinoBet ChooseBet(int tokens, ModifierSession session, CasinoBetPricing pricing, bool carFull)
+        {
+            return CasinoBetHeuristics.Greedy(tokens, session, pricing, carFull);
+        }
+
+        public bool HoldTokens(int tokens, ModifierSession session, CasinoBetPricing pricing, bool lastStop)
+        {
+            pricing = pricing ?? CasinoBetPricing.Default;
+
+            // На последнем пункте копить не для чего: банк больше не начислит.
+            if (lastStop || tokens <= 0 || pricing.CarryOverBonusPer <= 0)
+                return false;
+
+            // Остаток слишком мал для ставки, но достаточен, чтобы банк за него доплатил.
+            return tokens < pricing.Cost(CasinoBet.RareGuaranteed)
+                && tokens >= pricing.CarryOverBonusPer;
         }
     }
 

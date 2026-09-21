@@ -36,6 +36,9 @@ namespace RogueDrive.Simulation
         public int RareBets;
         public int SynergyBets;
 
+        /// <summary>Сколько жетонов начислил банк за пронесённые мимо пунктов остатки.</summary>
+        public int TokensBanked;
+
         /// <summary>Сколько раз гарантия от невезения вмешалась в выборку.</summary>
         public int PityTriggers;
 
@@ -43,7 +46,7 @@ namespace RogueDrive.Simulation
             "seed;generator;agent;configuration;completed;distance;time;kills;levels;" +
             "health_left;fuel_left;synergies;modifiers;build;" +
             "picks_to_first_synergy;distance_at_first_synergy;tokens_spent;tokens_wasted;" +
-            "rare_bets;synergy_bets;pity_triggers";
+            "rare_bets;synergy_bets;tokens_banked;pity_triggers";
 
         public string ToCsvRow()
         {
@@ -70,6 +73,7 @@ namespace RogueDrive.Simulation
             builder.Append(TokensWasted).Append(';');
             builder.Append(RareBets).Append(';');
             builder.Append(SynergyBets).Append(';');
+            builder.Append(TokensBanked).Append(';');
             builder.Append(PityTriggers);
 
             return builder.ToString();

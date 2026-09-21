@@ -193,6 +193,10 @@ namespace RogueDrive.Gameplay
         {
             float barrelChance = biome != null ? biome.barrelSpawnChance : 0.5f;
             float crateChance = biome != null ? biome.crateSpawnChance : 0.4f;
+            if (Difficulty.DynamicDifficultyManager.Instance != null)
+            {
+                crateChance += Difficulty.DynamicDifficultyManager.Instance.SupplyCrateBonusChance;
+            }
 
             // 1. Обработка развилок (Fork) со специфическим распределением по веткам
             if (type == ChunkType.Fork && spawnObstacles)
@@ -237,6 +241,10 @@ namespace RogueDrive.Gameplay
 
                         // Шанс появления элитного противника растет с дистанцией/сложностью
                         float eliteChance = Mathf.Clamp01((difficultyMultiplier - 1f) * 0.20f);
+                        if (Difficulty.DynamicDifficultyManager.Instance != null)
+                        {
+                            eliteChance *= Difficulty.DynamicDifficultyManager.Instance.EliteChanceMultiplier;
+                        }
                         if (allowElites && Random.value < eliteChance)
                         {
                             SpawnEliteEnemy(spawnPos);

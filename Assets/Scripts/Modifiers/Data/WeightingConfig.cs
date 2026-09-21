@@ -34,6 +34,9 @@ namespace RogueDrive.Modifiers
         [Tooltip("Когда все сокеты корпуса заняты, предлагаются только улучшения уже установленных модулей.")]
         public bool LockNewModulesWhenSocketsFull = true;
 
+        [Header("Ставки казино")]
+        public CasinoBetPricing BetPricing = new CasinoBetPricing();
+
         public float GetRarityWeight(Rarity rarity)
         {
             if (RarityWeights == null || RarityWeights.Length == 0)

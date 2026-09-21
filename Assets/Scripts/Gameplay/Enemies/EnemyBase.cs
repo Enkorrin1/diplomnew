@@ -45,6 +45,7 @@ namespace RogueDrive.Gameplay
 
         protected Transform playerTarget;
         protected ArcadeCarController playerCar;
+        protected EnemyMecanimController mecanimController;
 
         private VFX.EnemyHitFlash hitFlash;
 
@@ -82,6 +83,12 @@ namespace RogueDrive.Gameplay
             {
                 gameObject.AddComponent<EnemyVisualBobbing>();
             }
+
+            mecanimController = GetComponent<EnemyMecanimController>();
+            if (mecanimController == null)
+            {
+                mecanimController = gameObject.AddComponent<EnemyMecanimController>();
+            }
         }
 
         protected virtual void OnEnable()
@@ -106,6 +113,8 @@ namespace RogueDrive.Gameplay
                 return;
 
             currentHealth -= amount;
+
+            mecanimController?.TriggerHit();
 
             // Всплывающее число урона
             VFX.FloatingDamageNumber.Spawn(transform.position, amount, burnDmg > 0f);
@@ -193,6 +202,11 @@ namespace RogueDrive.Gameplay
                 Vector3 moveDir = direction.normalized;
                 transform.position += moveDir * (currentSpeed * dt);
                 transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
+                mecanimController?.SetSpeed(currentSpeed);
+            }
+            else
+            {
+                mecanimController?.SetSpeed(0f);
             }
         }
 
@@ -232,6 +246,8 @@ namespace RogueDrive.Gameplay
             }
             else
             {
+                mecanimController?.TriggerAttack();
+
                 // Контактный урон автомобилю
                 if (run != null)
                 {
@@ -258,6 +274,7 @@ namespace RogueDrive.Gameplay
         protected virtual void Die()
         {
             currentHealth = 0f;
+            mecanimController?.TriggerDeath();
             AnyEnemyKilled?.Invoke(this);
 
             // Регистрация в аркадной комбо-системе

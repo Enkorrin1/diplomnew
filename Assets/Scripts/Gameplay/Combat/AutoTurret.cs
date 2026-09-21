@@ -29,7 +29,9 @@ namespace RogueDrive.Gameplay
         StatBlock activeStats;
         ProjectilePipeline activeProjectiles;
 
-        public float Range => range;
+        public float Range => range * (Track.TrackWeatherHazardManager.Instance != null 
+            ? Track.TrackWeatherHazardManager.Instance.TurretRangeMultiplier 
+            : 1.0f);
         public float Damage => activeStats != null && activeStats.Get(StatId.Damage) > 0f 
             ? Mathf.Max(baseDamage, activeStats.Get(StatId.Damage)) 
             : baseDamage;
@@ -136,7 +138,7 @@ namespace RogueDrive.Gameplay
             if (currentTarget != null)
             {
                 IDamageable d = currentTarget.GetComponentInParent<IDamageable>();
-                if (d == null || d.IsDead || Vector3.Distance(transform.position, currentTarget.position) > range * 1.15f)
+                if (d == null || d.IsDead || Vector3.Distance(transform.position, currentTarget.position) > Range * 1.15f)
                 {
                     currentTarget = null;
                 }
@@ -146,7 +148,7 @@ namespace RogueDrive.Gameplay
                 return;
 
             // Поиск ближайшего врага
-            Collider[] colliders = Physics.OverlapSphere(transform.position, range);
+            Collider[] colliders = Physics.OverlapSphere(transform.position, Range);
             float minDistance = float.MaxValue;
             Transform nearest = null;
 

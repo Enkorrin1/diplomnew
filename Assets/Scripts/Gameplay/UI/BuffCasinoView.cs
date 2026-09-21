@@ -22,8 +22,14 @@ namespace RogueDrive.Gameplay
         /// <summary>Есть ли под ставку хотя бы один кандидат (жетоны здесь не учитываются).</summary>
         public Func<CasinoBet, bool> BetAvailable;
 
+        /// <summary>Сколько жетонов начислил банк за пронесённые мимо прошлого пункта.</summary>
+        public int CarryOverBonus;
+
         /// <summary>Применение выпавшего модификатора.</summary>
         public Action<ModifierDefinition> ApplyResult;
+
+        /// <summary>Возврат непотраченных жетонов: игрок ушёл с пункта, сохранив их в банке.</summary>
+        public Action<int> ReturnTokens;
 
         public BuildState Build;
         public SynergyResolver Synergies;
@@ -31,6 +37,9 @@ namespace RogueDrive.Gameplay
 
         /// <summary>Все сокеты корпуса заняты (для реплик крупье об улучшениях).</summary>
         public Func<bool> CarFull;
+
+        /// <summary>Цены ставок и возврат за успешную ставку на синергию.</summary>
+        public CasinoBetPricing Pricing = CasinoBetPricing.Default;
     }
 
     /// <summary>
@@ -77,6 +86,7 @@ namespace RogueDrive.Gameplay
         bool isVisible;
         bool skipRequested;
         bool continueRequested;
+        bool leaveRequested;
         int requestedBet = -1;
         Coroutine routine;
 
@@ -137,6 +147,8 @@ namespace RogueDrive.Gameplay
                 continueRequested = true;
             }
 
+            if (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.Backspace)) leaveRequested = true;
+
             if (Input.GetKeyDown(KeyCode.Alpha1) || Input.GetKeyDown(KeyCode.Keypad1)) requestedBet = 0;
             if (Input.GetKeyDown(KeyCode.Alpha2) || Input.GetKeyDown(KeyCode.Keypad2)) requestedBet = 1;
             if (Input.GetKeyDown(KeyCode.Alpha3) || Input.GetKeyDown(KeyCode.Keypad3)) requestedBet = 2;
@@ -150,6 +162,9 @@ namespace RogueDrive.Gameplay
         }
 
         /// <summary>Обработчики кнопок ставок (подключены в сцене как persistent listeners).</summary>
+        /// <summary>Обработчик кнопки «Уйти с жетонами»: остаток сохраняется в банке казино.</summary>
+        public void OnLeaveWithTokensPressed() => leaveRequested = true;
+
         public void OnBetStandardPressed() => requestedBet = 0;
         public void OnBetRarePressed() => requestedBet = 1;
         public void OnBetSynergyPressed() => requestedBet = 2;
@@ -168,6 +183,7 @@ namespace RogueDrive.Gameplay
             isVisible = true;
             skipRequested = false;
             continueRequested = false;
+            leaveRequested = false;
             requestedBet = -1;
 
             if (!Application.isMobilePlatform)
@@ -212,13 +228,18 @@ namespace RogueDrive.Gameplay
                              "Выполните «RogueDrive/Казино/Создать панель казино в UI_Canvas».");
 
             var names = new List<string>();
+            int tokensLeft = visit.Tokens;
             for (int i = 0; i < visit.Tokens; i++)
             {
                 IReadOnlyList<ModifierDefinition> candidates = visit.DrawReel != null ? visit.DrawReel(CasinoBet.Standard) : null;
                 if (candidates == null || candidates.Count == 0) break;
                 visit.ApplyResult?.Invoke(candidates[0]);
                 names.Add(candidates[0].DisplayName);
+                tokensLeft--;
             }
+
+            if (tokensLeft > 0)
+                visit.ReturnTokens?.Invoke(tokensLeft);
 
             PrototypeHud.Instance?.ShowBiomeNotification(
                 visit.StopName.ToUpperInvariant(),
@@ -240,28 +261,47 @@ namespace RogueDrive.Gameplay
 
             yield return new WaitForSecondsRealtime(0.35f);
 
+            if (visit.CarryOverBonus > 0)
+            {
+                SetText(reelCurrent, $"БАНК КАЗИНО: +{visit.CarryOverBonus}");
+                reelCurrent.color = new Color(0.3f, 1f, 0.7f);
+                yield return new WaitForSecondsRealtime(1f);
+            }
+
             var reel = new List<ModifierDefinition>();
             int tokens = visit.Tokens;
             int spin = 0;
+            bool left = false;
 
             while (tokens > 0)
             {
                 spin++;
                 if (resultPanel != null) resultPanel.gameObject.SetActive(false);
+
+                CasinoBetPricing pricing = visit.Pricing ?? CasinoBetPricing.Default;
+                bool carFull = visit.CarFull != null && visit.CarFull();
+                bool canBank = pricing.CarryOverBonusPer > 0;
                 UpdateSubtitle(visit, tokens, spin);
 
                 // 1. Ставка
                 CasinoBet bet = CasinoBet.Standard;
                 bool anyExtraBet = false;
                 for (int b = 1; b <= 2; b++)
-                    if (BetAffordable(visit, (CasinoBet)b, tokens)) anyExtraBet = true;
+                    if (BetAffordable(visit, (CasinoBet)b, tokens, carFull)) anyExtraBet = true;
 
-                if (anyExtraBet)
+                if (anyExtraBet || canBank)
                 {
-                    yield return ChooseBet(visit, tokens, result => bet = result);
+                    bool leave = false;
+                    yield return ChooseBet(visit, tokens, carFull, result => bet = result, () => leave = true);
+
+                    if (leave)
+                    {
+                        left = true;
+                        break;
+                    }
                 }
 
-                tokens -= CasinoBetRules.Cost(bet);
+                tokens -= pricing.Cost(bet, carFull);
                 Narrative.CasinoCroupierVoice.OnBet(visit.StopName, bet);
                 UpdateSubtitle(visit, tokens, spin);
                 if (betRoot != null) betRoot.SetActive(false);
@@ -347,7 +387,11 @@ namespace RogueDrive.Gameplay
 
                 visit.ApplyResult?.Invoke(result);
 
-                ShowResult(result, levelBefore + 1, closesSynergy, bet, pityFired);
+                int refund = pricing.Refund(bet, closesSynergy, carFull);
+                tokens += refund;
+
+                ShowResult(result, levelBefore + 1, closesSynergy, bet, pityFired, refund);
+                UpdateSubtitle(visit, tokens, spin);
                 Narrative.CasinoCroupierVoice.OnResult(visit.StopName, result, levelBefore + 1,
                     closesSynergy, pityFired, visit.CarFull != null && visit.CarFull());
                 if (result.Rarity == Rarity.Epic || closesSynergy)
@@ -365,8 +409,14 @@ namespace RogueDrive.Gameplay
                 }
             }
 
-            // Завершение: ждём подтверждения
-            SetText(subtitleText, "ЖЕТОНЫ ПОТРАЧЕНЫ");
+            // Завершение: непотраченные жетоны остаются у игрока и уходят в банк
+            if (tokens > 0)
+                visit.ReturnTokens?.Invoke(tokens);
+
+            SetText(subtitleText, tokens > 0
+                ? (left ? $"ЖЕТОНОВ СОХРАНЕНО: {tokens} — БАНК ДОПЛАТИТ НА СЛЕДУЮЩЕМ ПУНКТЕ"
+                        : $"ЖЕТОНОВ ОСТАЛОСЬ: {tokens}")
+                : "ЖЕТОНЫ ПОТРАЧЕНЫ");
             SetText(footerText, "[ПРОБЕЛ] / [ENTER] — ПРОДОЛЖИТЬ ПУТЬ");
             if (betRoot != null) betRoot.SetActive(false);
             if (continueButton != null) continueButton.gameObject.SetActive(true);
@@ -380,15 +430,22 @@ namespace RogueDrive.Gameplay
             Hide();
         }
 
-        /// <summary>Фаза выбора ставки: кнопки в панели или клавиши 1/2/3; пробел — обычная ставка.</summary>
-        IEnumerator ChooseBet(CasinoVisit visit, int tokens, Action<CasinoBet> onChosen)
+        /// <summary>
+        /// Фаза выбора ставки: кнопки в панели или клавиши 1/2/3; пробел — обычная ставка,
+        /// Esc — уйти, сохранив оставшиеся жетоны в банке казино.
+        /// </summary>
+        IEnumerator ChooseBet(CasinoVisit visit, int tokens, bool carFull,
+                              Action<CasinoBet> onChosen, Action onLeave)
         {
             requestedBet = -1;
             skipRequested = false;
+            leaveRequested = false;
+
+            CasinoBetPricing p = visit.Pricing ?? CasinoBetPricing.Default;
 
             bool[] affordable = new bool[3];
             for (int b = 0; b < 3; b++)
-                affordable[b] = BetAffordable(visit, (CasinoBet)b, tokens);
+                affordable[b] = BetAffordable(visit, (CasinoBet)b, tokens, carFull);
 
             if (HasBetUI)
             {
@@ -398,23 +455,36 @@ namespace RogueDrive.Gameplay
                     if (betButtons[b] != null) betButtons[b].interactable = affordable[b];
                     if (betLabels != null && b < betLabels.Length && betLabels[b] != null)
                     {
-                        string cost = CasinoBetRules.Cost((CasinoBet)b) == 1 ? "1 жетон" : CasinoBetRules.Cost((CasinoBet)b) + " жетона";
+                        int c = p.Cost((CasinoBet)b, carFull);
+                        string cost = c == 1 ? "1 жетон" : c + " жетона";
+                        if (carFull && c < p.Cost((CasinoBet)b)) cost += " (скидка)";
+                        int refund = p.Refund((CasinoBet)b, true, carFull);
+                        if (refund > 0) cost += $", возврат {refund} при успехе";
                         betLabels[b].text = $"[{b + 1}] {CasinoBetRules.DisplayName((CasinoBet)b).ToUpperInvariant()}\n{cost}";
                         betLabels[b].color = affordable[b] ? new Color(0.08f, 0.05f, 0.1f) : new Color(0.35f, 0.3f, 0.38f);
                     }
                 }
-                SetText(betHint, BetHintText(affordable));
+                SetText(betHint, BetHintText(affordable, carFull, p));
             }
 
             SetText(reelCurrent, "ВЫБЕРИТЕ СТАВКУ");
             reelCurrent.color = new Color(0.85f, 0.65f, 0.15f);
             SetText(reelPrev, ""); SetText(reelNext, "");
-            SetText(footerText, HasBetUI
-                ? "[1] обычный   [2] редкий+ (2 жетона)   [3] синергия (3 жетона)   •   [ПРОБЕЛ] — обычный"
-                : "[1] обычный   [2] редкий+ (2 жетона)   [3] синергия (3 жетона)");
+            string footer = $"[1] обычный   [2] редкий+ ({p.Cost(CasinoBet.RareGuaranteed, carFull)} ж.)   " +
+                            $"[3] синергия ({p.Cost(CasinoBet.SynergyHunt, carFull)} ж.)";
+            if (p.CarryOverBonusPer > 0)
+                footer += $"   •   [ESC] — уйти и сохранить жетоны (банк доплатит 1 за каждые {p.CarryOverBonusPer})";
+            SetText(footerText, HasBetUI ? footer + "   •   [ПРОБЕЛ] — обычный" : footer);
 
             while (true)
             {
+                if (leaveRequested)
+                {
+                    leaveRequested = false;
+                    onLeave();
+                    yield break;
+                }
+
                 if (skipRequested)
                 {
                     skipRequested = false;
@@ -440,9 +510,9 @@ namespace RogueDrive.Gameplay
             }
         }
 
-        static bool BetAffordable(CasinoVisit visit, CasinoBet bet, int tokens)
+        static bool BetAffordable(CasinoVisit visit, CasinoBet bet, int tokens, bool carFull)
         {
-            if (tokens < CasinoBetRules.Cost(bet))
+            if (tokens < (visit.Pricing ?? CasinoBetPricing.Default).Cost(bet, carFull))
                 return false;
 
             if (bet == CasinoBet.Standard)
@@ -451,8 +521,11 @@ namespace RogueDrive.Gameplay
             return visit.BetAvailable == null || visit.BetAvailable(bet);
         }
 
-        static string BetHintText(bool[] affordable)
+        static string BetHintText(bool[] affordable, bool carFull, CasinoBetPricing pricing)
         {
+            if (carFull && pricing != null && pricing.FullCarDiscount > 0)
+                return "Машина укомплектована: свободных сокетов нет, обычный спин даёт лишь слабое улучшение — ставки подешевели";
+
             if (!affordable[1] && !affordable[2])
                 return "Редких кандидатов и незамкнутых синергий в пуле нет — доступен только обычный спин";
             if (!affordable[2])
@@ -501,7 +574,7 @@ namespace RogueDrive.Gameplay
             return lvl > 0 ? $"{def.DisplayName}  (улучшение → ур. {lvl + 1})" : def.DisplayName;
         }
 
-        void ShowResult(ModifierDefinition def, int newLevel, bool closesSynergy, CasinoBet bet, bool pityFired)
+        void ShowResult(ModifierDefinition def, int newLevel, bool closesSynergy, CasinoBet bet, bool pityFired, int refund = 0)
         {
             Color rc = GetRarityColor(def.Rarity);
             if (resultPanel != null)
@@ -518,6 +591,7 @@ namespace RogueDrive.Gameplay
             if (closesSynergy) extra += "\n\n★ СОБРАНА СИНЕРГИЯ! ★";
             if (pityFired) extra += "\n(сработала гарантия от невезения)";
             else if (bet != CasinoBet.Standard) extra += $"\n(ставка «{CasinoBetRules.DisplayName(bet)}»)";
+            if (refund > 0) extra += $"\n+{refund} жетон возвращён за успешную ставку";
 
             SetText(resultBody, $"{RarityName(def.Rarity)} • {CategoryName(def.Category)} • Уровень {newLevel}\n{def.Description}" + extra);
         }

@@ -47,7 +47,13 @@ namespace RogueDrive.Simulation
         Casino,
 
         /// <summary>Та же схема казино, но жетоны ставятся по жадной политике ставок.</summary>
-        CasinoBettor
+        CasinoBettor,
+
+        /// <summary>
+        /// Схема казино с банком: мелкий остаток жетонов проносится мимо пункта ради
+        /// начисления на следующем. Измеряет, окупается ли отложенная ставка.
+        /// </summary>
+        CasinoBanker
     }
 
     /// <summary>
@@ -131,7 +137,9 @@ namespace RogueDrive.Simulation
                 while (casino != null && nextStop < stops.Length && context.Distance >= stops[nextStop])
                 {
                     nextStop++;
-                    SpendTokens(session, casino, tally);
+                    SpendTokens(session, casino, tally, sockets,
+                                setup.Weighting != null ? setup.Weighting.BetPricing : null,
+                                nextStop >= stops.Length);
                 }
 
                 if (picksToFirstSynergy < 0 && session.Build.ActiveSynergies.Count > 0)
@@ -162,7 +170,8 @@ namespace RogueDrive.Simulation
                 PicksToFirstSynergy = picksToFirstSynergy,
                 DistanceAtFirstSynergy = distanceAtFirstSynergy,
                 TokensSpent = tally.Spent,
-                TokensWasted = tally.Tokens,
+                TokensWasted = tally.Tokens + tally.Banked,
+                TokensBanked = tally.BankBonus,
                 RareBets = tally.RareBets,
                 SynergyBets = tally.SynergyBets,
                 PityTriggers = session.OfferGenerator.PityTriggers
@@ -175,15 +184,45 @@ namespace RogueDrive.Simulation
             public int Spent;
             public int RareBets;
             public int SynergyBets;
+
+            /// <summary>Жетоны, пронесённые мимо предыдущего пункта: за них начисляет банк.</summary>
+            public int Banked;
+
+            /// <summary>Сколько жетонов начислил банк за всё время заезда.</summary>
+            public int BankBonus;
         }
 
-        /// <summary>Визит в казино: все накопленные жетоны тратятся по политике ставок.</summary>
-        static void SpendTokens(ModifierSession session, ICasinoPolicy policy, CasinoTally tally)
+        /// <summary>
+        /// Визит в казино: банк начисляет надбавку за жетоны, пронесённые мимо прошлого
+        /// пункта, после чего жетоны тратятся по политике ставок. Политика вправе
+        /// остановиться и пронести остаток дальше.
+        /// </summary>
+        static void SpendTokens(ModifierSession session,
+                                ICasinoPolicy policy,
+                                CasinoTally tally,
+                                ISocketProvider sockets,
+                                CasinoBetPricing pricing,
+                                bool lastStop)
         {
+            pricing = pricing ?? CasinoBetPricing.Default;
+
+            int bonus = pricing.CarryOverBonus(tally.Banked);
+            tally.Tokens += bonus;
+            tally.BankBonus += bonus;
+            tally.Banked = 0;
+
             while (tally.Tokens > 0)
             {
-                CasinoBet bet = policy.ChooseBet(tally.Tokens, session);
-                int cost = CasinoBetRules.Cost(bet);
+                if (policy.HoldTokens(tally.Tokens, session, pricing, lastStop))
+                {
+                    tally.Banked = tally.Tokens;
+                    return;
+                }
+
+                bool carFull = sockets != null && sockets.AllOccupied;
+
+                CasinoBet bet = policy.ChooseBet(tally.Tokens, session, pricing, carFull);
+                int cost = pricing.Cost(bet, carFull);
 
                 if (cost > tally.Tokens)
                 {
@@ -208,9 +247,13 @@ namespace RogueDrive.Simulation
                     cost = 1;
                 }
 
+                int synergiesBefore = session.Build.ActiveSynergies.Count;
                 session.Service.Apply(offers[0]);
-                tally.Tokens -= cost;
-                tally.Spent += cost;
+                bool closedSynergy = session.Build.ActiveSynergies.Count > synergiesBefore;
+
+                int refund = pricing.Refund(bet, closedSynergy, carFull);
+                tally.Tokens -= cost - refund;
+                tally.Spent += cost - refund;
 
                 if (bet == CasinoBet.RareGuaranteed) tally.RareBets++;
                 else if (bet == CasinoBet.SynergyHunt) tally.SynergyBets++;
@@ -287,6 +330,9 @@ namespace RogueDrive.Simulation
 
                 case AgentKind.CasinoBettor:
                     return new CasinoBettorAgent();
+
+                case AgentKind.CasinoBanker:
+                    return new CasinoBankerAgent();
 
                 default:
                     return new PriorityAgent();

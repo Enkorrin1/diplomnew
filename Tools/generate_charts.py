@@ -5,13 +5,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Порядок и подписи агентов: три стратегии выбора «1 из 3» и два режима казино
-AGENT_ORDER = ['random', 'priority', 'synergy', 'casino', 'casino_bettor']
+AGENT_ORDER = ['random', 'priority', 'synergy', 'casino', 'casino_bettor', 'casino_banker']
 AGENT_COLORS = {
     'random': '#e74c3c',
     'priority': '#3498db',
     'synergy': '#2ecc71',
     'casino': '#e67e22',
     'casino_bettor': '#8e44ad',
+    'casino_banker': '#16a085',
 }
 AGENT_LABELS = {
     'random': 'Случайный агент (Random)',
@@ -19,9 +20,11 @@ AGENT_LABELS = {
     'synergy': 'Синергетический агент (Synergy)',
     'casino': 'Казино без ставок (Casino)',
     'casino_bettor': 'Казино со ставками (Casino bettor)',
+    'casino_banker': 'Казино с банком (Casino banker)',
 }
 AGENT_SHORT = {
-    'random': 'rnd', 'priority': 'pri', 'synergy': 'syn', 'casino': 'cas', 'casino_bettor': 'bet'
+    'random': 'rnd', 'priority': 'pri', 'synergy': 'syn', 'casino': 'cas',
+    'casino_bettor': 'bet', 'casino_banker': 'bnk'
 }
 CONFIG_ORDER = ['uniform', 'Neutral', 'Moderate', 'Strong']
 CONFIG_COLORS = {'uniform': '#7f8c8d', 'Neutral': '#3498db', 'Moderate': '#2ecc71', 'Strong': '#e67e22'}
@@ -300,6 +303,51 @@ def plot_ablation(df_summary, out_path):
     save(fig, out_path)
 
 
+PRICING_LABELS = {
+    'r2_s3_ref0': 'Р2 / С3',
+    'r2_s2_ref0': 'Р2 / С2',
+    'r2_s3_ref1': 'Р2 / С3, возврат 1',
+    'r2_s2_ref1': 'Р2 / С2, возврат 1',
+    'r1_s2_ref0': 'Р1 / С2',
+    'r1_s2_ref1': 'Р1 / С2, возврат 1',
+    'r1_s1_ref0': 'Р1 / С1',
+}
+
+
+def plot_bet_pricing(df_summary, out_path):
+    """Подбор цен ставок: агент со ставками против агента без ставок при разных ценах."""
+    configs = ordered(df_summary['configuration'].unique(), list(PRICING_LABELS.keys()))
+    labels = [PRICING_LABELS.get(c, c) for c in configs]
+    fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+    x = np.arange(len(configs))
+
+    def series(agent, col, scale=1.0):
+        out = []
+        for cfg in configs:
+            row = df_summary[(df_summary['configuration'] == cfg) & (df_summary['agent'] == agent)]
+            out.append(float(row[col].iloc[0]) * scale if len(row) else np.nan)
+        return np.array(out)
+
+    for ax, col, title, scale in ((axes[0], 'median_distance', 'Медианная дистанция, м', 1),
+                                  (axes[1], 'mean_synergies', 'Среднее число синергий за заезд', 1),
+                                  (axes[2], 'normalized_modifier_entropy', 'Разнообразие пула H_norm (выше — шире пул)', 1)):
+        cas = series('casino', col, scale)
+        bet = series('casino_bettor', col, scale)
+        ax.bar(x - 0.2, cas, 0.4, color=AGENT_COLORS['casino'], edgecolor='black', linewidth=0.6, label=AGENT_LABELS['casino'])
+        ax.bar(x + 0.2, bet, 0.4, color=AGENT_COLORS['casino_bettor'], edgecolor='black', linewidth=0.6, label=AGENT_LABELS['casino_bettor'])
+        for xi, (c, b) in enumerate(zip(cas, bet)):
+            if not np.isnan(c) and not np.isnan(b) and c != 0:
+                delta = (b - c) / c * 100
+                ax.text(xi + 0.2, b, f'{delta:+.0f}%', ha='center', va='bottom', fontsize=7)
+        ax.set_xticks(x)
+        ax.set_xticklabels(labels, rotation=35, ha='right')
+        ax.set_title(title)
+
+    axes[0].legend(frameon=True, loc='lower left', fontsize=8)
+    fig.suptitle('Подбор цен ставок (Р — «Редкий+», С — «Синергия», в жетонах); подпись — отличие от игры без ставок')
+    save(fig, out_path)
+
+
 def main():
     set_academic_style()
 
@@ -339,6 +387,13 @@ def main():
         plot_ablation(pd.read_csv(ablation_summary, sep=';'), os.path.join(charts_dir, "ablation.png"))
     else:
         print('[Chart] Нет выгрузки абляции (Simulation/Output/Ablation) — график абляции пропущен')
+
+    _, pricing_summary, _ = find_latest_files(os.path.join(output_dir, "BetPricing"))
+    if pricing_summary:
+        print(f"[Data] Using bet pricing summary: {os.path.basename(pricing_summary)}")
+        plot_bet_pricing(pd.read_csv(pricing_summary, sep=';'), os.path.join(charts_dir, "bet_pricing.png"))
+    else:
+        print('[Chart] Нет выгрузки цен ставок (Simulation/Output/BetPricing) — график пропущен')
 
     print("\n[Success] Charts generated in Artifacts/Charts/")
 

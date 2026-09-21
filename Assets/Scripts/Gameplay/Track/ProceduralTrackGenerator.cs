@@ -330,6 +330,10 @@ namespace RogueDrive.Gameplay
             if (!isSafeStart)
             {
                 float difficultyFactor = 1f + (totalDistanceGenerated / 600f);
+                if (Difficulty.DynamicDifficultyManager.Instance != null)
+                {
+                    difficultyFactor *= Difficulty.DynamicDifficultyManager.Instance.EnemyDensityMultiplier;
+                }
                 newChunk.Populate(isFirstMap ? firstMapEnemies : enemyPrefabs, explosiveBarrelPrefab, supplyCratePrefab, difficultyFactor, activeBiome, !isFirstMap, !isFirstMap);
             }
 
@@ -443,7 +447,8 @@ namespace RogueDrive.Gameplay
                 if (marker == null || Vector3.Distance(targetCar.position,chunk.transform.position) > activationDistance) continue;
                 populatedAuthoredChunks.Add(chunk);
                 int order = marker.Order;
-                if (order >= 2) chunk.Populate(order < 10 ? firstMapEnemies : enemyPrefabs,explosiveBarrelPrefab,supplyCratePrefab,1f+order/6f,GetBiomeForDistance(order*100f),false,order>=10);
+                float ddaFactor = Difficulty.DynamicDifficultyManager.Instance != null ? Difficulty.DynamicDifficultyManager.Instance.EnemyDensityMultiplier : 1.0f;
+                if (order >= 2) chunk.Populate(order < 10 ? firstMapEnemies : enemyPrefabs,explosiveBarrelPrefab,supplyCratePrefab,(1f+order/6f)*ddaFactor,GetBiomeForDistance(order*100f),false,order>=10);
                 if (order >= 38 && !bossSpawned && authoredBoss != null)
                 {
                     bossSpawned=true; authoredBoss.SetActive(true);

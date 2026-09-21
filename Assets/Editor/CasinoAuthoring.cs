@@ -506,16 +506,29 @@ namespace RogueDrive.Editor
             if (canvas == null) return false;
 
             BuffCasinoView view = FindView(canvas);
-            if (view == null || !view.HasSceneUI || view.HasBetUI) return false;
+            if (view == null || !view.HasSceneUI) return false;
 
             Transform panel = view.PanelTransform;
             if (panel == null) return false;
 
             var rt = panel as RectTransform;
-            if (rt != null && rt.sizeDelta.y < 600f)
-                rt.sizeDelta = new Vector2(rt.sizeDelta.x, 600f);
+            if (rt != null && rt.sizeDelta.y < 640f)
+                rt.sizeDelta = new Vector2(rt.sizeDelta.x, 640f);
 
             Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+
+            // Панель со ставками уже есть — дополняем её кнопкой ухода с жетонами
+            if (view.HasBetUI)
+            {
+                Transform row = panel.Find("BetRow");
+                if (row == null || row.Find("BetLeave") != null) return false;
+
+                BuildLeaveButton(view, row, font);
+                EditorUtility.SetDirty(view);
+                EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
+                return true;
+            }
+
             BuildBetRow(view, panel, font);
             EditorUtility.SetDirty(view);
             EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
@@ -569,8 +582,29 @@ namespace RogueDrive.Editor
                 labels[i] = label;
             }
 
+            BuildLeaveButton(view, row.transform, font);
+
             view.BindBetUI(row, buttons, labels, hint);
             row.SetActive(false);
+        }
+
+        /// <summary>
+        /// Кнопка «Уйти с жетонами»: остаток остаётся при игроке и попадает в банк
+        /// казино, который доплатит на следующем пункте.
+        /// </summary>
+        static void BuildLeaveButton(BuffCasinoView view, Transform row, Font font)
+        {
+            Image img = Img(row, "BetLeave", new Color(0.3f, 0.85f, 0.6f, 1f));
+            PlaceRect(img.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, -32f), new Vector2(380f, 26f));
+            img.raycastTarget = true;
+
+            Button b = img.gameObject.AddComponent<Button>();
+            b.targetGraphic = img;
+            UnityEventTools.AddPersistentListener(b.onClick, view.OnLeaveWithTokensPressed);
+
+            Text label = Txt(img.transform, "Label", font, 13, FontStyle.Bold, new Color(0.05f, 0.12f, 0.09f),
+                "[ESC] УЙТИ И СОХРАНИТЬ ЖЕТОНЫ В БАНКЕ");
+            Stretch(label.rectTransform);
         }
 
         static Canvas FindCanvas()
