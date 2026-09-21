@@ -20,6 +20,8 @@ namespace RogueDrive.Gameplay
         float currentHealth;
         bool hasExploded;
 
+        public static event System.Action<ExplosiveBarrel> BarrelExploded;
+
         public bool IsDead => hasExploded;
 
         private void Awake()
@@ -65,6 +67,7 @@ namespace RogueDrive.Gameplay
         {
             if (hasExploded) return;
             hasExploded = true;
+            BarrelExploded?.Invoke(this);
 
             // Сотрясение камеры
             ArcadeCameraFollow.Instance?.TriggerShake(0.9f, 0.45f);

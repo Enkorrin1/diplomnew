@@ -86,6 +86,14 @@ namespace RogueDrive.Gameplay
             {
                 gameObject.AddComponent<RogueDrive.Gameplay.Track.TrackWeatherHazardManager>();
             }
+            if (FindFirstObjectByType<RogueDrive.Gameplay.Track.CreepingStormBarrier>() == null)
+            {
+                gameObject.AddComponent<RogueDrive.Gameplay.Track.CreepingStormBarrier>();
+            }
+            if (FindFirstObjectByType<RogueDrive.Gameplay.Campaign.RadioBountyManager>() == null)
+            {
+                gameObject.AddComponent<RogueDrive.Gameplay.Campaign.RadioBountyManager>();
+            }
             Camera mainCam = Camera.main;
             if (mainCam != null && mainCam.GetComponent<RogueDrive.Gameplay.VFX.CameraPostProcessEffects>() == null)
             {

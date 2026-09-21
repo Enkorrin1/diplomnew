@@ -68,6 +68,7 @@ namespace RogueDrive.Gameplay
         public bool IsNitroActive { get; private set; }
         public bool IsHandbrakeActive => isHandbrakeActive;
         public bool IsGrounded => isGrounded;
+        public bool IsDrifting => body != null && (Mathf.Abs(transform.InverseTransformDirection(body.linearVelocity).x) > 2.8f || (isHandbrakeActive && Mathf.Abs(SpeedMps) > 4f));
         public SocketRegistry Sockets => sockets;
         public GameRunController Run => run;
         public float PickupRadius => activeStats != null && activeStats.Get(StatId.PickupRadius) > 0f ? activeStats.Get(StatId.PickupRadius) : 6.5f;
