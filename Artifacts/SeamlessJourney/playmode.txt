@@ -3,35 +3,35 @@ OK Stream and car ready
 OK Original garage driving/inventory rig
 OK World loot and free cargo slot
 OK World 2 loaded ahead
-OK Physical crossing 2; max frame displacement=1,77
+OK Physical crossing 2; max frame displacement=1,39
 OK Actor and camera identities unchanged
 OK Fuel retained with normal consumption
 OK Coolant retained
 OK No transition pause or slow motion
-Worlds loaded: 2, global progress 15959,5
+Worlds loaded: 2, global progress 15959,7
 OK Stage index advanced without victory
 OK Run, coins and progression preserved
 OK Health preserved
 OK Same physical cargo instance
 OK World 3 loaded ahead
-OK Physical crossing 3; max frame displacement=4,35
+OK Physical crossing 3; max frame displacement=2,49
 OK Actor and camera identities unchanged
 OK Fuel retained with normal consumption
 OK Coolant retained
 OK No transition pause or slow motion
-Worlds loaded: 2, global progress 25613,1
+Worlds loaded: 2, global progress 25613,0
 OK Stage index advanced without victory
 OK Run, coins and progression preserved
 OK Health preserved
 OK Same physical cargo instance
 OK First world unloaded behind the car
 OK World 4 loaded ahead
-OK Physical crossing 4; max frame displacement=1,66
+OK Physical crossing 4; max frame displacement=1,26
 OK Actor and camera identities unchanged
 OK Fuel retained with normal consumption
 OK Coolant retained
 OK No transition pause or slow motion
-Worlds loaded: 2, global progress 35768,0
+Worlds loaded: 2, global progress 35768,3
 OK Stage index advanced without victory
 OK Run, coins and progression preserved
 OK Health preserved
@@ -41,7 +41,7 @@ OK Final finish remains active
 OK Intermediate completion cannot end continuous run
 OK World 1 loaded ahead
 OK World 2 loaded ahead
-OK Physical crossing back to 1; max frame displacement=3,89
+OK Physical crossing back to 1; max frame displacement=1,28
 OK Actor and camera identities unchanged
 OK Fuel retained with normal consumption
 OK Coolant retained

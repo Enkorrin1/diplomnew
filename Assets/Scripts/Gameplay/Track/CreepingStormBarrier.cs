@@ -36,9 +36,6 @@ namespace RogueDrive.Gameplay.Track
         private Hub.GaragePlayerController pedestrian;
         private float routeDistance;
 
-        private GameObject stormVisualObject;
-        private ParticleSystem stormParticles;
-
         // UI Radar
         private GameObject stormRadarRoot;
         private Text stormDistanceText;
@@ -49,11 +46,26 @@ namespace RogueDrive.Gameplay.Track
         public float DistanceToCar => distanceToCar;
         public bool IsEngulfed => isEngulfed;
         public float RouteDistance => routeDistance;
+        /// <summary>Машина укрыта в мастерской: фронт не показывается.</summary>
+        public bool IsSheltered { get; private set; }
+
+        /// <summary>Положение фронта на дороге и направление его движения (для StormFrontView).</summary>
+        public bool TryGetFront(out Vector3 position, out Quaternion heading)
+        {
+            if (route != null)
+            {
+                route.Evaluate(routeDistance, out position, out heading);
+                return true;
+            }
+            heading = Quaternion.identity;
+            position = new Vector3(playerCar != null ? playerCar.transform.position.x : 0f, 0f, stormZ);
+            return playerCar != null;
+        }
+
         public void BeginNextWave(float departureDistance)
         {
             routeDistance=departureDistance-(route!=null?route.StormLead:900);
-            distanceToCar=departureDistance-routeDistance;isEngulfed=false;beepTimer=0;
-            if(stormVisualObject!=null)stormVisualObject.SetActive(true);
+            distanceToCar=departureDistance-routeDistance;isEngulfed=false;beepTimer=0;IsSheltered=false;
         }
 
         public void RebindContinuousRoute(StageRoute continuous, float distanceOffset)
@@ -75,7 +87,6 @@ namespace RogueDrive.Gameplay.Track
                 return;
             }
 
-            BuildStormVisualWall();
             BuildStormRadarUI();
         }
 
@@ -97,11 +108,6 @@ namespace RogueDrive.Gameplay.Track
             route = StageRoute.Instance;
             if (route != null)
                 routeDistance = (playerCar != null ? route.ProjectDistance(playerCar.transform.position) : 0f) - route.StormLead;
-
-            if (stormVisualObject != null)
-            {
-                stormVisualObject.transform.position = new Vector3(0f, 6f, stormZ);
-            }
         }
 
         private void Update()
@@ -139,28 +145,24 @@ namespace RogueDrive.Gameplay.Track
             {
                 if(stormRadarRoot!=null)stormRadarRoot.SetActive(false);
                 isEngulfed=false;
-                if(stormVisualObject!=null)stormVisualObject.SetActive(false);
+                IsSheltered=true;
                 if(pedestrian!=null&&pedestrian.gameObject.activeInHierarchy&&route!=null
                     &&route.ProjectDistance(pedestrian.transform.position)<=routeDistance)
                     Hub.PlayerFieldNeeds.For(pedestrian).TakeDamage(stormDamagePerSec*dt);
                 return;
             }
-            if(stormVisualObject!=null)stormVisualObject.SetActive(true);
+            IsSheltered=false;
             if (route != null)
             {
                 routeDistance += route.StormSpeed * dt;
                 distanceToCar = route.ProjectDistance(playerCar.transform.position) - routeDistance;
                 route.Evaluate(routeDistance, out Vector3 front, out Quaternion heading);
                 stormZ = front.z;
-                if (stormVisualObject != null)
-                    stormVisualObject.transform.SetPositionAndRotation(front + Vector3.up * 6f, heading);
             }
             else
             {
                 stormZ += baseChaseSpeed * dt;
                 distanceToCar = playerCar.transform.position.z - stormZ;
-                if (stormVisualObject != null)
-                    stormVisualObject.transform.position = new Vector3(playerCar.transform.position.x, 6f, stormZ);
             }
 
             // Обработка критических зон
@@ -206,8 +208,6 @@ namespace RogueDrive.Gameplay.Track
             isEngulfed = distanceToCar <= 0;
             route.Evaluate(routeDistance, out Vector3 front, out Quaternion heading);
             stormZ = front.z;
-            if (stormVisualObject != null)
-            { stormVisualObject.SetActive(true); stormVisualObject.transform.SetPositionAndRotation(front + Vector3.up * 6, heading); }
             UpdateRadarUI(dt);
         }
 
@@ -251,46 +251,6 @@ namespace RogueDrive.Gameplay.Track
             }
         }
 
-        private void BuildStormVisualWall()
-        {
-            if (stormVisualObject != null) return;
-
-            stormVisualObject = new GameObject("CreepingStormWall");
-            stormVisualObject.transform.SetParent(transform);
-
-            // Частицы пыли и молний фронта
-            stormParticles = stormVisualObject.AddComponent<ParticleSystem>();
-            var main = stormParticles.main;
-            main.loop = true;
-            main.startLifetime = 2.5f;
-            main.startSpeed = 8f;
-            main.startSize = 4.5f;
-            main.startColor = new Color(0.85f, 0.35f, 0.15f, 0.85f);
-            main.simulationSpace = ParticleSystemSimulationSpace.World;
-            main.maxParticles = 600;
-
-            var shape = stormParticles.shape;
-            shape.shapeType = ParticleSystemShapeType.Box;
-            shape.scale = new Vector3(55f, 22f, 8f);
-
-            var emission = stormParticles.emission;
-            emission.rateOverTime = 160;
-
-            var renderer = stormVisualObject.GetComponent<ParticleSystemRenderer>();
-            renderer.renderMode = ParticleSystemRenderMode.Billboard;
-            Material mat = new Material(Shader.Find("Particles/Standard Unlit") ?? Shader.Find("Mobile/Particles/Alpha Blended") ?? Shader.Find("Sprites/Default"));
-            renderer.sharedMaterial = mat;
-
-            // Зловещий свет фронта бури
-            GameObject lightObj = new GameObject("StormGlowLight");
-            lightObj.transform.SetParent(stormVisualObject.transform, false);
-            Light l = lightObj.AddComponent<Light>();
-            l.type = LightType.Point;
-            l.color = new Color(1f, 0.35f, 0.1f);
-            l.range = 45f;
-            l.intensity = 3.5f;
-        }
-
         private void BuildStormRadarUI()
         {
             if (stormRadarRoot != null) return;
@@ -302,8 +262,9 @@ namespace RogueDrive.Gameplay.Track
             stormRadarRoot.transform.SetParent(canvas.transform, false);
 
             RectTransform rt = stormRadarRoot.GetComponent<RectTransform>();
-            rt.anchorMin = new Vector2(0.30f, 0.93f);
-            rt.anchorMax = new Vector2(0.70f, 0.985f);
+            // Под зеркалом заднего вида (StormRearMirror занимает верх экрана по центру).
+            rt.anchorMin = new Vector2(0.33f, 0.795f);
+            rt.anchorMax = new Vector2(0.67f, 0.85f);
             rt.offsetMin = Vector2.zero;
             rt.offsetMax = Vector2.zero;
 
