@@ -39,8 +39,12 @@ namespace RogueDrive.Gameplay.Combat
             spawnTimer = Random.Range(minSpawnInterval, maxSpawnInterval);
         }
 
+        [SerializeField] private bool enableProceduralSpawning = false;
+
         private void Update()
         {
+            if (!enableProceduralSpawning) return; // Процедурный спавн рейдеров отключен
+
             if (player == null)
             {
                 player = FindFirstObjectByType<ArcadeCarController>();

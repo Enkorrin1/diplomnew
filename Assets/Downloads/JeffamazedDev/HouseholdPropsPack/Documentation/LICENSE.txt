@@ -1,0 +1,16 @@
+FREE COMMERCIAL USE ASSET LICENSE
+
+By downloading or importing this Asset Pack, you agree to the following terms:
+
+1. GRANT OF LICENSE
+You are granted a non-exclusive, worldwide, perpetual license to use, modify, and integrate these assets into your own video games and personal projects for FREE.
+
+2. COMMERCIAL USE ALLOWED
+You are fully permitted to use these assets in commercial, monetized games. You do not owe the Author any royalties or fees, regardless of how much money your game makes. Credit to the Author is appreciated but not required.
+
+3. PROHIBITIONS (WHAT YOU CANNOT DO)
+- You cannot resell, redistribute, or share these raw asset files (meshes, textures, prefabs) on any other website or marketplace.
+- You cannot claim ownership of these models or tools. 
+- You cannot package these assets into another "free pack" or asset bundle to distribute to other developers.
+
+All assets are provided "as-is" without warranty. If you wish to share this pack with a friend, please direct them to the original download link.

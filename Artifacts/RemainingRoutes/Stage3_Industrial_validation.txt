@@ -1,0 +1,1 @@
+Stage3_Industrial: length=9505,2m, height=0,0..118,0m, maxGrade=9,0%, rays=5637, missing=0, blocked=0

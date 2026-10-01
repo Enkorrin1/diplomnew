@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: e7142b0a1b4a5fc48ab0fb9edc8dd389
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures: []
+  nonModifiableTextures: []
+  preprocessorOverride: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 401152
+  packageName: Apocalypse FREE - Low Poly Asset Pack
+  packageVersion: 1.1
+  assetPath: Assets/ithappy/Apocalypse_Free/Shaders/Ithappy_BloodOverlay_URP.shader
+  uploadId: 992496

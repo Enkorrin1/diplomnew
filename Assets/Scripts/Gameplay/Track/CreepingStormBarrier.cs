@@ -32,6 +32,9 @@ namespace RogueDrive.Gameplay.Track
 
         private ArcadeCarController playerCar;
         private GameRunController run;
+        private StageRoute route;
+        private Hub.GaragePlayerController pedestrian;
+        private float routeDistance;
 
         private GameObject stormVisualObject;
         private ParticleSystem stormParticles;
@@ -45,6 +48,20 @@ namespace RogueDrive.Gameplay.Track
         public float StormZ => stormZ;
         public float DistanceToCar => distanceToCar;
         public bool IsEngulfed => isEngulfed;
+        public float RouteDistance => routeDistance;
+        public void BeginNextWave(float departureDistance)
+        {
+            routeDistance=departureDistance-(route!=null?route.StormLead:900);
+            distanceToCar=departureDistance-routeDistance;isEngulfed=false;beepTimer=0;
+            if(stormVisualObject!=null)stormVisualObject.SetActive(true);
+        }
+
+        public void RebindContinuousRoute(StageRoute continuous, float distanceOffset)
+        {
+            if (route == continuous) return;
+            routeDistance += distanceOffset;
+            route = continuous;
+        }
 
         private void Awake()
         {
@@ -64,6 +81,7 @@ namespace RogueDrive.Gameplay.Track
 
         private void OnDestroy()
         {
+            if (stormRadarRoot != null) Destroy(stormRadarRoot);
             if (Instance == this)
                 Instance = null;
         }
@@ -72,9 +90,13 @@ namespace RogueDrive.Gameplay.Track
         {
             playerCar = FindFirstObjectByType<ArcadeCarController>();
             run = FindFirstObjectByType<GameRunController>();
+            pedestrian=FindFirstObjectByType<Hub.GaragePlayerController>(FindObjectsInactive.Include);
 
             float startZ = playerCar != null ? playerCar.transform.position.z : 0f;
             stormZ = startZ - startOffsetBehind;
+            route = StageRoute.Instance;
+            if (route != null)
+                routeDistance = (playerCar != null ? route.ProjectDistance(playerCar.transform.position) : 0f) - route.StormLead;
 
             if (stormVisualObject != null)
             {
@@ -84,6 +106,16 @@ namespace RogueDrive.Gameplay.Track
 
         private void Update()
         {
+            if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == "MainMenuScene")
+            {
+                if (stormRadarRoot != null) stormRadarRoot.SetActive(false);
+                return;
+            }
+            if (Coop.CoopSession.Instance?.Busy == true)
+            {
+                UpdateCrewStorm();
+                return;
+            }
             if (run == null)
             {
                 run = FindFirstObjectByType<GameRunController>();
@@ -96,32 +128,39 @@ namespace RogueDrive.Gameplay.Track
                 if (playerCar == null) return;
             }
 
-            if (run.IsGameOver) return;
+            if (run.IsGameOver)
+            {
+                if (stormRadarRoot != null) stormRadarRoot.SetActive(false);
+                return;
+            }
 
             float dt = Time.deltaTime;
-            float carZ = playerCar.transform.position.z;
-            distanceToCar = carZ - stormZ;
-
-            // Адаптивная скорость преследования:
-            // Если игрок улетел далеко вперед (> 150м) — буря ускоряется для поддержания драйва.
-            // Если игрок на грани поглощения (< 15м) — скорость чуть стабилизируется, давая шанс на нитро.
-            float currentSpeed = baseChaseSpeed;
-            if (distanceToCar > 150f)
+            if(playerCar.GetComponent<VehicleModularState>()?.Workshop?.Sheltered??false)
             {
-                currentSpeed = Mathf.Lerp(baseChaseSpeed, 18.5f, (distanceToCar - 150f) / 100f);
+                if(stormRadarRoot!=null)stormRadarRoot.SetActive(false);
+                isEngulfed=false;
+                if(stormVisualObject!=null)stormVisualObject.SetActive(false);
+                if(pedestrian!=null&&pedestrian.gameObject.activeInHierarchy&&route!=null
+                    &&route.ProjectDistance(pedestrian.transform.position)<=routeDistance)
+                    Hub.PlayerFieldNeeds.For(pedestrian).TakeDamage(stormDamagePerSec*dt);
+                return;
             }
-            else if (distanceToCar < 15f && distanceToCar > 0f)
+            if(stormVisualObject!=null)stormVisualObject.SetActive(true);
+            if (route != null)
             {
-                currentSpeed = Mathf.Lerp(11.5f, baseChaseSpeed, distanceToCar / 15f);
+                routeDistance += route.StormSpeed * dt;
+                distanceToCar = route.ProjectDistance(playerCar.transform.position) - routeDistance;
+                route.Evaluate(routeDistance, out Vector3 front, out Quaternion heading);
+                stormZ = front.z;
+                if (stormVisualObject != null)
+                    stormVisualObject.transform.SetPositionAndRotation(front + Vector3.up * 6f, heading);
             }
-
-            stormZ += currentSpeed * dt;
-
-            // Синхронизация 3D-стены бури
-            if (stormVisualObject != null)
+            else
             {
-                float carX = playerCar.transform.position.x;
-                stormVisualObject.transform.position = new Vector3(carX, 6f, stormZ);
+                stormZ += baseChaseSpeed * dt;
+                distanceToCar = playerCar.transform.position.z - stormZ;
+                if (stormVisualObject != null)
+                    stormVisualObject.transform.position = new Vector3(playerCar.transform.position.x, 6f, stormZ);
             }
 
             // Обработка критических зон
@@ -130,11 +169,45 @@ namespace RogueDrive.Gameplay.Track
             if (isEngulfed)
             {
                 // Машина внутри смертоносного фронта бури!
-                run.TakeDamage(stormDamagePerSec * dt);
+                if(pedestrian!=null)
+                    Hub.PlayerFieldNeeds.For(pedestrian).TakeDamage(stormDamagePerSec*dt*(pedestrian.gameObject.activeInHierarchy?1:.35f));
+                else run.TakeDamage(stormDamagePerSec * dt);
                 ArcadeCameraFollow.Instance?.TriggerShake(0.35f, 0.1f);
                 CameraPostProcessEffects.Instance?.TriggerDamageFlash(0.4f);
             }
 
+            UpdateRadarUI(dt);
+        }
+
+        void UpdateCrewStorm()
+        {
+            var car = Coop.CoopVehicle.Instance;
+            if (car == null || !car.IsSpawned || car.Transitioning.Value) return;
+            if (route == null) route = StageRoute.Instance;
+            if (route == null) return;
+            float dt = Time.deltaTime;
+            if (car.IsServer)
+            {
+                routeDistance += route.StormSpeed * dt;
+                distanceToCar = route.ProjectDistance(car.transform.position) - routeDistance;
+                car.StormFront.Value = routeDistance;
+                car.StormDistance.Value = distanceToCar;
+                // Never damage the dormant offline expedition. Only the server resolves hits.
+                foreach (var person in FindObjectsByType<Coop.CoopPlayer>(FindObjectsSortMode.None))
+                    if (route.ProjectDistance(person.transform.position) <= routeDistance)
+                        person.ServerTakeDamage(stormDamagePerSec * dt);
+                if (distanceToCar <= 0) car.Hull.Value = Mathf.Max(0, car.Hull.Value - stormDamagePerSec * .35f * dt);
+            }
+            else
+            {
+                routeDistance = car.StormFront.Value;
+                distanceToCar = car.StormDistance.Value;
+            }
+            isEngulfed = distanceToCar <= 0;
+            route.Evaluate(routeDistance, out Vector3 front, out Quaternion heading);
+            stormZ = front.z;
+            if (stormVisualObject != null)
+            { stormVisualObject.SetActive(true); stormVisualObject.transform.SetPositionAndRotation(front + Vector3.up * 6, heading); }
             UpdateRadarUI(dt);
         }
 

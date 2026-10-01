@@ -1,0 +1,23 @@
+PASS host application ready
+PASS host connected
+PASS client application ready
+PASS two players replicated
+PASS shared vehicle replicated
+PASS one camera and listener per player
+PASS driver and navigator seated
+PASS occupied driver seat rejected
+PASS passenger input cannot drive
+PASS third application ready
+PASS third player rejected
+PASS host drives shared car
+PASS exit while moving rejected
+PASS car stopped
+PASS host exits
+PASS client becomes driver
+PASS host becomes navigator
+PASS remote driver moves authoritative car
+PASS disconnected driver released and car brakes
+PASS host shutdown clears scene actors
+PASS host can start a new session
+PASS client can rejoin a fresh session
+RESULT PASS

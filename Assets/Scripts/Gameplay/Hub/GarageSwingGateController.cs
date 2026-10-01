@@ -22,17 +22,47 @@ namespace RogueDrive.Gameplay.Hub
         [SerializeField] private bool isOpen = false;
         private bool isAnimating = false;
 
+        public static GarageSwingGateController Instance { get; private set; }
         public bool IsOpen => isOpen;
         public void OpenGates() => OpenGate();
+
+        public void ApplyNetworkState(bool open)
+        {
+            EnsureDoorsExist();
+            isAnimating = false;
+            isOpen = open;
+            if (leftDoor != null) leftDoor.localRotation = open ? leftTargetRot : leftClosedRot;
+            if (rightDoor != null) rightDoor.localRotation = open ? rightTargetRot : rightClosedRot;
+        }
 
         private Quaternion leftClosedRot;
         private Quaternion rightClosedRot;
         private Quaternion leftTargetRot;
         private Quaternion rightTargetRot;
 
+        private void Awake()
+        {
+            Instance = this;
+        }
+
+        private void OnDestroy()
+        {
+            if (Instance == this) Instance = null;
+        }
+
         private void Start()
         {
             EnsureDoorsExist();
+
+            // Обеспечиваем комфортную зону взаимодействия перед воротами
+            BoxCollider rootCol = GetComponent<BoxCollider>();
+            if (rootCol == null)
+            {
+                rootCol = gameObject.AddComponent<BoxCollider>();
+                rootCol.isTrigger = true;
+                rootCol.size = new Vector3(8.0f, 4.5f, 2.5f);
+                rootCol.center = new Vector3(0f, 2.25f, 0f);
+            }
 
             if (leftDoor != null)
             {
@@ -88,6 +118,9 @@ namespace RogueDrive.Gameplay.Hub
         {
             if (isOpen || isAnimating) return;
 
+            bool hasPower = GaragePrologueManager.Instance == null || GaragePrologueManager.Instance.IsPowerOn;
+            if (!hasPower) return;
+
             isAnimating = true;
 
             if (GaragePrologueManager.Instance != null)
@@ -137,16 +170,18 @@ namespace RogueDrive.Gameplay.Hub
         {
             if (leftDoor == null)
             {
-                Transform foundLeft = transform.Find("Gate_Door_Left");
-                if (foundLeft != null) leftDoor = foundLeft;
-                else leftDoor = CreateDoorPlaceholder("Gate_Door_Left", new Vector3(-3.2f, 0f, 0f), true);
+                leftDoor = transform.Find("Gate_Door_Left")
+                    ?? transform.Find("Door_Left_Hinge")
+                    ?? transform.Find("Door_Left");
+                if (leftDoor == null) leftDoor = CreateDoorPlaceholder("Gate_Door_Left", new Vector3(-3.2f, 0f, 0f), true);
             }
 
             if (rightDoor == null)
             {
-                Transform foundRight = transform.Find("Gate_Door_Right");
-                if (foundRight != null) rightDoor = foundRight;
-                else rightDoor = CreateDoorPlaceholder("Gate_Door_Right", new Vector3(3.2f, 0f, 0f), false);
+                rightDoor = transform.Find("Gate_Door_Right")
+                    ?? transform.Find("Door_Right_Hinge")
+                    ?? transform.Find("Door_Right");
+                if (rightDoor == null) rightDoor = CreateDoorPlaceholder("Gate_Door_Right", new Vector3(3.2f, 0f, 0f), false);
             }
         }
 

@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -23,6 +23,8 @@ namespace RogueDrive.Gameplay.Hub
         [SerializeField] private Transform bedHeadTransform;
         [SerializeField] private Vector3 bedLyingOffset = new Vector3(0f, 0.45f, 0f);
         [SerializeField] private Vector3 bedLyingEuler = new Vector3(-65f, 0f, 0f); // взгляд в потолок
+        [SerializeField] private Transform wakeEyePose;
+        [SerializeField] private Transform wakeStandingPose;
 
         [Header("Timing")]
         [SerializeField] private float radioStaticDuration = 3.5f;
@@ -39,6 +41,10 @@ namespace RogueDrive.Gameplay.Hub
         private Text subtitleText;
         private GameObject subtitlePanel;
 
+        private Vector3 cutsceneStandingPos;
+        private Quaternion cutsceneStandingRot;
+        private readonly System.Collections.Generic.List<Canvas> hiddenCanvases = new System.Collections.Generic.List<Canvas>();
+
         public bool IsRunning => isCutsceneRunning;
 
         private void Awake()
@@ -46,13 +52,20 @@ namespace RogueDrive.Gameplay.Hub
             if (player == null) player = FindFirstObjectByType<GaragePlayerController>();
             if (playerCamera == null && player != null) playerCamera = player.PlayerCamera;
             if (playerCamera == null) playerCamera = Camera.main;
+            if (bedHeadTransform == null)
+            {
+                bedHeadTransform = GameObject.Find("Placeholder_Pillow")?.transform
+                    ?? GameObject.Find("Placeholder_Bed")?.transform;
+            }
         }
 
         private void Start()
         {
-            // Проверяем, видел ли игрок пролог
+            if (GarageDepartureCheckpoint.HasPendingRestore) return;
+            // Проверяем, видел ли игрок пролог или был ли он форсирован
             int seen = PlayerPrefs.GetInt("BunkerPrologueSeen_V1", 0);
-            if (seen == 0)
+            if (seen == 0 || GaragePrologueManager.ForcePrologueAwakening ||
+                (GaragePrologueManager.Instance != null && GaragePrologueManager.Instance.IsPreviewRun))
             {
                 StartCoroutine(PlayAwakeningSequence());
             }
@@ -70,16 +83,37 @@ namespace RogueDrive.Gameplay.Hub
             eyeBlinkProgress = 0f;
             CreateCutsceneUI();
 
+            Vector3 bedPos = bedHeadTransform != null ? bedHeadTransform.position : new Vector3(-8.5f, 0.4f, -8.5f);
+            cutsceneStandingPos = new Vector3(bedPos.x + 1.2f, 0.1f, bedPos.z);
+
+            Vector3 targetHeadPos = cutsceneStandingPos + Vector3.up * 1.65f;
+            Vector3 lookDir = (new Vector3(0f, 0.8f, 0f) - targetHeadPos).normalized;
+            cutsceneStandingRot = Quaternion.LookRotation(new Vector3(lookDir.x, 0f, lookDir.z));
+            if (wakeStandingPose != null)
+            {
+                cutsceneStandingPos = wakeStandingPose.position;
+                cutsceneStandingRot = wakeStandingPose.rotation;
+                targetHeadPos = cutsceneStandingPos + Vector3.up * 1.65f;
+            }
+
             if (player != null)
             {
+                player.transform.position = cutsceneStandingPos;
+                player.transform.rotation = cutsceneStandingRot;
                 player.SetMovementLocked(true);
             }
 
-            Vector3 standingPos = player != null ? player.transform.position : (bedHeadTransform != null ? bedHeadTransform.position + Vector3.right * 1.2f : Vector3.zero);
-            Quaternion standingRot = player != null ? player.transform.rotation : Quaternion.identity;
-
-            Vector3 lyingPos = bedHeadTransform != null ? bedHeadTransform.position + bedLyingOffset : standingPos + Vector3.down * 1.1f;
+            Vector3 lyingPos = bedHeadTransform != null ? bedHeadTransform.position + bedLyingOffset : bedPos + Vector3.up * 0.45f;
+            // Keep the eye above the mattress, including authored pillow meshes.
+            if (bedHeadTransform != null)
+                foreach (var renderer in bedHeadTransform.GetComponentsInChildren<Renderer>())
+                    lyingPos.y = Mathf.Max(lyingPos.y, renderer.bounds.max.y + 0.18f);
             Quaternion lyingRot = Quaternion.Euler(bedLyingEuler);
+            if (wakeEyePose != null)
+            {
+                lyingPos = wakeEyePose.position;
+                lyingRot = wakeEyePose.rotation;
+            }
 
             if (playerCamera != null)
             {
@@ -104,16 +138,10 @@ namespace RogueDrive.Gameplay.Hub
             // Открыли глаза
             yield return AnimateBlink(0.1f, 1.0f, 0.8f);
 
-            // ── Фаза 4: Подъем с кровати и поворот к машине ─────────────────────────
+            // ── Фаза 4: Подъем с кровати на ноги прямо в жилом отсеке ────────────────
             float elapsed = 0f;
             Vector3 camStart = playerCamera != null ? playerCamera.transform.position : lyingPos;
             Quaternion rotStart = playerCamera != null ? playerCamera.transform.rotation : lyingRot;
-
-            Vector3 targetHeadPos = standingPos + Vector3.up * 1.7f;
-            // Смотрим вперед в сторону ангара и машины
-            Vector3 lookDir = (Vector3.zero - targetHeadPos);
-            lookDir.y = 0f;
-            Quaternion targetRot = lookDir.sqrMagnitude > 0.01f ? Quaternion.LookRotation(lookDir) : standingRot;
 
             while (elapsed < riseDuration)
             {
@@ -123,7 +151,7 @@ namespace RogueDrive.Gameplay.Hub
                 if (playerCamera != null)
                 {
                     playerCamera.transform.position = Vector3.Lerp(camStart, targetHeadPos, t);
-                    playerCamera.transform.rotation = Quaternion.Slerp(rotStart, targetRot, t);
+                    playerCamera.transform.rotation = Quaternion.Slerp(rotStart, cutsceneStandingRot, t);
                 }
                 yield return null;
             }
@@ -156,17 +184,33 @@ namespace RogueDrive.Gameplay.Hub
                 Destroy(cutsceneCanvas.gameObject);
             }
 
-            PlayerPrefs.SetInt("BunkerPrologueSeen_V1", 1);
-            PlayerPrefs.Save();
+            RestoreGameplayUI();
+            if (GaragePrologueManager.Instance == null || !GaragePrologueManager.Instance.IsPreviewRun)
+            {
+                PlayerPrefs.SetInt("BunkerPrologueSeen_V1", 1);
+                PlayerPrefs.Save();
+            }
 
             if (player != null)
             {
+                player.transform.position = cutsceneStandingPos;
+                player.transform.rotation = cutsceneStandingRot;
+                if (playerCamera != null)
+                {
+                    if (playerCamera.transform.parent != player.transform)
+                    {
+                        playerCamera.transform.SetParent(player.transform, false);
+                    }
+                    playerCamera.transform.localPosition = new Vector3(0f, 1.6f, 0f);
+                    player.SetCameraPitch(0f);
+                }
                 player.SetMovementLocked(false);
             }
 
             if (GaragePrologueManager.Instance != null)
             {
-                GaragePrologueManager.Instance.ShowNotification("ЦЕЛЬ: Запустите дизель-генератор, чтобы подать питание на ворота!", 6f);
+                GaragePrologueManager.Instance.RefreshObjective();
+                GaragePrologueManager.Instance.ShowNotification("ЦЕЛЬ: Запустите дизель-генератор на стене бункера!", 5.5f);
             }
         }
 
@@ -181,6 +225,30 @@ namespace RogueDrive.Gameplay.Hub
                     FinishCutscene();
                 }
             }
+        }
+
+        private void LateUpdate()
+        {
+            if (!isCutsceneRunning) return;
+            foreach (var overlay in FindObjectsByType<Canvas>(FindObjectsSortMode.None))
+            {
+                if (overlay == cutsceneCanvas || !overlay.enabled || overlay.renderMode == RenderMode.WorldSpace) continue;
+                if (!hiddenCanvases.Contains(overlay)) hiddenCanvases.Add(overlay);
+                overlay.enabled = false;
+            }
+        }
+
+        private void RestoreGameplayUI()
+        {
+            foreach (var overlay in hiddenCanvases)
+                if (overlay != null) overlay.enabled = true;
+            hiddenCanvases.Clear();
+        }
+
+        private void OnDisable()
+        {
+            if (isCutsceneRunning) { StopAllCoroutines(); FinishCutscene(); }
+            RestoreGameplayUI();
         }
 
         private void SetSubtitle(string text)

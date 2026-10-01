@@ -17,10 +17,14 @@ namespace RogueDrive.Gameplay.Hub
         [Header("Target Stage")]
         [SerializeField] private string targetSceneName = "Stage1_Outskirts";
 
+        public string TargetSceneName => targetSceneName;
+
         private bool isTransitioning;
 
         public string GetPromptText()
         {
+            if (GarageDeparturePreparation.Instance != null && !GarageDeparturePreparation.Instance.Ready)
+                return "[E] Сначала изучите маршрут и загрузите бензин с ремкомплектом";
             var prologue = GaragePrologueManager.Instance;
             if (prologue == null) return "[E] Сесть в машину";
 
@@ -28,22 +32,48 @@ namespace RogueDrive.Gameplay.Hub
             {
                 return "[E] В ангаре темно! (Сначала включите генератор)";
             }
+
+            var assembly = BunkerStarterCarAssembly.Instance;
+            if (assembly != null && !assembly.IsAssemblyComplete)
+            {
+                if (!assembly.IsWheelInstalled) return "[E] Машина на домкрате! (Установите колесо со стеллажа)";
+                if (!assembly.IsBatteryInstalled) return "[E] Нет питания! (Установите аккумулятор под капот)";
+                if (!assembly.IsFuelFilled) return "[E] Бак пуст! (Залейте канистру бензина)";
+            }
+
             if (!prologue.HasCarKeys)
             {
                 return "[E] Машина заперта! (Заберите ключи с верстака)";
             }
             if (!prologue.IsGateOpen)
             {
-                return "[E] Гермоворота закрыты! (Откройте ворота на стене)";
+                return "[E] Гермоворота закрыты! (Откройте ворота на пульте у пандуса)";
             }
 
-            return "[E] Сесть за руль и выехать на трассу [Space]";
+            return "[E] Завести мотор и выехать из бункера";
         }
 
-        public bool CanInteract() => !isTransitioning;
+        public bool CanInteract()
+        {
+            if (GarageDeparturePreparation.Instance != null && !GarageDeparturePreparation.Instance.Ready) return false;
+            if (isTransitioning) return false;
+            var prologue = GaragePrologueManager.Instance;
+            if (prologue == null) return true;
+            if (!prologue.IsPowerOn) return false;
+            var assembly = BunkerStarterCarAssembly.Instance;
+            if (assembly != null && !assembly.IsAssemblyComplete) return false;
+            if (!prologue.HasCarKeys) return false;
+            if (!prologue.IsGateOpen) return false;
+            return true;
+        }
 
         public void Interact(GaragePlayerController player)
         {
+            if (GarageDeparturePreparation.Instance != null && !GarageDeparturePreparation.Instance.Ready)
+            {
+                GaragePrologueManager.Instance?.ShowNotification("Изучите маршрут и положите запас бензина и ремкомплект в багажник.");
+                return;
+            }
             var prologue = GaragePrologueManager.Instance;
             if (prologue != null)
             {
@@ -52,51 +82,81 @@ namespace RogueDrive.Gameplay.Hub
                     prologue.ShowNotification("ВНИМАНИЕ: Сначала запустите дизель-генератор на стене!");
                     return;
                 }
+
+                var assembly = BunkerStarterCarAssembly.Instance;
+                if (assembly != null && !assembly.IsAssemblyComplete)
+                {
+                    prologue.ShowNotification("ВНИМАНИЕ: Седан еще не готов к выезду! Завершите базовую сборку машины.");
+                    return;
+                }
+
                 if (!prologue.HasCarKeys)
                 {
                     prologue.ShowNotification("ВНИМАНИЕ: Без ключей зажигания машина не заведется! Осмотрите верстак.");
                     return;
                 }
+
                 if (!prologue.IsGateOpen)
                 {
-                    prologue.ShowNotification("ВНИМАНИЕ: Ворота закрыты! Потяните рычаг привода ворот.");
+                    prologue.ShowNotification("ВНИМАНИЕ: Гермоворота заперты! Откройте их с пульта у пандуса.");
                     return;
                 }
             }
 
-            StartCoroutine(BoardAndLaunchRoutine(player));
+            if (GarageDeparturePreparation.Instance != null && !GarageDepartureCheckpoint.CapturePrepared())
+            {
+                GaragePrologueManager.Instance?.ShowNotification("Не удалось сохранить подготовку. Припасы остались на месте.");
+                return;
+            }
+            isTransitioning = true;
+
+            GameObject carToDrive = ResolveCarObject();
+
+            var driveController = GarageDriveOutController.Instance;
+            if (driveController == null)
+            {
+                driveController = (carToDrive != null ? carToDrive : gameObject).AddComponent<GarageDriveOutController>();
+            }
+
+            driveController.StartDriveOut(player, carToDrive);
         }
 
-        private IEnumerator BoardAndLaunchRoutine(GaragePlayerController player)
+        public void ResetBoardingState()
         {
-            isTransitioning = true;
-            if (player != null)
+            isTransitioning = false;
+        }
+
+        private GameObject ResolveCarObject()
+        {
+            if (gameObject.name.Contains("Classic Car") || gameObject.name.Contains("Car_9"))
             {
-                player.SetMovementLocked(true);
+                return gameObject;
             }
 
-            if (GaragePrologueManager.Instance != null)
+            Transform carChild = transform.Find("Classic Car_9");
+            if (carChild != null) return carChild.gameObject;
+
+            if (transform.parent != null)
             {
-                GaragePrologueManager.Instance.MarkPrologueCompleted();
-                GaragePrologueManager.Instance.ShowNotification("ЗАЖИГАНИЕ ВКЛЮЧЕНО... ВЫЕЗД НА ТРАССУ!", 3.0f);
+                carChild = transform.parent.Find("Classic Car_9");
+                if (carChild != null) return carChild.gameObject;
             }
 
-            // Звук зажигания и рева мотора
-            if (AudioManager.Instance != null)
+            GameObject podium = GameObject.Find("PodiumAnchor");
+            if (podium != null)
             {
-                AudioManager.Instance.PlayLevelUp();
+                carChild = podium.transform.Find("Classic Car_9");
+                if (carChild != null) return carChild.gameObject;
             }
 
-            yield return new WaitForSeconds(1.2f);
-
-            // Определяем целевую сцену
-            string sceneToLoad = targetSceneName;
-            if (!Application.CanStreamedLevelBeLoaded(sceneToLoad))
+            var assembly = BunkerStarterCarAssembly.Instance ?? FindFirstObjectByType<BunkerStarterCarAssembly>();
+            if (assembly != null)
             {
-                sceneToLoad = "Stage1_Outskirts";
+                carChild = assembly.transform.Find("Classic Car_9");
+                if (carChild != null) return carChild.gameObject;
             }
 
-            SceneTransitionManager.SwitchScene(sceneToLoad);
+            return GameObject.Find("Classic Car_9");
         }
     }
 }

@@ -1,0 +1,50 @@
+START
+OK Continuous route ready
+OK Three distinct roadside caches
+OK Every cache has stable stream identity
+OK Cache bodies carve enemy navigation
+OK Legacy full inventory retains loot: Backpack
+OK Legacy partial collection succeeds: Backpack
+OK Legacy consumed partial reward cannot refill: Backpack
+OK Legacy remainder completes: Backpack
+OK Legacy exhausted container cannot farm ammo: Backpack
+OK Legacy full inventory retains loot: CardboardBox
+OK Legacy partial collection succeeds: CardboardBox
+OK Legacy consumed partial reward cannot refill: CardboardBox
+OK Legacy remainder completes: CardboardBox
+OK Legacy exhausted container cannot farm ammo: CardboardBox
+OK Legacy full inventory retains loot: ToolCabinet
+OK Legacy partial collection succeeds: ToolCabinet
+OK Legacy consumed partial reward cannot refill: ToolCabinet
+OK Legacy remainder completes: ToolCabinet
+OK Legacy exhausted container cannot farm ammo: ToolCabinet
+OK Enemy navigation excludes the solid cache footprint
+OK Cannot start a cache remotely
+OK Cache is linked to real local encounter guards
+OK Starting search alerts local guard
+OK Pressing E again cancels without rewards
+OK Search takes real gameplay time
+OK Leaving range cancels search and resets timer
+OK Pause freezes search timer
+OK Patrol cache opens after timed search
+OK Storm advances while searching outside shelter
+OK Full inventory preserves all cache rewards
+OK One free slot takes one reward; remainder stays in cache
+OK Consumed reward cannot be claimed again during partial search
+OK Last reward completes cache exactly once
+OK Repeated interaction with empty cache cannot farm loot
+OK JSON round trip preserves opened and consumed cache
+OK Negative saved reward is rejected
+OK Stream reactivates approached cache route0/supply/1
+OK Distinct cache route0/supply/1 completes
+OK All authored rewards delivered: route0/supply/1
+OK Stream reactivates approached cache route0/supply/2
+OK Distinct cache route0/supply/2 completes
+OK All authored rewards delivered: route0/supply/2
+OK Real station checkpoint after roadside search
+OK Arrival checkpoint includes cache histories
+OK Station restart requested
+OK Actual scene reload and checkpoint restore
+OK Consumed caches remain empty after actual checkpoint reload
+OK Partial cache preserves exact unclaimed rewards after actual reload
+PASS: roadside supply search, inventory pressure, storm and actual checkpoint restore.

@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 025ea745be7c42778ea973f159fea29a
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 401152
+  packageName: Apocalypse FREE - Low Poly Asset Pack
+  packageVersion: 1.1
+  assetPath: Assets/ithappy/Apocalypse_Free/Scripts/FaceManagement/FacePicker.cs
+  uploadId: 992496

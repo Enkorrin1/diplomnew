@@ -1,0 +1,4 @@
+Join 1->2: rays=1218, missing=0, blocked=0
+Join 2->3: rays=1218, missing=0, blocked=0
+Join 3->4: rays=1218, missing=0, blocked=0
+PASS: all three connectors have continuous collision and vehicle clearance.

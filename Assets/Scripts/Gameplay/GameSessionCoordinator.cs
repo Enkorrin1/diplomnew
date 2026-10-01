@@ -8,7 +8,7 @@ namespace RogueDrive.Gameplay
 {
     /// <summary>
     /// Главный координатор сессии заезда.
-    /// Связывает данные модификаторов, физический автомобиль, авто-турель,
+    /// Связывает данные модификаторов, физический автомобиль,
     /// систему опыта, генератор предложений и придорожное казино.
     ///
     /// Схема прогрессии: опыт с зомби → уровень → жетон казино. Жетоны копятся,
@@ -24,7 +24,6 @@ namespace RogueDrive.Gameplay
 
         [Header("Scene References")]
         [SerializeField] private ArcadeCarController carController;
-        [SerializeField] private AutoTurret turret;
         [SerializeField] private GameRunController runController;
         [SerializeField] private RunExperienceManager experienceManager;
         [SerializeField] private BuffCasinoView casinoView;
@@ -49,6 +48,12 @@ namespace RogueDrive.Gameplay
 
         public ModifierSession Session => session;
 
+        // Called while the arrival scene's gameplay root is still inactive.
+        public void BindArrivingCar(ArcadeCarController car)
+        {
+            carController = car;
+        }
+
         /// <summary>Накопленные, но ещё не потраченные жетоны казино (по одному за уровень).</summary>
         public int CasinoTokens => casinoTokens;
 
@@ -59,7 +64,7 @@ namespace RogueDrive.Gameplay
             RogueDrive.Gameplay.Narrative.CasinoCroupierVoice.ResetForRun();
             FindSceneReferences();
             InitializeModifierSession();
-            BindCombatAndProgression();
+            BindVehicleAndProgression();
         }
 
         private void OnEnable()
@@ -88,8 +93,6 @@ namespace RogueDrive.Gameplay
         {
             if (carController == null)
                 carController = FindFirstObjectByType<ArcadeCarController>();
-            if (turret == null)
-                turret = FindFirstObjectByType<AutoTurret>();
             if (runController == null)
                 runController = FindFirstObjectByType<GameRunController>();
             if (experienceManager == null)
@@ -185,26 +188,15 @@ namespace RogueDrive.Gameplay
                 CampaignCarryOver.Clear();
         }
 
-        void BindCombatAndProgression()
+        void BindVehicleAndProgression()
         {
             if (session == null)
                 return;
-
-            if (turret != null)
-            {
-                turret.BindStats(session.Effects.Stats, session.Effects.Projectiles);
-            }
 
             if (carController != null)
             {
                 carController.BindStats(session.Effects.Stats);
 
-                CarAuraController auras = carController.GetComponent<CarAuraController>();
-                if (auras == null)
-                {
-                    auras = carController.gameObject.AddComponent<CarAuraController>();
-                }
-                auras.BindBehaviours(session.Effects.Behaviours);
             }
 
             if (runController != null)

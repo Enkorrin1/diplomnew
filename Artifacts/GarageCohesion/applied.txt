@@ -1,0 +1,123 @@
+Unified interactive roots: 80
+Pickup_Battery -> Battery
+Pickup_FuelCanister -> FuelCanister
+JerrycanLarge -> WaterCanister
+JerrycanLarge (1) -> FuelCanister
+JerrycanLarge (2) -> FuelCanister
+Pickup_WaterCanister -> WaterCanister
+Flashlight_Portable -> Flashlight
+CarBattery_Portable -> Battery
+BatterySmall_Portable -> Cell
+Flashlight_Portable -> Flashlight
+BatteryLarge_Portable -> Cell
+WrenchSmall_Portable -> Wrench
+Walkie_talkie_Portable -> Radio
+Jerrycan_Portable -> FuelCanister
+BatterySmall_Portable -> Cell
+First_Aid_Portable -> Medkit
+CarBattery (2)_Portable -> Battery
+CarBattery_Portable -> Battery
+BatteryLarge_Portable -> Cell
+CarBattery (1)_Portable -> Battery
+Jerrycan_Portable -> FuelCanister
+Jerrycan_Portable -> FuelCanister
+WrenchSmall_Portable -> Wrench
+Hammer_Portable -> Hammer
+Screwdriver_Portable -> Screwdriver
+WrenchLarge_Portable -> Wrench
+WrenchMedium_Portable -> Wrench
+Walkie_talkie_Portable -> Radio
+Screwdriver_Portable -> Screwdriver
+Hammer_Portable -> Hammer
+First_Aid_Portable -> Medkit
+JerrycanLarge_Portable -> FuelCanister
+WrenchMedium_Portable -> Wrench
+Flashlight_Portable -> Flashlight
+Walkie_talkie_Portable -> Radio
+JerrycanLarge_Portable -> FuelCanister
+CarBattery_Portable -> Battery
+Fuel_Canister_Portable -> FuelCanister
+JerrycanLarge_Portable -> FuelCanister
+JerrycanLarge_Portable -> FuelCanister
+Jerrycan_Portable -> FuelCanister
+WrenchMedium_Portable -> Wrench
+WrenchMedium_Portable -> Wrench
+WrenchLarge_Portable -> Wrench
+Jerrycan_Portable -> FuelCanister
+Screwdriver_Portable -> Screwdriver
+Hammer_Portable -> Hammer
+CarBattery_Portable -> Battery
+WrenchLarge_Portable -> Wrench
+CarBattery_Portable -> Battery
+WrenchSmall_Portable -> Wrench
+Screwdriver_Portable -> Screwdriver
+WrenchLarge_Portable -> Wrench
+Jerrycan_Portable -> FuelCanister
+WrenchLarge_Portable -> Wrench
+Screwdriver_Portable -> Screwdriver
+Hammer_Portable -> Hammer
+Jerrycan_Portable -> FuelCanister
+Jerrycan_Portable -> FuelCanister
+Hammer_Portable -> Hammer
+CarBattery_Portable -> Battery
+Screwdriver_Portable -> Screwdriver
+Jerrycan_Portable -> FuelCanister
+Screwdriver_Portable -> Screwdriver
+Hammer_Portable -> Hammer
+Hammer_Portable -> Hammer
+Jerrycan_Portable -> FuelCanister
+WrenchSmall_Portable -> Wrench
+CarBattery_Portable -> Battery
+Hammer_Portable -> Hammer
+Jerrycan_Portable -> FuelCanister
+WrenchLarge_Portable -> Wrench
+Jerrycan_Portable -> FuelCanister
+Screwdriver_Portable -> Screwdriver
+WrenchLarge_Portable -> Wrench
+Jerrycan_Portable -> FuelCanister
+Departure_FuelReserve -> FuelCanister
+Departure_Medkit -> Medkit
+Departure_WaterReserve -> WaterCanister
+Departure_OilReserve -> OilCanister
+WrenchMedium -> Wrench
+Hammer -> Hammer
+Screwdriver -> Screwdriver
+Added Prop_ACVent_Stright
+Added Prop_ACVent_Stright
+Added Prop_ACVent_Stright
+Added Prop_ACVent_Stright
+Added Prop_ACVent_Stright
+Added Prop_ACVent_Stright
+Added Prop_ACVent_Stright
+Added Prop_ACVent_Stright
+Added Prop_ACVent_Stright
+Added Prop_RoofVent_01
+Added Prop_RoofVent_01
+Added Prop_RoofVent_01
+Added Prop_ACVent_Stright
+Added Prop_ACVent_Stright
+Added Prop_ACVent_Stright
+Added Prop_ACVent_Stright
+Added Prop_ACVent_Stright
+Added Prop_ACVent_Stright
+Added Prop_ACVent_Stright
+Added Prop_ACVent_Stright
+Added Prop_ACVent_Stright
+Added Prop_RoofVent_01
+Added Prop_RoofVent_01
+Added Prop_RoofVent_01
+Added Prop_RoofVent_04
+Added Prop_ElectracityCabinet_01
+Added Prop_ElectracityCabinet_01
+Added Prop_RoadCone_01
+Added Prop_RoadCone_01
+Added Prop_TrashBag_01
+Added Prop_TrashBag_01
+Added SpiralNotebook
+Added PenBlue
+Added SpiralNotebook
+Added PenBlue
+Added TissueBoxRectangle
+FuelCanister -> FuelCanister
+WaterCanister -> WaterCanister
+OilCanister -> OilCanister

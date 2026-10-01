@@ -1,0 +1,37 @@
+PASS Stage1 preloaded
+PASS Preloaded Stage1 has no active geometry in garage
+PASS Preloaded Stage1 has no active collisions in garage
+PASS 80+ canonical visual instances survive Play Mode
+PASS One mesh set for Canonical_Battery (10)
+PASS One mesh set for Canonical_Screwdriver (9)
+PASS One mesh set for Canonical_WaterCanister (3)
+PASS One mesh set for Canonical_Hammer (9)
+PASS One mesh set for Canonical_FuelCanister (22)
+PASS One mesh set for Canonical_OilCanister (1)
+PASS One mesh set for Canonical_Wrench (16)
+PASS One mesh set for Canonical_Cell (4)
+PASS One mesh set for Canonical_Medkit (3)
+PASS One mesh set for Canonical_Radio (3)
+PASS One mesh set for Canonical_Flashlight (3)
+PASS No unified objects fell through floor: 
+PASS Pick up Battery
+PASS Storage release restores physics Battery
+PASS Single collider after dropping Battery
+PASS World scale preserved Battery
+PASS Pick up FuelCanister
+PASS Storage release restores physics FuelCanister
+PASS Single collider after dropping FuelCanister
+PASS World scale preserved FuelCanister
+PASS Fluid retained FuelCanister
+PASS Pick up WaterCanister
+PASS Storage release restores physics WaterCanister
+PASS Single collider after dropping WaterCanister
+PASS World scale preserved WaterCanister
+PASS Fluid retained WaterCanister
+PASS Pick up OilCanister
+PASS Storage release restores physics OilCanister
+PASS Single collider after dropping OilCanister
+PASS World scale preserved OilCanister
+PASS Fluid retained OilCanister
+PASS Canonical wrench can be stored in pocket
+COMPLETE

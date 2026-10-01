@@ -1,0 +1,26 @@
+PASS: three authored walkers
+PASS: wall blocks initial visual detection
+PASS: visible player is approached and attack telegraphed
+PASS: windup does not cause immediate contact damage
+PASS: dodged swing reaches recovery
+PASS: moving out of reach during windup avoids damage
+PASS: next melee swing damages pedestrian
+PASS: one swing applies exactly 12 character damage
+PASS: pedestrian hit leaves vehicle health unchanged
+PASS: recovery prevents repeated per-frame hits
+PASS: navigation routes around a carved physical blocker
+PASS: lost target enters search
+PASS: search expires without omniscient pursuit
+PASS: deactivation preserves wounded health
+PASS: reactivated walker waits for and rejoins navigation
+PASS: walker approaches and attacks parked vehicle
+PASS: vehicle hit does not damage inactive passenger
+PASS: parked vehicle contact does not kill or damage walker
+PASS: high-speed physical ram kills walker using pre-impact speed
+PASS: healing restores character health
+PASS: elapsed time no longer drains hunger or thirst
+PASS: lethal damage ends the attempt exactly once
+PASS: medkit cannot resurrect a dead character
+PASS: dead walker leaves combat after death presentation
+PASS: dead walker cannot respawn on site reactivation
+PASS: all encounter checks

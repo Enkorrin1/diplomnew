@@ -1,0 +1,1 @@
+Stage4_Citadel: length=9001,8m, height=0,0..38,0m, maxGrade=4,2%, rays=5334, missing=0, blocked=0

@@ -101,13 +101,9 @@ namespace RogueDrive.Audio
                 {
                     cam.gameObject.AddComponent<AudioListener>();
                 }
-                else
-                {
-                    if (GetComponent<AudioListener>() == null)
-                    {
-                        gameObject.AddComponent<AudioListener>();
-                    }
-                }
+                // During a network scene load the player camera may not exist yet.
+                // Never attach a listener beside this procedural AudioSource:
+                // OnAudioFilterRead cannot serve both components on the same object.
             }
             else if (listeners.Length > 1)
             {

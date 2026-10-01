@@ -87,6 +87,17 @@ namespace RogueDrive.Gameplay
                     projected = candidate;
                 }
             }
+            // Authored elevation routes use continuous MeshCollider ribbons. Their
+            // saved centreline provides a candidate even when no legacy road boxes exist.
+            StageRoute route = StageRoute.Instance;
+            if (route != null)
+            {
+                route.Evaluate(route.ProjectDistance(position), out Vector3 centre, out Quaternion heading);
+                float lateral = Mathf.Clamp(Vector3.Dot(position - centre, heading * Vector3.right), -6.3f, 6.3f);
+                Vector3 candidate = centre + heading * Vector3.right * lateral + Vector3.up * .04f;
+                float distance = (candidate - position).sqrMagnitude;
+                if (distance < best) { best = distance; projected = candidate; }
+            }
             return !float.IsPositiveInfinity(best);
         }
         [Header("Chunk Properties")]
@@ -191,79 +202,8 @@ namespace RogueDrive.Gameplay
             bool spawnObstacles = true,
             bool allowElites = true)
         {
-            float barrelChance = biome != null ? biome.barrelSpawnChance : 0.5f;
-            float crateChance = biome != null ? biome.crateSpawnChance : 0.4f;
-            if (Difficulty.DynamicDifficultyManager.Instance != null)
-            {
-                crateChance += Difficulty.DynamicDifficultyManager.Instance.SupplyCrateBonusChance;
-            }
-
-            // 1. Обработка развилок (Fork) со специфическим распределением по веткам
-            if (type == ChunkType.Fork && spawnObstacles)
-            {
-                PopulateForkLanes(enemyPrefabs, barrelPrefab, cratePrefab, difficultyMultiplier);
-                return;
-            }
-
-            // 2. Стандартный спавн препятствий (бочки и ящики)
-            if (spawnObstacles && obstacleSpawnPoints != null && obstacleSpawnPoints.Length > 0)
-            {
-                for (int i = 0; i < obstacleSpawnPoints.Length; i++)
-                {
-                    Transform pt = obstacleSpawnPoints[i];
-                    if (pt == null) continue;
-
-                    float roll = Random.value;
-                    if (roll < barrelChance && barrelPrefab != null)
-                    {
-                        Instantiate(barrelPrefab, pt.position, pt.rotation, transform).SetActive(true);
-                    }
-                    else if (roll < (barrelChance + crateChance) && cratePrefab != null)
-                    {
-                        Instantiate(cratePrefab, pt.position, pt.rotation, transform).SetActive(true);
-                    }
-                }
-            }
-
-            // 3. Спавн врагов
-            if (enemyPrefabs != null && enemyPrefabs.Length > 0 && enemySpawnPoints != null && enemySpawnPoints.Length > 0)
-            {
-                float biomeMult = biome != null ? biome.enemyDensityMultiplier : 1.0f;
-                int maxEnemies = Mathf.RoundToInt(enemySpawnPoints.Length * Mathf.Clamp(difficultyMultiplier * biomeMult, 0.5f, 2.5f));
-                maxEnemies = Mathf.Min(maxEnemies, enemySpawnPoints.Length);
-
-                for (int i = 0; i < maxEnemies; i++)
-                {
-                    if (Random.value > 0.35f)
-                    {
-                        Vector3 spawnPos = enemySpawnPoints[i].position + Random.insideUnitSphere * 1.5f;
-                        if (TryProjectToRoad(spawnPos, out Vector3 roadSpawn)) spawnPos = roadSpawn + Vector3.up * 0.5f;
-
-                        // Шанс появления элитного противника растет с дистанцией/сложностью
-                        float eliteChance = Mathf.Clamp01((difficultyMultiplier - 1f) * 0.20f);
-                        if (Difficulty.DynamicDifficultyManager.Instance != null)
-                        {
-                            eliteChance *= Difficulty.DynamicDifficultyManager.Instance.EliteChanceMultiplier;
-                        }
-                        if (allowElites && Random.value < eliteChance)
-                        {
-                            SpawnEliteEnemy(spawnPos);
-                        }
-                        else
-                        {
-                            GameObject enemyPrefab = enemyPrefabs[Random.Range(0, enemyPrefabs.Length)];
-                            if (GameplayPool.Instance != null)
-                            {
-                                GameplayPool.Instance.Spawn(enemyPrefab, spawnPos, Quaternion.identity);
-                            }
-                            else
-                            {
-                                Instantiate(enemyPrefab, spawnPos, Quaternion.identity);
-                            }
-                        }
-                    }
-                }
-            }
+            // Процедурный спавн отключен: все препятствия и враги выставляются вручную на сцене
+            return;
         }
 
         void SpawnEliteEnemy(Vector3 pos)

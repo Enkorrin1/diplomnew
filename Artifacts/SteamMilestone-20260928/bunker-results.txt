@@ -1,0 +1,20 @@
+PASS host application ready
+PASS host connected
+PASS client application ready
+PASS two peers connected
+PASS shared quest and vehicle spawned on both peers
+PASS exactly one crew canvas per peer
+PASS remote station rejected from afar
+PASS client action replicated: generator
+PASS client action replicated: wheel
+PASS client action replicated: battery
+PASS client action replicated: fuel
+PASS fuel capped at required 15 liters
+PASS client action replicated: keys
+PASS client action replicated: gates
+PASS client leaves prepared bunker
+PASS late join restores preparation
+PASS host becomes driver
+PASS client becomes navigator
+PASS damage applied before departure
+FAIL both peers reach road

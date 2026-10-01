@@ -1,0 +1,5 @@
+Pipeline: No RuntimePipelineConfig asset found (Project Settings > Pipeline > Runtime). Pipeline will be disabled in Player builds.
+You are building a player, but you have uncompiled code changes. This means that any post-processing or importing code you may have changed will not affect this player build.
+Assets\Scripts\Gameplay\Hub\GaragePrologueManager.cs(35,39): warning CS0414: The field 'GaragePrologueManager.forceFreshPrologueInEditor' is assigned but its value is never used
+Assets\Downloads\FastMesh\Scripts\SceneViewText.cs(12,16): warning CS0414: The field 'SceneViewText.text2' is assigned but its value is never used
+Assets\Scripts\Gameplay\Hub\BunkerStarterCarAssembly.cs(33,39): warning CS0414: The field 'BunkerStarterCarAssembly.forceFreshAssemblyInEditor' is assigned but its value is never used

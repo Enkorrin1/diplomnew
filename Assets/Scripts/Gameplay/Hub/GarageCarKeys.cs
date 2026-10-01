@@ -10,7 +10,6 @@ namespace RogueDrive.Gameplay.Hub
     {
         [Header("Visuals")]
         [SerializeField] private GameObject visualModel;
-        [SerializeField] private Light itemHighlightLight;
 
         private void Start()
         {
@@ -20,6 +19,10 @@ namespace RogueDrive.Gameplay.Hub
             if (GaragePrologueManager.Instance != null && GaragePrologueManager.Instance.HasCarKeys)
             {
                 visualModel.SetActive(false);
+                if (PlayerPocketInventory.Instance != null && !PlayerPocketInventory.Instance.HasItem("car_keys"))
+                {
+                    PlayerPocketInventory.Instance.TryAddItem("car_keys", "Ключи авто", 1);
+                }
             }
         }
 
@@ -35,7 +38,16 @@ namespace RogueDrive.Gameplay.Hub
 
         public void Interact(GaragePlayerController player)
         {
-            if (GaragePrologueManager.Instance == null) return;
+            if (!CanInteract()) return;
+
+            if (PlayerPocketInventory.Instance != null)
+            {
+                if (!PlayerPocketInventory.Instance.TryAddItem("car_keys", "Ключи авто", 1))
+                {
+                    GaragePrologueManager.Instance.ShowNotification("Освободите место в карманах для ключей.", 3f);
+                    return;
+                }
+            }
 
             GaragePrologueManager.Instance.PickUpKeys();
 
@@ -47,10 +59,6 @@ namespace RogueDrive.Gameplay.Hub
             if (visualModel != null)
             {
                 visualModel.SetActive(false);
-            }
-            if (itemHighlightLight != null)
-            {
-                itemHighlightLight.enabled = false;
             }
             var col = GetComponent<Collider>();
             if (col != null) col.enabled = false;

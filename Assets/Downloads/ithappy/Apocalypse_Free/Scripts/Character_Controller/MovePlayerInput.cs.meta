@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: a478c34572cc42e6886ae9df9fda5c43
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 401152
+  packageName: Apocalypse FREE - Low Poly Asset Pack
+  packageVersion: 1.1
+  assetPath: Assets/ithappy/Apocalypse_Free/Scripts/Character_Controller/MovePlayerInput.cs
+  uploadId: 992496

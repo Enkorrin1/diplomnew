@@ -1,0 +1,8 @@
+# Flat HUD, revision 2
+
+Generated with the built-in image_gen tool. Live labels, percentages, fills and clipped flat-color panels are composed in Unity. The atlas supplies the heart, bread and water icons; its backdrop is not displayed.
+
+Asset: vitals_flat_v2.png
+
+Prompt:
+Create a production 2D UI sprite sheet for a LOW POLY survival driving game. EXACT 1536x1024 canvas. Flat clean vector-like graphic design, large simple geometric shapes and angular polygonal icons. NO realistic rendering, NO metal, NO texture, NO weathering, NO bolts, NO rivets, NO bevel trim, NO ornamental borders, NO gradients, NO glow, NO shadows. Solid flat dark blue-grey background #1b272f. Exactly three identical simple horizontal UI strips: each x78 to1462; strip one y105 to333, strip two y403 to631, strip three y698 to926. Silhouette is a simple long rectangle with clipped corners. Left square icon area x95 to310, each strip has an iconic LOW POLY symbol built of only 5-8 large flat colored polygons: top coral red heart, middle golden yellow bread loaf with 3 simple cuts (food/satiety), bottom muted sky-blue water drop. Rest of each strip: flat dark slate upper empty label area x392 to1408 at row top+40 to+100; flat darker empty meter rectangle x354 to1420 at row top+124 to+184. No fill inside meter. Absolutely NO text or numbers: real labels and fills are added by the game. Palette solid desaturated charcoal slate, ivory, coral, ochre, sky blue. Clear visual hierarchy, minimal clean modern indie low-poly game HUD; chunky readable shapes, not military industrial UI. Image is a sprite atlas, not a game screenshot.

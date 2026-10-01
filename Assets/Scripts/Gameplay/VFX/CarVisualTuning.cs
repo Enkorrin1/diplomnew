@@ -6,8 +6,6 @@ namespace RogueDrive.Gameplay.VFX
     /// <summary>
     /// Модульный визуальный тюнинг автомобиля:
     /// — Броня кузова (Hull): силовой кенгурятник, защитные решетки на окнах, бронеплиты на дверях.
-    /// — Вооружение (Armament): массивный ствол автопушки + лазерный целеуказатель.
-    /// — Колеса (Tires): угрожающие шипы на ступицах дисков.
     /// Синхронизируется с MetaProgress и отображается как в гараже, так и на трассе.
     /// </summary>
     public sealed class CarVisualTuning : MonoBehaviour
@@ -33,8 +31,6 @@ namespace RogueDrive.Gameplay.VFX
             if (progress == null) return;
 
             int hullLevel = GetLevel(progress, carId, "hull");
-            int armamentLevel = GetLevel(progress, carId, "armament");
-            int tiresLevel = GetLevel(progress, carId, "tires");
 
             // 1. БРОНЯ КУЗОВА (HULL)
             if (hullLevel >= 1)
@@ -50,17 +46,6 @@ namespace RogueDrive.Gameplay.VFX
                 AttachSideArmorPlates();
             }
 
-            // 2. ВООРУЖЕНИЕ (ARMAMENT)
-            if (armamentLevel >= 1)
-            {
-                AttachTurretEnhancements(armamentLevel);
-            }
-
-            // 3. КОЛЕСНЫЕ ШИПЫ (TIRES)
-            if (tiresLevel >= 1)
-            {
-                AttachWheelSpikes();
-            }
         }
 
         private int GetLevel(MetaProgress progress, string carId, string trackIdKeyword)
@@ -132,53 +117,6 @@ namespace RogueDrive.Gameplay.VFX
             // Бронелисты на бортах дверей
             CreateMeshPart("Plate_L", new Vector3(-1.02f, 0.65f, 0.1f), new Vector3(0.06f, 0.45f, 1.5f), armorPlateColor, armorRoot);
             CreateMeshPart("Plate_R", new Vector3(1.02f, 0.65f, 0.1f), new Vector3(0.06f, 0.45f, 1.5f), armorPlateColor, armorRoot);
-        }
-
-        private void AttachTurretEnhancements(int level)
-        {
-            Transform roofSocket = transform.Find("Socket_Roof") ?? transform;
-            Transform turretEnhance = new GameObject("Turret_HeavyBarrel").transform;
-            turretEnhance.SetParent(roofSocket, false);
-
-            Color gunMetal = new Color(0.12f, 0.13f, 0.15f);
-
-            // Спаренный пламегаситель
-            CreateMeshPart("HeavyMuzzle_L", new Vector3(-0.08f, 0.12f, 0.95f), new Vector3(0.08f, 0.08f, 0.35f), gunMetal, turretEnhance);
-            CreateMeshPart("HeavyMuzzle_R", new Vector3(0.08f, 0.12f, 0.95f), new Vector3(0.08f, 0.08f, 0.35f), gunMetal, turretEnhance);
-            // Лазерный целеуказатель отключен для чистоты визуала
-        }
-
-        private void AttachWheelSpikes()
-        {
-            Transform spikesRoot = new GameObject("Wheel_Spikes").transform;
-            spikesRoot.SetParent(tuningRoot, false);
-
-            Color spikeColor = new Color(0.75f, 0.75f, 0.8f);
-
-            Vector3[] wheelPositions = new[]
-            {
-                new Vector3(-0.98f, 0.35f, 1.4f),  // Переднее левое
-                new Vector3(0.98f, 0.35f, 1.4f),   // Переднее правое
-                new Vector3(-0.98f, 0.35f, -1.3f), // Заднее левое
-                new Vector3(0.98f, 0.35f, -1.3f)   // Заднее правое
-            };
-
-            for (int i = 0; i < wheelPositions.Length; i++)
-            {
-                float outward = wheelPositions[i].x > 0 ? 1f : -1f;
-                GameObject spike = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-                spike.name = $"Spike_Wheel_{i}";
-                spike.transform.SetParent(spikesRoot, false);
-                spike.transform.localPosition = wheelPositions[i] + Vector3.right * (outward * 0.12f);
-                spike.transform.localRotation = Quaternion.Euler(0f, 0f, 90f);
-                spike.transform.localScale = new Vector3(0.06f, 0.15f, 0.06f);
-
-                var r = spike.GetComponent<Renderer>();
-                if (r != null) r.sharedMaterial = new Material(Shader.Find("Standard")) { color = spikeColor };
-
-                var col = spike.GetComponent<Collider>();
-                if (col != null) Destroy(col);
-            }
         }
 
         private static GameObject CreateMeshPart(string name, Vector3 pos, Vector3 scale, Color color, Transform parent)

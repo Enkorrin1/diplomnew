@@ -11,6 +11,8 @@ namespace RogueDrive.Gameplay.Hub
         [Header("Atmosphere")]
         [SerializeField] private ParticleSystem dustParticles;
         [SerializeField] private bool createDustAtRuntime = false;
+        [SerializeField] private Color fogColor = new Color(0.05f, 0.07f, 0.10f);
+        [SerializeField] private float fogDensity = 0.015f;
 
         private void Start()
         {
@@ -25,8 +27,8 @@ namespace RogueDrive.Gameplay.Hub
         {
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.ExponentialSquared;
-            RenderSettings.fogColor = new Color(0.05f, 0.07f, 0.10f);
-            RenderSettings.fogDensity = 0.015f;
+            RenderSettings.fogColor = fogColor;
+            RenderSettings.fogDensity = fogDensity;
         }
 
         private void CreateDustParticles()

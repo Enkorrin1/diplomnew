@@ -1,0 +1,14 @@
+[
+  {
+    "tool": "image_gen.imagegen",
+    "asset": "Assets/Resources/UI/LowPoly/coop_backdrop.png",
+    "prompt": "Create a polished cinematic low-poly 3D game key art illustration for Rogue Drive survival cooperative expedition, wide landscape 16:9. Two anonymous survivors in practical muted jackets, one on each side of a shared worn dark olive station wagon with roof rack, spare tire and fuel canisters. They stand at a bunker garage entrance looking out toward a winding road through distant mountains and an approaching wall of dust storm. Stylized angular geometry, cohesive handcrafted low-poly videogame appearance, dusty ochre landscape, charcoal teal shadows, warm amber workshop light, cool steel blue atmosphere. Strong readable silhouettes, purposeful survival roadtrip mood, tasteful cinematic composition. Vehicle and two survivors occupy the right two thirds; left third is dark atmospheric negative space for interface. No text, no logos, no UI, no weapon posing, no photorealism. This is finished background artwork for a cooperative lobby, not a mockup.",
+    "transparent_background": false
+  },
+  {
+    "tool": "image_gen.imagegen",
+    "asset": "Assets/Resources/UI/LowPoly/combat_inventory_atlas.png",
+    "transparent_background": true,
+    "prompt": "Exactly three equal columns in one horizontal row on transparent background: left a dark 9mm pistol with brown grip; middle a rusty crowbar with red grip diagonally; right three cartridges and an ochre ammunition box. Consistent low-poly game inventory art, warm lighting, recognizable silhouettes. No text, UI, floor or labels."
+  }
+]

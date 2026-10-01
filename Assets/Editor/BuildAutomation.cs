@@ -24,7 +24,12 @@ namespace RogueDrive.Editor
             "Assets/Scenes/Stage1_Outskirts.unity",
             "Assets/Scenes/Stage2_Wasteland.unity",
             "Assets/Scenes/Stage3_Industrial.unity",
-            "Assets/Scenes/Stage4_Citadel.unity"
+            "Assets/Scenes/Stage4_Citadel.unity",
+            "Assets/Scenes/Coop_Outskirts.unity",
+            "Assets/Scenes/Journey/Route01_World.unity",
+            "Assets/Scenes/Journey/Route02_World.unity",
+            "Assets/Scenes/Journey/Route03_World.unity",
+            "Assets/Scenes/Journey/Route04_World.unity"
         };
 
         [MenuItem("RogueDrive/Сборка проекта (Build)/Настроить параметры Android", priority = 12)]
@@ -83,6 +88,24 @@ namespace RogueDrive.Editor
             {
                 Debug.LogError($"[BuildAutomation] ❌ Ошибка сборки Windows: {report.summary.result}");
             }
+        }
+
+        [MenuItem("RogueDrive/Сборка проекта (Build)/Собрать Windows Development", priority = 11)]
+        public static void BuildWindowsDevelopment()
+        {
+            string outputDir = Path.Combine(Directory.GetCurrentDirectory(), "Builds", "FullGameDev");
+            Directory.CreateDirectory(outputDir);
+            EnsureBuildScenes();
+            var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
+            {
+                scenes = GetEnabledScenes(),
+                locationPathName = Path.Combine(outputDir, "RogueDrive.exe"),
+                target = BuildTarget.StandaloneWindows64,
+                options = BuildOptions.Development
+            });
+            Debug.Log($"[BuildAutomation] Windows Development: {report.summary.result}; errors={report.summary.totalErrors}; warnings={report.summary.totalWarnings}.");
+            if (report.summary.result != UnityEditor.Build.Reporting.BuildResult.Succeeded)
+                throw new InvalidOperationException("Windows Development build failed.");
         }
 
         [MenuItem("RogueDrive/Сборка проекта (Build)/Собрать Android APK (Release)", priority = 11)]

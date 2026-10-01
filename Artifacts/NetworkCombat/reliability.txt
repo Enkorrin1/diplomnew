@@ -1,0 +1,25 @@
+OK Old engine JSON keeps internal component identity
+OK Legacy component condition preserved
+OK Copied engine owns independent internal components
+OK New engine JSON preserves all internal components
+OK Existing fitted-engine save remains compatible
+OK Component serialization restores assembly without recursive depth expansion
+OK Pistol prefab has valid serialized components
+OK Negative reserve cannot remove magazine ammo
+OK Reload consumes only available reserve
+OK Reload never exceeds magazine capacity
+OK Complete checkpoint accepted
+OK Null inventory cell rejected before mutation
+OK Missing cargo identity rejected
+OK Duplicate physical identity rejected
+OK Valid station checkpoint accepted
+OK Incomplete station save cannot advertise Continue
+OK Non-finite car position rejected
+OK Unknown station rejected
+OK First save promoted from flushed temporary file
+OK Replacement keeps previous valid progress in backup
+OK Saving after primary corruption preserves valid backup
+OK Failed replacement leaves primary and backup intact
+OK Uncommitted temporary file cannot replace active progress
+OK Next save recovers after interrupted write
+PASS: 24 expedition reliability checks.

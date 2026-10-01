@@ -135,57 +135,6 @@ namespace RogueDrive.EditorTools
                 }
             }
 
-            // 2. Исправляем турель на крыше
-            Transform socketRoof = playerCar.transform.Find("Socket_Roof");
-            if (socketRoof != null)
-            {
-                socketRoof.localPosition = new Vector3(0f, 1.25f, -0.1f);
-                Transform turret = socketRoof.Find("AutoTurret_Roof");
-                if (turret != null)
-                {
-                    Transform baseT = turret.Find("TurretBase");
-                    if (baseT != null)
-                    {
-                        baseT.localScale = new Vector3(0.35f, 0.04f, 0.35f);
-                        baseT.localPosition = new Vector3(0f, 0.02f, 0f);
-                        modified = true;
-                    }
-
-                    Transform swivel = turret.Find("TurretSwivel");
-                    if (swivel != null)
-                    {
-                        MeshRenderer mr = swivel.GetComponent<MeshRenderer>();
-                        if (mr != null)
-                        {
-                            Object.DestroyImmediate(mr);
-                            modified = true;
-                        }
-                        MeshFilter mf = swivel.GetComponent<MeshFilter>();
-                        if (mf != null)
-                        {
-                            Object.DestroyImmediate(mf);
-                            modified = true;
-                        }
-
-                        if (swivel.Find("AR_Turret_Gun") == null)
-                        {
-                            GameObject gunPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Low Poly AR Weapon Pack 1/Prefabs/Weapons/AR_A_1.prefab");
-                            if (gunPrefab != null)
-                            {
-                                GameObject gun = (GameObject)PrefabUtility.InstantiatePrefab(gunPrefab, swivel);
-                                gun.name = "AR_Turret_Gun";
-                                gun.transform.localPosition = new Vector3(0f, 0.05f, 0.15f);
-                                gun.transform.localRotation = Quaternion.identity;
-                                gun.transform.localScale = Vector3.one * 1.6f;
-                                Collider[] cols = gun.GetComponentsInChildren<Collider>(true);
-                                for (int i = 0; i < cols.Length; i++) Object.DestroyImmediate(cols[i]);
-                                modified = true;
-                            }
-                        }
-                    }
-                }
-            }
-
             // Отложенный вызов может попасть в момент переключения в Play Mode.
             // Повторная проверка предотвращает попытку сохранить runtime-сцену.
             if (modified && !EditorApplication.isPlayingOrWillChangePlaymode)

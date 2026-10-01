@@ -68,6 +68,7 @@ namespace RogueDrive.Gameplay
 
         private void OnTriggerEnter(Collider other)
         {
+            if (!enabled || (SeamlessJourneyStream.Instance != null && stageIndex < 4)) return;
             if (isPassed) return;
 
             ArcadeCarController car = other.GetComponentInParent<ArcadeCarController>();

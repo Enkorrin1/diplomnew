@@ -1,0 +1,19 @@
+fileFormatVersion: 2
+guid: afeea6d126b0fc54288142ea0faca793
+timeCreated: 1466102008
+licenseType: Store
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 65665
+  packageName: Pixel Cube World Atlantis
+  packageVersion: 1.0
+  assetPath: Assets/PiXel Cube World Atlantis/Scripts/TextureOffset.cs
+  uploadId: 124043

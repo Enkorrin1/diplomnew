@@ -57,32 +57,34 @@ namespace RogueDrive.Gameplay
                 gameObject.AddComponent<RogueDrive.UI.PauseMenuUI>();
             }
 
-            if (FindFirstObjectByType<RogueDrive.Gameplay.Combat.ComboScoreSystem>() == null)
+            // The scene entry activates gameplay before other components' OnEnable may run.
+            bool legacyArcadeRun = FindFirstObjectByType<StageRoute>(FindObjectsInactive.Include) == null;
+            if (legacyArcadeRun && FindFirstObjectByType<RogueDrive.Gameplay.Combat.ComboScoreSystem>() == null)
             {
                 gameObject.AddComponent<RogueDrive.Gameplay.Combat.ComboScoreSystem>();
             }
 
-            if (FindFirstObjectByType<RogueDrive.Gameplay.Combat.RaiderSpawner>() == null)
+            if (legacyArcadeRun && FindFirstObjectByType<RogueDrive.Gameplay.Combat.RaiderSpawner>() == null)
             {
                 gameObject.AddComponent<RogueDrive.Gameplay.Combat.RaiderSpawner>();
             }
 
             // Визуальные эффекты скорости и критического здоровья
-            if (FindFirstObjectByType<RogueDrive.Gameplay.VFX.SpeedLinesOverlay>() == null)
+            if (legacyArcadeRun && FindFirstObjectByType<RogueDrive.Gameplay.VFX.SpeedLinesOverlay>() == null)
             {
                 gameObject.AddComponent<RogueDrive.Gameplay.VFX.SpeedLinesOverlay>();
             }
-            if (FindFirstObjectByType<RogueDrive.Gameplay.VFX.CriticalHealthOverlay>() == null)
+            if (legacyArcadeRun && FindFirstObjectByType<RogueDrive.Gameplay.VFX.CriticalHealthOverlay>() == null)
             {
                 gameObject.AddComponent<RogueDrive.Gameplay.VFX.CriticalHealthOverlay>();
             }
 
             // Динамическая сложность (DDA), погода и пост-процессинг
-            if (FindFirstObjectByType<RogueDrive.Gameplay.Difficulty.DynamicDifficultyManager>() == null)
+            if (legacyArcadeRun && FindFirstObjectByType<RogueDrive.Gameplay.Difficulty.DynamicDifficultyManager>() == null)
             {
                 gameObject.AddComponent<RogueDrive.Gameplay.Difficulty.DynamicDifficultyManager>();
             }
-            if (FindFirstObjectByType<RogueDrive.Gameplay.Track.TrackWeatherHazardManager>() == null)
+            if (legacyArcadeRun && FindFirstObjectByType<RogueDrive.Gameplay.Track.TrackWeatherHazardManager>() == null)
             {
                 gameObject.AddComponent<RogueDrive.Gameplay.Track.TrackWeatherHazardManager>();
             }
@@ -90,12 +92,14 @@ namespace RogueDrive.Gameplay
             {
                 gameObject.AddComponent<RogueDrive.Gameplay.Track.CreepingStormBarrier>();
             }
-            if (FindFirstObjectByType<RogueDrive.Gameplay.Campaign.RadioBountyManager>() == null)
+            if (legacyArcadeRun && FindFirstObjectByType<RogueDrive.Gameplay.Campaign.RadioBountyManager>() == null)
             {
                 gameObject.AddComponent<RogueDrive.Gameplay.Campaign.RadioBountyManager>();
             }
             Camera mainCam = Camera.main;
-            if (mainCam != null && mainCam.GetComponent<RogueDrive.Gameplay.VFX.CameraPostProcessEffects>() == null)
+            var existingCar = FindFirstObjectByType<ArcadeCarController>();
+            bool continuousBunkerCamera = existingCar != null && existingCar.UsesGarageDriving;
+            if (!continuousBunkerCamera && mainCam != null && mainCam.GetComponent<RogueDrive.Gameplay.VFX.CameraPostProcessEffects>() == null)
             {
                 mainCam.gameObject.AddComponent<RogueDrive.Gameplay.VFX.CameraPostProcessEffects>();
             }
@@ -120,6 +124,7 @@ namespace RogueDrive.Gameplay
 
         public void ReportTravelled(float distance)
         {
+            if (StageRoute.Instance != null) return;
             if (IsGameOver || distance <= 0f)
                 return;
 
@@ -129,6 +134,8 @@ namespace RogueDrive.Gameplay
 
         public void ConsumeFuel(float amount)
         {
+            // Authored survival routes use the actual tank, not a second countdown.
+            if (StageRoute.Instance != null && VehicleModularState.Instance != null) return;
             if (IsGameOver || amount <= 0f)
                 return;
 
@@ -208,6 +215,14 @@ namespace RogueDrive.Gameplay
 
         public void TakeDamage(float amount)
         {
+            if(IsGameOver||amount<=0)return;
+            var vehicle=FindFirstObjectByType<ArcadeCarController>();
+            vehicle?.GetComponent<VehicleModularState>()?.ApplyComponentDamage(amount,Vector3.forward);
+            TakeChassisDamage(amount);
+        }
+
+        public void TakeChassisDamage(float amount)
+        {
             if (IsGameOver || amount <= 0f)
                 return;
 
@@ -221,6 +236,8 @@ namespace RogueDrive.Gameplay
             }
         }
 
+        private float lastFuelWarningTime;
+
         /// <summary>Вызывается контроллером машины, когда скорость при 0 топлива упала до полной остановки.</summary>
         public void ReportCarStopped()
         {
@@ -229,7 +246,17 @@ namespace RogueDrive.Gameplay
 
             if (IsOutOfFuel)
             {
-                EndRun("Топливо закончилось");
+                // Не завершаем заезд мгновенно! Даем игроку шанс выйти из машины [E],
+                // достать канистру из багажника или слить бензин с обочины до прихода бури!
+                if (Time.time - lastFuelWarningTime > 5.0f)
+                {
+                    lastFuelWarningTime = Time.time;
+                    if (RogueDrive.Gameplay.Hub.GaragePrologueManager.Instance != null)
+                    {
+                        RogueDrive.Gameplay.Hub.GaragePrologueManager.Instance.ShowNotification(
+                            "⚠️ ТОПЛИВО НА НУЛЕ! Выйдите из машины [E], достаньте канистру из багажника или слейте бензин с обочины до прихода шторма!", 4.5f);
+                    }
+                }
             }
         }
 
@@ -244,12 +271,21 @@ namespace RogueDrive.Gameplay
 
         public void Restart()
         {
+            if(Hub.JourneyCheckpoint.OwnsCurrentRun&&Hub.JourneyCheckpoint.RequestRestore(true))return;
+            if (Hub.GarageDepartureCheckpoint.OwnsCurrentRun && Hub.GarageDepartureCheckpoint.RequestRestore(true)) return;
             Time.timeScale = 1f;
+            if (SeamlessJourneyStream.Instance != null)
+            {
+                SceneManager.LoadScene(SeamlessJourneyStream.Instance.EntryScene);
+                return;
+            }
             SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
         }
 
         public void LoadGarage()
         {
+            if(Hub.JourneyCheckpoint.OwnsCurrentRun&&Hub.JourneyCheckpoint.RequestRestore(false))return;
+            if (Hub.GarageDepartureCheckpoint.OwnsCurrentRun && Hub.GarageDepartureCheckpoint.RequestRestore(false)) return;
             Time.timeScale = 1f;
             const string garageSceneName = "GarageScene";
             const string garageScenePath = "Assets/Scenes/GarageScene.unity";
@@ -285,10 +321,35 @@ namespace RogueDrive.Gameplay
         public bool IsCampaignVictory { get; private set; }
         public bool IsStageVictory { get; private set; }
         public int CurrentStageIndex { get; private set; } = 1;
-        public float StageTargetDistance => 3000f;
+        public void SetJourneyStage(int stageIndex)
+        {
+            if (!IsGameOver) CurrentStageIndex = Mathf.Clamp(stageIndex, 1, 4);
+        }
+        public void RestoreJourneyResources(float health,int coins)
+        {
+            Health=Mathf.Clamp(health,1,MaxHealth);CoinsCollected=Mathf.Max(0,coins);
+            HealthChanged?.Invoke(Health,MaxHealth);CoinsChanged?.Invoke(CoinsCollected);
+        }
+        public float StageTargetDistance => StageRoute.Instance != null ? StageRoute.Instance.Length : 3000f;
+
+        public void ReportRoutePosition(float distance)
+        {
+            if (IsGameOver) return;
+            Distance = Mathf.Clamp(distance, 0f, StageTargetDistance);
+            DistanceChanged?.Invoke(Distance);
+        }
+
+        public void SyncPhysicalFuel(float fraction)
+        {
+            if (IsGameOver) return;
+            Fuel = Mathf.Clamp01(fraction) * MaxFuel;
+            IsOutOfFuel = fraction <= .002f;
+            FuelChanged?.Invoke(Fuel, MaxFuel);
+        }
 
         public void ReportStageCompleted(int stageIndex)
         {
+            if (SeamlessJourneyStream.Instance != null && stageIndex < 4) return;
             if (IsGameOver || IsStageVictory)
                 return;
 
@@ -349,6 +410,12 @@ namespace RogueDrive.Gameplay
             EndReason = string.Empty;
         }
 
+        public void ReportPlayerDeath()
+        {
+            if (IsGameOver) return;
+            EndRun("Персонаж погиб");
+        }
+
         void EndRun(string reason)
         {
             if (IsGameOver)
@@ -361,9 +428,9 @@ namespace RogueDrive.Gameplay
             try
             {
                 var meta = RogueDrive.Meta.SaveService.GetActiveProgress();
-                if (meta != null)
+                if (meta != null && !(Hub.GaragePrologueManager.Instance?.IsPreviewRun??Application.isEditor))
                 {
-                    if (CoinsCollected > 0)
+                    if (CoinsCollected > 0 && ((!Hub.GarageDepartureCheckpoint.OwnsCurrentRun&&!Hub.JourneyCheckpoint.OwnsCurrentRun) || IsStageVictory || IsCampaignVictory))
                     {
                         meta.AddCoins(CoinsCollected);
                     }

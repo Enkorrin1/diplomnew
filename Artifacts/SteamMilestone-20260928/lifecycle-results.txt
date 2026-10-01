@@ -1,0 +1,21 @@
+PASS host application ready
+PASS host lobby connected
+PASS host alone cannot launch
+PASS client application ready
+PASS both peers see connected crew
+PASS host readiness replicated
+PASS countdown synchronized
+PASS unready cancels countdown
+PASS third application ready
+PASS full crew rejects third peer
+PASS both peers enter bunker with two players
+PASS one camera and audio listener on each peer
+PASS client returns to menu after shutdown
+PASS host removes disconnected player
+PASS client rejoins bunker
+PASS host departure returns both to menu
+PASS same process can host again
+PASS same client can join again
+PASS new session clears readiness
+PASS no runtime exceptions or audio filter conflicts
+RESULT PASS

@@ -1,0 +1,71 @@
+PASS host application ready
+PASS host connected
+PASS client application ready
+PASS client connected
+PASS shared quest spawned on both peers
+PASS one crew canvas per peer
+PASS remote generator request rejected at distance
+PASS station generator replicated
+PASS station wheel replicated
+PASS station battery replicated
+PASS station fuel replicated
+PASS fuel capped at 15 liters on both peers
+PASS station keys replicated
+PASS station gates replicated
+PASS client leaves prepared bunker
+PASS late join restores preparation
+PASS host approaches car
+PASS host tests departure without passenger
+PASS departure blocked while teammate is on foot
+PASS host selected role seated
+PASS client approaches car
+PASS client selected role seated
+PASS host health set before departure
+PASS bunker screenshots saved
+PASS both peers arrive on road
+PASS same vehicle and players survive transition
+PASS roles fuel and health preserved
+PASS one vehicle camera listener and HUD on both peers
+PASS shared supplies initialized on both peers
+PASS storm radar synchronized for both crew roles
+PASS distant and seated cache request grants nothing
+PASS remote player approaches actual roadside cache
+PASS timed search synchronized to both peers
+PASS competing actor cannot steal an ongoing search
+PASS owner cancels search on both peers
+PASS cancelled search starts again
+PASS leaving interaction radius cancels without rewards
+PASS search restarts after walking back
+PASS downed actor cannot continue search
+PASS downed fixture recovered before next search
+PASS full shared inventory preserves opened cache rewards
+PASS storm continues advancing during shared cache search
+PASS simultaneous claim grants patrol cache exactly once
+PASS repeated empty cache request grants nothing
+PASS medical cache supplies shared by both peers
+PASS navigator boards to mark the next supply stop
+PASS navigator marker synchronized to driver
+PASS repair cache search starts before connection loss
+PASS disconnect releases cache search lock
+PASS road reconnect restores shared supplies and marker
+PASS road reconnect restores visible shared HUD on both peers
+PASS late join retains exhausted patrol cache history
+PASS repair cache completes after reconnect without duplication
+PASS remote pistol reload spends shared ammunition
+PASS host pistol reload uses the same shared pool
+PASS consumed shared ammo cannot be farmed from empty cache
+PASS client boards as driver for crew actions
+PASS host boards as navigator for crew actions
+PASS driver repair request rejected without spending materials
+PASS navigator heals wounded driver from shared medkit
+PASS crew healing capped at 100 HP
+PASS navigator cannot repair while car is moving
+PASS navigator repairs hull and spends exactly two bolts
+PASS repair cooldown rejects duplicate command
+PASS repair caps hull at 100
+PASS healthy vehicle keeps repair materials
+PASS disabled engine rejects driver acceleration
+PASS disabled engine recovery consumes battery and bolts
+PASS missing recovery battery keeps remaining materials
+PASS no runtime exceptions
+RESULT PASS

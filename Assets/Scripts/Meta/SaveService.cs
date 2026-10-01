@@ -12,8 +12,7 @@ namespace RogueDrive.Meta
     ///
     /// Поддерживает:
     /// 1. Атомарную запись через временный файл с резервным копированием (.backup).
-    /// 2. Легковесную обфускацию/шифрование с префиксом RD1:, предотвращающую читерство
-    ///    и повреждение при ручном редактировании, с прозрачным fallback на чистый JSON.
+    /// 2. Легковесную обфускацию с префиксом RD1: и чтение старого чистого JSON.
     /// 3. Кэширование активного экземпляра MetaProgress в памяти для доступа из всех сцен.
     /// </summary>
     public static class SaveService
@@ -91,21 +90,31 @@ namespace RogueDrive.Meta
 
             try
             {
-                string json = JsonUtility.ToJson(data, true);
-                string encoded = Encrypt(json);
-                string temporary = FilePath + ".tmp";
-
-                File.WriteAllText(temporary, encoded, Encoding.UTF8);
-
-                if (File.Exists(FilePath))
-                    File.Copy(FilePath, BackupPath, true);
-
-                File.Copy(temporary, FilePath, true);
-                File.Delete(temporary);
+                SaveToPaths(data, FilePath, BackupPath);
             }
             catch (Exception exception)
             {
                 Debug.LogError($"[SaveService] Не удалось сохранить прогресс: {exception.Message}");
+            }
+        }
+
+        static void SaveToPaths(MetaProgressData data, string path, string backup)
+        {
+            string temporary = path + ".tmp";
+            byte[] bytes = Encoding.UTF8.GetBytes(Encrypt(JsonUtility.ToJson(data, true)));
+            using (var stream = new FileStream(temporary, FileMode.Create, FileAccess.Write, FileShare.None))
+            {
+                stream.Write(bytes, 0, bytes.Length);
+                stream.Flush(true);
+            }
+
+            if (!File.Exists(path))
+                File.Move(temporary, path);
+            else
+            {
+                // Never replace a known-good backup with a damaged primary after recovery.
+                bool primaryValid = TryRead(path) != null;
+                File.Replace(temporary, path, primaryValid ? backup : null);
             }
         }
 
@@ -129,6 +138,7 @@ namespace RogueDrive.Meta
             {
                 if (File.Exists(FilePath)) File.Delete(FilePath);
                 if (File.Exists(BackupPath)) File.Delete(BackupPath);
+                if (_activeProgress != null) _activeProgress.Changed -= SaveActive;
                 _activeProgress = null;
                 Debug.Log("[SaveService] Файлы сохранения удалены.");
             }
@@ -165,7 +175,7 @@ namespace RogueDrive.Meta
             }
             catch (Exception exception)
             {
-                Debug.LogError($"[SaveService] Не удалось прочитать {path}: {exception.Message}");
+                Debug.LogWarning($"[SaveService] Не удалось прочитать {path}: {exception.Message}");
                 return null;
             }
         }

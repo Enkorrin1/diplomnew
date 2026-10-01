@@ -16,9 +16,7 @@ namespace RogueDrive.Gameplay
     {
         [Header("Engine & Speed")]
         [SerializeField, Min(1f)] private float topSpeedMps = 28f;         // ~100 км/ч
-        [SerializeField, Min(1f)] private float nitroTopSpeedMps = 42f;    // ~150 км/ч
         [SerializeField, Min(1f)] private float acceleration = 30f;
-        [SerializeField, Min(1f)] private float nitroAcceleration = 55f;
         [SerializeField, Min(1f)] private float brakeForce = 45f;
         [SerializeField, Min(1f)] private float reverseSpeedMps = 10f;
 
@@ -28,9 +26,14 @@ namespace RogueDrive.Gameplay
         [SerializeField, Min(0f)] private float downforce = 15f;          // прижимная сила к дороге
         [SerializeField, Min(0f)] private float bodyRollTilt = 3.5f;       // наклон кузова в повороте
 
-        [Header("Fuel & Nitro Consumption")]
+        [Header("Chassis Dynamics")]
+        [SerializeField, Min(0f)] private float longitudinalForceDrop = 0.35f; // на сколько ниже ЦМ прикладывается тяга/тормоз (клевок/присед), м
+        [SerializeField, Min(0f)] private float rollCoupleArm = 0.6f;          // плечо пары сил крена от бокового ускорения, м
+        [SerializeField, Min(0f)] private float maxRollAcceleration = 10f;     // ограничение бокового ускорения для крена, м/с²
+        [SerializeField, Min(0f)] private float airLevelingTorque = 2.5f;      // выравнивание кузова в полёте
+
+        [Header("Fuel Consumption")]
         [SerializeField, Min(0f)] private float fuelPerSecond = 1.8f;
-        [SerializeField, Min(0f)] private float nitroPerSecond = 35f;
 
         [Header("Collision Damage")]
         [SerializeField, Min(0f)] private float baseObstacleDamage = 20f;
@@ -41,10 +44,21 @@ namespace RogueDrive.Gameplay
         [Header("Run Controller Reference")]
         [SerializeField] private GameRunController run;
 
+        [Tooltip("Keep the bunker vehicle, its suspension and camera throughout the first stage.")]
+        [SerializeField] private bool useGarageDriving;
+        private Hub.GarageDriveOutVehicle garageDriver;
+        public bool UsesGarageDriving => useGarageDriving;
+
+        private void OnEnable()
+        {
+            if (useGarageDriving) lastPosition = transform.position;
+        }
+
         Rigidbody body;
         SocketRegistry sockets;
         BoxCollider chassisCollider;
         Vector3 baseColliderCenter;
+        Vector3 baseColliderSize;
         Vector3 baseCenterOfMass;
         float baseLateralGrip;
         float baseDownforce;
@@ -52,10 +66,10 @@ namespace RogueDrive.Gameplay
         float baseLinearDamping;
         float currentLateralGrip;
         CarSuspensionUpgradeVisuals suspension;
+        VehicleModularState modularState;
 
         float throttleInput;
         float steerInput;
-        bool isNitroRequested;
         bool isHandbrakeActive;
         bool isGrounded;
         float lastGroundedTime;
@@ -64,8 +78,8 @@ namespace RogueDrive.Gameplay
         public float SpeedMps { get; private set; }
         public float SpeedKmh => SpeedMps * 3.6f;
         public float SteeringAngle => steerInput * 28f;
-        public float TopSpeedMps => IsNitroActive ? nitroTopSpeedMps : topSpeedMps;
-        public bool IsNitroActive { get; private set; }
+        public float TopSpeedMps => topSpeedMps;
+        public bool IsNitroActive => false; // Нитро полностью удалено по концепции Survival Racing
         public bool IsHandbrakeActive => isHandbrakeActive;
         public bool IsGrounded => isGrounded;
         public bool IsDrifting => body != null && (Mathf.Abs(transform.InverseTransformDirection(body.linearVelocity).x) > 2.8f || (isHandbrakeActive && Mathf.Abs(SpeedMps) > 4f));
@@ -73,6 +87,7 @@ namespace RogueDrive.Gameplay
         public GameRunController Run => run;
         public float PickupRadius => activeStats != null && activeStats.Get(StatId.PickupRadius) > 0f ? activeStats.Get(StatId.PickupRadius) : 6.5f;
 
+        public static bool JustDroveOutOfBunker = false;
         StatBlock activeStats;
 
         public void Configure(GameRunController controller)
@@ -83,14 +98,18 @@ namespace RogueDrive.Gameplay
         public void PlaceAtStart(Vector3 position, Quaternion rotation)
         {
             if (body == null) body = GetComponent<Rigidbody>();
+            bool wasKinematic = body.isKinematic;
+            if (wasKinematic) body.isKinematic = false;
             body.position = position; body.rotation = rotation;
             body.linearVelocity = Vector3.zero; body.angularVelocity = Vector3.zero;
+            if (wasKinematic) body.isKinematic = true;
             transform.SetPositionAndRotation(position,rotation); lastPosition = position;
         }
 
         public void BindStats(StatBlock stats)
         {
             activeStats = stats;
+            if (useGarageDriving) return;
             if (stats != null && body != null)
             {
                 float mass = stats.Get(StatId.Mass);
@@ -126,6 +145,17 @@ namespace RogueDrive.Gameplay
             body = GetComponent<Rigidbody>();
             sockets = GetComponent<SocketRegistry>();
 
+            // The authored bunker car already owns its model, colliders and inventory.
+            // Do not replace them or run the legacy save/respawn path on a seamless start.
+            if (useGarageDriving)
+            {
+                EnsureDiegeticHotspots();
+                if (GetComponent<VehiclePassengerEntry>() == null)
+                    gameObject.AddComponent<VehiclePassengerEntry>();
+                lastPosition = transform.position;
+                return;
+            }
+
             if (run == null)
             {
                 run = FindFirstObjectByType<GameRunController>();
@@ -143,10 +173,12 @@ namespace RogueDrive.Gameplay
             body.constraints = RigidbodyConstraints.None;
             body.linearDamping = 0.35f;
             body.angularDamping = 2.5f;
-            body.centerOfMass = new Vector3(0f, -0.2f, 0f);
             chassisCollider = GetComponent<BoxCollider>();
             baseColliderCenter = chassisCollider != null ? chassisCollider.center : Vector3.zero;
-            baseCenterOfMass = body.centerOfMass;
+            baseColliderSize = chassisCollider != null ? chassisCollider.size : Vector3.zero;
+            // Временный ЦМ до подстановки модели; окончательный задаёт ConfigureChassisForSuspension()
+            baseCenterOfMass = new Vector3(0f, 0.3f, 0f);
+            body.centerOfMass = baseCenterOfMass;
             baseLateralGrip = lateralGrip;
             baseDownforce = downforce;
             baseBodyRollTilt = bodyRollTilt;
@@ -191,8 +223,28 @@ namespace RogueDrive.Gameplay
                 gameObject.AddComponent<CarSuspensionUpgradeVisuals>();
             suspension = GetComponent<CarSuspensionUpgradeVisuals>();
 
-            if (GetComponent<RogueDrive.Gameplay.Combat.VehicleCombatSkills>() == null)
-                gameObject.AddComponent<RogueDrive.Gameplay.Combat.VehicleCombatSkills>();
+            if (GetComponent<VehicleModularState>() == null)
+                gameObject.AddComponent<VehicleModularState>();
+            modularState = GetComponent<VehicleModularState>();
+
+            if (GetComponent<VehicleCargoTrunk>() == null)
+                gameObject.AddComponent<VehicleCargoTrunk>();
+
+            if (GetComponent<VehicleBloodSplatterVFX>() == null)
+                gameObject.AddComponent<VehicleBloodSplatterVFX>();
+
+            if (GetComponent<VehicleRadioSystem>() == null)
+                gameObject.AddComponent<VehicleRadioSystem>();
+
+            if (GetComponent<VehiclePassengerEntry>() == null)
+                gameObject.AddComponent<VehiclePassengerEntry>();
+
+            EnsureDiegeticHotspots();
+            EnsureTacticalHud();
+
+            // Коллайдер шасси и центр масс под реальную геометрию колёс: днище над дорогой,
+            // машина стоит на пружинах, а не на коллайдере
+            ConfigureChassisForSuspension();
 
             if (AudioManager.Instance == null)
             {
@@ -201,6 +253,67 @@ namespace RogueDrive.Gameplay
             }
 
             lastPosition = transform.position;
+
+            if (JustDroveOutOfBunker)
+            {
+                JustDroveOutOfBunker = false;
+                if (body != null)
+                {
+                    body.linearVelocity = transform.forward * 16f;
+                }
+            }
+
+            if (PlayerPrefs.GetInt("BunkerDataSaved", 0) == 1)
+            {
+                PlayerPrefs.DeleteKey("BunkerDataSaved");
+
+                // 1. Восстанавливаем сохраненное топливо и радиатор
+                if (modularState != null)
+                {
+                    float savedFuel = PlayerPrefs.GetFloat("BunkerSaved_Fuel", 20f);
+                    float savedWater = PlayerPrefs.GetFloat("BunkerSaved_Water", 10f);
+                    modularState.AddFuel(savedFuel - modularState.FuelLiters);
+                    modularState.AddRadiatorWater(savedWater - modularState.RadiatorWater);
+                }
+
+                // 2. Восстанавливаем багажник
+                var trunk = GetComponent<VehicleCargoTrunk>();
+                if (trunk != null && PlayerPrefs.HasKey("BunkerSaved_Trunk"))
+                {
+                    trunk.ClearCargo();
+                    string rawTrunk = PlayerPrefs.GetString("BunkerSaved_Trunk", "");
+                    if (!string.IsNullOrEmpty(rawTrunk))
+                    {
+                        string[] parts = rawTrunk.Split(',');
+                        foreach (var p in parts)
+                        {
+                            if (int.TryParse(p, out int itemInt))
+                            {
+                                trunk.TryStoreItem((Hub.BunkerAssemblyItemType)itemInt, out _);
+                            }
+                        }
+                    }
+                }
+
+                // 3. Восстанавливаем карманы игрока
+                var pocket = FindFirstObjectByType<Hub.PlayerPocketInventory>();
+                if (pocket != null && PlayerPrefs.HasKey("BunkerSaved_Pocket"))
+                {
+                    string rawPocket = PlayerPrefs.GetString("BunkerSaved_Pocket", "");
+                    if (!string.IsNullOrEmpty(rawPocket))
+                    {
+                        string[] slots = rawPocket.Split(';');
+                        foreach (var s in slots)
+                        {
+                            string[] fields = s.Split(':');
+                            if (fields.Length >= 3 && int.TryParse(fields[2], out int count))
+                            {
+                                pocket.TryAddItem(fields[0], fields[1], count);
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         void RefreshUpgradeHandling()
@@ -214,16 +327,53 @@ namespace RogueDrive.Gameplay
                 body.linearDamping = baseLinearDamping + suspensionQuality * 0.35f;
         }
 
-        /// <summary>Настраивает реальный дорожный просвет и устойчивость шасси.</summary>
+        /// <summary>Настраивает устойчивость шасси под уровень подвески. Просвет даёт сама подвеска (rideLift).</summary>
         public void ApplySuspensionUpgrade(int level, float clearance)
         {
-            if (chassisCollider != null)
-                chassisCollider.center = baseColliderCenter;
-
             if (body != null)
                 body.centerOfMass = baseCenterOfMass - Vector3.up * Mathf.Min(0.12f, level * 0.02f);
 
             RefreshUpgradeHandling();
+        }
+
+        /// <summary>
+        /// Поднимает днище коллайдера шасси над дорогой на величину просвета подвески и ставит центр масс
+        /// на уровень ступиц. Без этого коллайдер (низ на уровне пятна контакта колёс) ложится на дорогу
+        /// и пружины не несут нагрузку.
+        /// </summary>
+        void ConfigureChassisForSuspension()
+        {
+            float wheelCenterY = 0.35f;
+            float wheelRadius = 0.35f;
+            if (suspension != null)
+                suspension.TryGetWheelGeometry(out wheelCenterY, out wheelRadius);
+
+            float wheelBottomY = wheelCenterY - wheelRadius;
+            float clearance = suspension != null ? suspension.GroundClearance : 0.22f;
+
+            if (chassisCollider != null && baseColliderSize.y > 0.01f)
+            {
+                float top = baseColliderCenter.y + baseColliderSize.y * 0.5f;
+                float baseBottom = baseColliderCenter.y - baseColliderSize.y * 0.5f;
+                float wantedBottom = wheelBottomY + clearance;
+                float bottom = Mathf.Min(top - 0.3f, Mathf.Max(baseBottom, wantedBottom));
+                if (bottom > baseBottom + 0.001f)
+                {
+                    Vector3 size = baseColliderSize;
+                    Vector3 center = baseColliderCenter;
+                    size.y = top - bottom;
+                    center.y = (top + bottom) * 0.5f;
+                    chassisCollider.size = size;
+                    chassisCollider.center = center;
+                }
+            }
+
+            if (body != null)
+            {
+                baseCenterOfMass = new Vector3(0f, Mathf.Max(wheelBottomY + 0.05f, wheelCenterY * 0.9f), 0f);
+                body.centerOfMass = baseCenterOfMass;
+                body.ResetInertiaTensor();
+            }
         }
 
         void CleanChildColliders()
@@ -324,12 +474,34 @@ namespace RogueDrive.Gameplay
 
         private void Update()
         {
+            if (useGarageDriving)
+            {
+                if (garageDriver == null) garageDriver = GetComponent<Hub.GarageDriveOutVehicle>();
+                if (modularState == null) modularState = GetComponent<VehicleModularState>();
+                SpeedMps = Vector3.Dot(body.linearVelocity, transform.forward);
+                steerInput = garageDriver != null ? garageDriver.SteeringAngle / 28f : 0f;
+                isGrounded = garageDriver != null && garageDriver.IsGrounded;
+                isHandbrakeActive = garageDriver != null && garageDriver.IsHandbrakeActive;
+                bool driving = garageDriver != null && garageDriver.isActiveAndEnabled && garageDriver.IsDrivingEnabled;
+                if (driving && run != null && run.gameObject.activeInHierarchy && !run.IsGameOver)
+                {
+                    float travelled = Vector3.Distance(transform.position, lastPosition);
+                    if (SpeedMps > 0f) run.ReportTravelled(travelled);
+                    if (Mathf.Abs(garageDriver.ThrottleInput) > .01f && garageDriver.ThrottleInput*SpeedMps>=-.1f && (modularState == null || modularState.CanProvidePower) && !run.IsOutOfFuel)
+                    {
+                        modularState?.ConsumeFuel(garageDriver.ThrottleInput, Time.deltaTime);
+                        run.ConsumeFuel(fuelPerSecond * Time.deltaTime * (modularState?.Workshop?.Stats.fuel??1));
+                    }
+                    if ((run.IsOutOfFuel || (modularState != null && !modularState.HasFuel)) && Mathf.Abs(SpeedMps) < 0.25f)
+                        run.ReportCarStopped();
+                }
+                lastPosition = transform.position;
+                return;
+            }
             if (run != null && run.IsGameOver)
             {
                 throttleInput = 0f;
                 steerInput = 0f;
-                isNitroRequested = false;
-                IsNitroActive = false;
                 return;
             }
 
@@ -351,10 +523,8 @@ namespace RogueDrive.Gameplay
 
             throttleInput = Mathf.Clamp(v, -1f, 1f);
             steerInput = Mathf.Clamp(h, -1f, 1f);
-            // Нитро: Shift, ПКМ (правая кнопка мыши), геймпад A / X / RB
-            isNitroRequested = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)
-                || Input.GetMouseButton(1)
-                || Input.GetKey(KeyCode.JoystickButton0) || Input.GetKey(KeyCode.JoystickButton2) || Input.GetKey(KeyCode.JoystickButton5);
+            if((modularState?.Workshop?.Busy??false)||(RogueDrive.UI.VehicleDashboardPanelsUI.Instance?.IsAnyPanelOpen??false)){throttleInput=0;steerInput=0;}
+
             // Ручной тормоз: Пробел, геймпад B / Circle
             isHandbrakeActive = Input.GetKey(KeyCode.Space)
                 || Input.GetKey(KeyCode.JoystickButton1);
@@ -363,26 +533,20 @@ namespace RogueDrive.Gameplay
             if (isHandbrakeActive)
             {
                 throttleInput = 0f;
-                isNitroRequested = false;
             }
 
-            // Обработка расхода нитро
-            bool hasFuel = run == null || !run.IsOutOfFuel;
-            if (isNitroRequested && throttleInput > 0f && hasFuel)
+            // Расход топлива в модульной системе и в GameRunController
+            bool hasFuel = (modularState == null || modularState.CanProvidePower) && (run == null || !run.IsOutOfFuel);
+            if (Mathf.Abs(throttleInput) > .01f && throttleInput*SpeedMps>=-.1f && hasFuel)
             {
-                IsNitroActive = run == null || run.TryConsumeNitro(nitroPerSecond * Time.deltaTime);
-            }
-            else
-            {
-                IsNitroActive = false;
-            }
+                modularState?.ConsumeFuel(throttleInput, Time.deltaTime);
 
-            // Расход топлива при нажатой педали газа (с учётом модификатора FuelDrain)
-            if (run != null && throttleInput > 0f && !run.IsOutOfFuel)
-            {
-                float fuelDrainMult = (activeStats != null && activeStats.Get(StatId.FuelDrain) > 0f) ? (activeStats.Get(StatId.FuelDrain) / 1.8f) : 1.0f;
-                float fuelCost = fuelPerSecond * fuelDrainMult * (IsNitroActive ? 1.5f : 1.0f) * Time.deltaTime;
-                run.ConsumeFuel(fuelCost);
+                if (run != null)
+                {
+                    float fuelDrainMult = (activeStats != null && activeStats.Get(StatId.FuelDrain) > 0f) ? (activeStats.Get(StatId.FuelDrain) / 1.8f) : 1.0f;
+                    float fuelCost = fuelPerSecond * fuelDrainMult * Time.deltaTime * (modularState?.Workshop?.Stats.fuel??1);
+                    run.ConsumeFuel(fuelCost);
+                }
             }
 
             // Расчёт пройденной дистанции
@@ -394,20 +558,22 @@ namespace RogueDrive.Gameplay
             lastPosition = transform.position;
 
             // Проверка остановки при пустом баке (инерционный накат окончен)
-            if (run != null && run.IsOutOfFuel && Mathf.Abs(SpeedMps) < 0.25f)
+            bool isDry = (run != null && run.IsOutOfFuel) || (modularState != null && !modularState.HasFuel);
+            if (isDry && Mathf.Abs(SpeedMps) < 0.25f)
             {
-                run.ReportCarStopped();
+                run?.ReportCarStopped();
             }
 
             // Визуальный крен кузова в поворотах
             UpdateVisualRoll(Time.deltaTime);
 
-            // Обновление звука мотора и нитро
-            AudioManager.Instance?.UpdateEngineSound(SpeedKmh, TopSpeedMps * 3.6f, IsNitroActive);
+            // Обновление звука мотора
+            AudioManager.Instance?.UpdateEngineSound(SpeedKmh, TopSpeedMps * 3.6f, false);
         }
 
         private void FixedUpdate()
         {
+            if (useGarageDriving) return;
             isGrounded = suspension != null && suspension.Simulate(body);
             if (isGrounded) lastGroundedTime = Time.time;
             SpeedMps = Vector3.Dot(body.linearVelocity, transform.forward);
@@ -431,9 +597,30 @@ namespace RogueDrive.Gameplay
             }
             else
             {
-                // В воздухе: дополнительная стабилизация и возможность подруливания
+                // В воздухе: выравнивание кузова и возможность подруливания
+                ApplyAirLeveling();
                 ApplySteeringAirborne();
             }
+        }
+
+        /// <summary>
+        /// Продольное ускорение прикладывается ниже центра масс — так тяга приподнимает нос,
+        /// а торможение даёт клевок, и пружины подвески это отрабатывают.
+        /// </summary>
+        void AddLongitudinalAcceleration(Vector3 acceleration)
+        {
+            Vector3 point = body.worldCenterOfMass - transform.up * longitudinalForceDrop;
+            body.AddForceAtPosition(acceleration, point, ForceMode.Acceleration);
+        }
+
+        /// <summary>Плавно возвращает кузов в горизонт во время полёта.</summary>
+        void ApplyAirLeveling()
+        {
+            if (airLevelingTorque <= 0f) return;
+            Vector3 axis = Vector3.Cross(transform.up, Vector3.up);
+            float angle = Vector3.Angle(transform.up, Vector3.up) * Mathf.Deg2Rad;
+            if (axis.sqrMagnitude < 1e-6f || angle < 0.01f) return;
+            body.AddTorque(axis.normalized * (angle * airLevelingTorque), ForceMode.Acceleration);
         }
 
         void ApplyDriveForces()
@@ -441,15 +628,15 @@ namespace RogueDrive.Gameplay
             if (run != null && run.IsGameOver)
                 return;
 
-            // Если топливо закончилось — двигатель заглушен, тяга отсутствует (чистый накат)
-            if (run != null && run.IsOutOfFuel)
-            {
-                return;
-            }
+            bool engineAvailable=(run==null||!run.IsOutOfFuel)&&(modularState==null||modularState.CanProvidePower);
 
             float speedMult = (activeStats != null && activeStats.Get(StatId.Speed) > 0f) ? (activeStats.Get(StatId.Speed) / 28f) : 1.0f;
-            float currentTopSpeed = (IsNitroActive ? nitroTopSpeedMps : topSpeedMps) * speedMult;
-            float currentAccel = (IsNitroActive ? nitroAcceleration : acceleration) * Mathf.Max(0.7f, speedMult);
+            float currentTopSpeed = topSpeedMps * speedMult;
+            float currentAccel = acceleration * Mathf.Max(0.7f, speedMult);
+            if(modularState?.Workshop!=null)currentAccel*=Mathf.Max(.25f,modularState.Workshop.Stats.power)*1200f/(1200f+modularState.Workshop.Stats.mass);
+
+            // Штраф мощности при перегреве мотора (выкипела вода в радиаторе)
+            currentAccel*=engineAvailable?(modularState?.EnginePowerMultiplier??1):0;
 
             // Ручной тормоз (Пробел)
             if (isHandbrakeActive)
@@ -457,17 +644,22 @@ namespace RogueDrive.Gameplay
                 if (Mathf.Abs(SpeedMps) > 0.3f)
                 {
                     float hbForce = brakeForce * 1.6f;
-                    body.AddForce(-transform.forward * (Mathf.Sign(SpeedMps) * hbForce), ForceMode.Acceleration);
+                    AddLongitudinalAcceleration(-transform.forward * (Mathf.Sign(SpeedMps) * hbForce));
                 }
                 return;
             }
 
+            if(throttleInput>.05f && SpeedMps<-.3f)
+            {
+                AddLongitudinalAcceleration(transform.forward*Mathf.Min(brakeForce,-SpeedMps/Time.fixedDeltaTime));
+                return;
+            }
             if (throttleInput > 0.05f)
             {
                 if (SpeedMps < currentTopSpeed)
                 {
                     float force = currentAccel * throttleInput;
-                    body.AddForce(transform.forward * force, ForceMode.Acceleration);
+                    AddLongitudinalAcceleration(transform.forward * force);
                 }
             }
             else if (throttleInput < -0.05f)
@@ -475,19 +667,29 @@ namespace RogueDrive.Gameplay
                 if (SpeedMps > 0.5f)
                 {
                     // Тормоз при движении вперед
-                    body.AddForce(-transform.forward * (brakeForce * Mathf.Abs(throttleInput)), ForceMode.Acceleration);
+                    AddLongitudinalAcceleration(-transform.forward * (brakeForce * Mathf.Abs(throttleInput)));
                 }
                 else if (SpeedMps > -reverseSpeedMps)
                 {
                     // Задний ход
-                    body.AddForce(-transform.forward * (acceleration * 0.7f * Mathf.Abs(throttleInput)), ForceMode.Acceleration);
+                    AddLongitudinalAcceleration(-transform.forward * (currentAccel * 0.7f * Mathf.Abs(throttleInput)));
                 }
             }
         }
 
         void ApplySteering()
         {
-            if (Mathf.Abs(steerInput) < 0.05f)
+            // Увод машины в сторону при пробитых или неравномерно изношенных шинах
+            float tirePull = 0f;
+            if (modularState != null)
+            {
+                float leftTires = (modularState.GetTireIntegrity(0) + modularState.GetTireIntegrity(2)) * 0.5f;
+                float rightTires = (modularState.GetTireIntegrity(1) + modularState.GetTireIntegrity(3)) * 0.5f;
+                tirePull = (rightTires - leftTires) * 0.4f; // Тянет в сторону пробитого колеса
+            }
+
+            float effectiveSteer = steerInput + tirePull;
+            if (Mathf.Abs(effectiveSteer) < 0.03f)
                 return;
 
             // Heading changes require longitudinal motion; stopped wheels can
@@ -497,7 +699,7 @@ namespace RogueDrive.Gameplay
             float speedRatio = Mathf.Clamp01(Mathf.Abs(SpeedMps) / 5f);
             float speedFactor = speedRatio;
             float handbrakeSteerMultiplier = isHandbrakeActive ? 1.35f : 1.0f;
-            float turnAmount = steerInput * steerSpeed * Mathf.Clamp(PlayerPrefs.GetFloat("SteerSensitivity",1f),.5f,2f) * speedFactor * handbrakeSteerMultiplier * Time.fixedDeltaTime;
+            float turnAmount = effectiveSteer * steerSpeed * Mathf.Clamp(PlayerPrefs.GetFloat("SteerSensitivity",1f),.5f,2f) * speedFactor * handbrakeSteerMultiplier * Time.fixedDeltaTime;
 
             // Инвертируем поворот при движении назад
             if (SpeedMps < 0f)
@@ -522,10 +724,24 @@ namespace RogueDrive.Gameplay
         {
             Vector3 right = transform.right;
             float lateralVelocity = Vector3.Dot(body.linearVelocity, right);
+            // Учитываем износ и прокол шин в модульной системе
+            float tireGrip = modularState != null ? modularState.GetAverageTireGrip() : 1.0f;
             // При активном ручном тормозе ослабляем боковое сцепление для эффектного входа в занос
-            float grip = isHandbrakeActive ? (currentLateralGrip * 0.35f) : currentLateralGrip;
+            float grip = isHandbrakeActive ? (currentLateralGrip * 0.35f) : (currentLateralGrip * tireGrip);
             Vector3 counterForce = -right * (lateralVelocity * grip);
+            // Импульс сцепления — строго через центр масс: гашение скольжения не должно опрокидывать машину
             body.AddForce(counterForce, ForceMode.VelocityChange);
+
+            // Крен кузова наружу поворота: пара сил вокруг ЦМ, ограниченная по боковому ускорению,
+            // которую отрабатывают пружины и стабилизатор подвески
+            if (rollCoupleArm > 0f && isGrounded)
+            {
+                float lateralAccel = Mathf.Clamp(lateralVelocity * grip / Time.fixedDeltaTime, -maxRollAcceleration, maxRollAcceleration);
+                Vector3 couple = -right * lateralAccel;
+                Vector3 com = body.worldCenterOfMass;
+                body.AddForceAtPosition(couple, com - transform.up * rollCoupleArm, ForceMode.Acceleration);
+                body.AddForceAtPosition(-couple, com + transform.up * rollCoupleArm, ForceMode.Acceleration);
+            }
         }
 
         void CheckGrounded()
@@ -578,7 +794,7 @@ namespace RogueDrive.Gameplay
 
         void HandleObstacleHit(GameObject targetGo)
         {
-            if (run == null || run.IsGameOver)
+            if (!enabled || run == null || !run.gameObject.activeInHierarchy || run.IsGameOver)
                 return;
 
             TrackObstacle obstacle = targetGo.GetComponentInParent<TrackObstacle>();
@@ -588,18 +804,77 @@ namespace RogueDrive.Gameplay
             // Эффект удара: сотрясение камеры и звук скрежета
             AudioManager.Instance?.PlayCrash(0.9f);
             ArcadeCameraFollow.Instance?.TriggerShake(0.7f, 0.3f);
-            // Ordinary road furniture produces a small impact, not the explosive ram effect.
             CombatVfxCatalog.Instance?.SpawnBulletHit(targetGo.transform.position, Quaternion.LookRotation(transform.forward));
 
-            // Если на полном ходу или на нитро — препятствие сносится легче
-            float damage = baseObstacleDamage;
-            if (IsNitroActive)
+            // Поглощение удара кенгурятником или радиатором в модульной системе
+            // GameRunController routes obstacle damage to the vehicle modules once.
+
+            // Если наезд произошел на высокой скорости — брызги крови на кузов
+            if (SpeedKmh > 15f)
             {
-                damage *= 0.4f; // нитро защищает корпус при таране
-                run.AddNitro(15f); // бонус заряда за агрессивный таран
+                VehicleBloodSplatterVFX.Instance?.RegisterZombieRam(targetGo.transform.position, transform.forward, SpeedKmh);
             }
 
-            run.TakeDamage(damage);
+            run.TakeDamage(baseObstacleDamage);
+        }
+
+        private void EnsureDiegeticHotspots()
+        {
+            if (transform.Find("Hotspot_Tire_FL") == null)
+                CreateTireHotspot("Hotspot_Tire_FL", 0, "Переднее левое", new Vector3(-1.0f, 0.35f, 1.25f));
+            if (transform.Find("Hotspot_Tire_FR") == null)
+                CreateTireHotspot("Hotspot_Tire_FR", 1, "Переднее правое", new Vector3(1.0f, 0.35f, 1.25f));
+            if (transform.Find("Hotspot_Tire_RL") == null)
+                CreateTireHotspot("Hotspot_Tire_RL", 2, "Заднее левое", new Vector3(-1.0f, 0.35f, -1.25f));
+            if (transform.Find("Hotspot_Tire_RR") == null)
+                CreateTireHotspot("Hotspot_Tire_RR", 3, "Заднее правое", new Vector3(1.0f, 0.35f, -1.25f));
+
+            if (!HasInspectionHotspot(Hub.VehicleInspectionHotspot.HotspotType.EngineHood))
+                CreateInspectionHotspot("Hotspot_Hood", RogueDrive.Gameplay.Hub.VehicleInspectionHotspot.HotspotType.EngineHood, new Vector3(0f, 0.7f, 1.9f), new Vector3(1.4f, 1.2f, 1.2f));
+            if (!HasInspectionHotspot(Hub.VehicleInspectionHotspot.HotspotType.Trunk))
+                CreateInspectionHotspot("Hotspot_Trunk", RogueDrive.Gameplay.Hub.VehicleInspectionHotspot.HotspotType.Trunk, new Vector3(0f, 0.7f, -1.9f), new Vector3(1.4f, 1.2f, 1.2f));
+            if (!HasInspectionHotspot(Hub.VehicleInspectionHotspot.HotspotType.FuelInlet))
+                CreateInspectionHotspot("Hotspot_Fuel", RogueDrive.Gameplay.Hub.VehicleInspectionHotspot.HotspotType.FuelInlet, new Vector3(-1.15f, 0.65f, -1.1f), new Vector3(0.8f, 1.0f, 0.8f));
+        }
+
+        private bool HasInspectionHotspot(Hub.VehicleInspectionHotspot.HotspotType type)
+        {
+            foreach(var spot in GetComponentsInChildren<Hub.VehicleInspectionHotspot>(true))
+                if(spot.Type==type)return true;
+            return false;
+        }
+
+        private void CreateTireHotspot(string name, int tireIdx, string label, Vector3 localPos)
+        {
+            GameObject go = new GameObject(name);
+            go.transform.SetParent(transform, false);
+            go.transform.localPosition = localPos;
+            BoxCollider box = go.AddComponent<BoxCollider>();
+            box.isTrigger = true;
+            box.size = new Vector3(0.8f, 0.8f, 0.8f);
+            var hotspot = go.AddComponent<RogueDrive.Gameplay.Hub.VehicleTireHotspot>();
+            hotspot.Configure(tireIdx, label);
+        }
+
+        private void CreateInspectionHotspot(string name, RogueDrive.Gameplay.Hub.VehicleInspectionHotspot.HotspotType type, Vector3 localPos, Vector3 boxSize)
+        {
+            GameObject go = new GameObject(name);
+            go.transform.SetParent(transform, false);
+            go.transform.localPosition = localPos;
+            BoxCollider box = go.AddComponent<BoxCollider>();
+            box.isTrigger = true;
+            box.size = boxSize;
+            var hotspot = go.AddComponent<RogueDrive.Gameplay.Hub.VehicleInspectionHotspot>();
+            hotspot.Configure(type);
+        }
+
+        private void EnsureTacticalHud()
+        {
+            if (FindFirstObjectByType<RogueDrive.UI.VehicleModularTacticalHud>() == null)
+            {
+                GameObject hudGo = new GameObject("VehicleModularTacticalHud", typeof(RogueDrive.UI.VehicleModularTacticalHud));
+                DontDestroyOnLoad(hudGo);
+            }
         }
     }
 }

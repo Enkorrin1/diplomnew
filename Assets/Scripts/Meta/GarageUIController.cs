@@ -71,11 +71,15 @@ namespace RogueDrive.Meta
         bool _isDragging;
         private RogueDrive.UI.SceneUIView sceneView;
         Vector2 _lastMousePos;
-
+        private bool _isBunkerHub;
 
         private void Awake()
         {
             useSceneUI = true;
+            _isBunkerHub = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == "GarageScene" ||
+                           FindFirstObjectByType<RogueDrive.Gameplay.Hub.BunkerStarterCarAssembly>() != null ||
+                           FindFirstObjectByType<RogueDrive.Gameplay.Hub.GaragePlayerController>() != null;
+
             if (catalog == null)
             {
                 catalog = Resources.Load<GarageCatalog>("GarageCatalog");
@@ -92,10 +96,11 @@ namespace RogueDrive.Meta
 
             _meta = SaveService.GetActiveProgress(tracks, cars);
 
-            // РќР°С…РѕРґРёРј РёРЅРґРµРєСЃ СЃРѕС…СЂР°РЅС‘РЅРЅРѕР№ РІС‹Р±СЂР°РЅРЅРѕР№ РјР°С€РёРЅС‹
+            // Находим индекс сохранённой выбранной машины
             if (catalog != null && catalog.Cars.Count > 0)
             {
-                string savedId = _meta.SelectedCar != null ? _meta.SelectedCar.Id : catalog.Cars[0].Id;
+                // В бункере сборки стартовым автомобилем всегда является Седан ("light")
+                string savedId = _isBunkerHub ? "light" : (_meta.SelectedCar != null ? _meta.SelectedCar.Id : catalog.Cars[0].Id);
                 for (int i = 0; i < catalog.Cars.Count; i++)
                 {
                     if (catalog.Cars[i] != null && catalog.Cars[i].Id == savedId)
@@ -103,6 +108,11 @@ namespace RogueDrive.Meta
                         _selectedCarIndex = i;
                         break;
                     }
+                }
+                if (_isBunkerHub && _meta != null && (_meta.SelectedCar == null || _meta.SelectedCar.Id != "light"))
+                {
+                    _meta.SelectCar("light");
+                    SaveService.SaveActive();
                 }
             }
         }
@@ -117,9 +127,9 @@ namespace RogueDrive.Meta
         {
             if (sceneView != null && sceneView.BlocksBackgroundInput) return;
 
-            // Р•СЃР»Рё РІ РіР°СЂР°Р¶Рµ Р°РєС‚РёРІРµРЅ СЂРµР¶РёРј РѕС‚ РїРµСЂРІРѕРіРѕ Р»РёС†Р° (GaragePlayerController),
-            // РѕС‚РєР»СЋС‡Р°РµРј РїРµСЂРµС…РІР°С‚ РєР»Р°РІРёС€ РјРµРЅСЋ (WASD) Рё Р°РІС‚Рѕ-РІСЂР°С‰РµРЅРёРµ РїРѕРґРёСѓРјР°:
-            if (FindFirstObjectByType<RogueDrive.Gameplay.Hub.GaragePlayerController>() != null)
+            // В 3D-бункере (GarageScene) управление ходьбой, сборкой и машиной осуществляют контроллеры от первого лица.
+            // Полностью отключаем вращение подиума, авто-переключение машин и перехват клавиш (E, WASD, Space):
+            if (_isBunkerHub || UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == "GarageScene")
             {
                 return;
             }
@@ -243,6 +253,42 @@ namespace RogueDrive.Meta
             if (podiumAnchor == null || catalog == null || catalog.Cars.Count == 0)
                 return;
 
+            bool isCoop = RogueDrive.Gameplay.Coop.CoopSession.Instance != null && 
+                          RogueDrive.Gameplay.Coop.CoopSession.Instance.Manager != null && 
+                          RogueDrive.Gameplay.Coop.CoopSession.Instance.Manager.IsListening;
+
+            if (isCoop)
+            {
+                Transform existingCar = podiumAnchor.Find("Classic Car_9");
+                if (existingCar != null) existingCar.gameObject.SetActive(false);
+                return;
+            }
+
+            bool isBunkerHub = FindFirstObjectByType<RogueDrive.Gameplay.Hub.BunkerStarterCarAssembly>() != null ||
+                               FindFirstObjectByType<RogueDrive.Gameplay.Hub.GaragePlayerController>() != null;
+
+            if (isBunkerHub)
+            {
+                Transform existingCar = podiumAnchor.Find("Classic Car_9");
+                if (existingCar != null)
+                {
+                    existingCar.gameObject.SetActive(true);
+                    _currentCarModel = existingCar.gameObject;
+
+                    _currentWheelVisuals = _currentCarModel.GetComponent<CarWheelUpgradeVisuals>() ?? _currentCarModel.AddComponent<CarWheelUpgradeVisuals>();
+                    if (catalog != null && catalog.WheelUpgradePrefabs != null && catalog.WheelUpgradePrefabs.Length > 0)
+                    {
+                        _currentWheelVisuals.Configure(catalog.WheelUpgradePrefabs);
+                    }
+                    _currentWheelVisuals.RefreshForCurrentProgress("light");
+                    _currentSuspensionVisuals = _currentCarModel.GetComponent<CarSuspensionUpgradeVisuals>() ?? _currentCarModel.AddComponent<CarSuspensionUpgradeVisuals>();
+                    _currentSuspensionVisuals.RefreshForCurrentProgress("light");
+                    _currentTuningVisuals = _currentCarModel.GetComponent<RogueDrive.Gameplay.VFX.CarVisualTuning>() ?? _currentCarModel.AddComponent<RogueDrive.Gameplay.VFX.CarVisualTuning>();
+                    _currentTuningVisuals.RefreshTuning("light", _meta);
+                    return;
+                }
+            }
+
             if (_currentCarModel != null)
             {
                 Destroy(_currentCarModel);
@@ -328,8 +374,6 @@ namespace RogueDrive.Meta
                 CreateMeshPart(parent, $"Wheel_{i + 1}", wheelOffsets[i], new Vector3(0.25f, 0.58f, 0.58f), new Color(0.1f, 0.1f, 0.12f));
             }
 
-            Transform turret = CreateMeshPart(parent, "Turret_Base", new Vector3(0f, 1.25f, -0.2f), new Vector3(0.5f, 0.15f, 0.5f), new Color(0.25f, 0.28f, 0.35f));
-            CreateMeshPart(turret, "Turret_Barrel", new Vector3(0f, 0.15f, 0.4f), new Vector3(0.12f, 0.12f, 0.65f), new Color(0.85f, 0.35f, 0.15f));
         }
 
         private Transform CreateMeshPart(Transform parent, string name, Vector3 pos, Vector3 scale, Color color)

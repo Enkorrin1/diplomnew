@@ -243,6 +243,9 @@ namespace RogueDrive.Gameplay
                 {
                     run.TakeDamage(contactDamage * 0.2f); // легкий урон автомобилю
                 }
+
+                // Кровь зомби оседает на капоте и бампере
+                RogueDrive.Gameplay.VFX.VehicleBloodSplatterVFX.Instance?.RegisterZombieRam(transform.position, transform.up, car.SpeedKmh);
             }
             else
             {
@@ -263,6 +266,7 @@ namespace RogueDrive.Gameplay
                         carBody.linearVelocity *= 0.5f;
                     }
                     TakeDamage(carSpeed * 10f * ramVulnerability);
+                    RogueDrive.Gameplay.VFX.VehicleBloodSplatterVFX.Instance?.RegisterZombieRam(transform.position, transform.up, car.SpeedKmh);
                 }
                 else
                 {

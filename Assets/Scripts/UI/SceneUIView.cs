@@ -31,18 +31,50 @@ namespace RogueDrive.UI
         [SerializeField] private Slider healthBar, fuelBar, nitroBar, xpBar, bossBar;
         [SerializeField] private Slider masterSlider, musicSlider, effectsSlider, steeringSlider;
         [SerializeField] private Text settingsValues;
+        private GraphicsSettingsPanel graphicsSettingsPanel;
         [SerializeField] private GameSettingsDefaults defaults;
         private bool settingsOpen, aboutOpen, campaignOpen;
         private MetaProgress progress;
-        public bool BlocksBackgroundInput => settingsOpen || aboutOpen || campaignOpen;
+        private GameObject legacyPauseButton;
+        [SerializeField] private GameObject newJourneyPanel;
+        [SerializeField] private RogueDrive.Gameplay.Coop.CoopLobbyModal coopLobbyModal;
+        [SerializeField] private Button continueJourneyButton, prepareJourneyButton;
+        private bool newJourneyOpen, journeyLoading;
+        private bool canContinueJourney, canPrepareJourney;
+        private bool IsMainMenu => gameObject.scene.name == "MainMenuScene";
+        public bool BlocksBackgroundInput => settingsOpen || aboutOpen || campaignOpen || newJourneyOpen || (coopLobbyModal != null && coopLobbyModal.IsOpen);
+        public void BindArrivingCar(ArcadeCarController arrivingCar) => car = arrivingCar;
 
         void Start()
         {
             ResolveMissingReferences();
+            CreateGraphicsSettingsControls();
             progress = SaveService.GetActiveProgress(catalog != null ? catalog.Upgrades : null, catalog != null ? catalog.Cars : null);
             LoadSettings();
+            if (IsMainMenu)
+            {
+                canContinueJourney = RogueDrive.Gameplay.Hub.GarageDepartureCheckpoint.CanContinue;
+                canPrepareJourney = RogueDrive.Gameplay.Hub.GarageDepartureCheckpoint.CanPrepare;
+                Cursor.lockState = CursorLockMode.None;
+                Cursor.visible = true;
+            }
             if (masterSlider != null) AudioListener.volume = masterSlider.value;
             Refresh();
+            FocusMainMenu();
+        }
+
+        void FocusMainMenu()
+        {
+            if (!IsMainMenu || UnityEngine.EventSystems.EventSystem.current == null) return;
+            GameObject panel = graphicsSettingsPanel != null && graphicsSettingsPanel.IsOpen ? graphicsSettingsPanel.gameObject
+                : newJourneyOpen ? newJourneyPanel : settingsOpen ? settingsPanel : aboutOpen ? aboutPanel : mainPanel;
+            if (panel == null) return;
+            foreach (var button in panel.GetComponentsInChildren<Button>())
+                if (button.IsInteractable())
+                {
+                    UnityEngine.EventSystems.EventSystem.current.SetSelectedGameObject(button.gameObject);
+                    break;
+                }
         }
 
         void ResolveMissingReferences()
@@ -68,15 +100,38 @@ namespace RogueDrive.UI
             bool gambling = casino != null && casino.IsVisible;
             bool paused = pause != null && pause.IsPaused;
             bool ended = run != null && run.IsGameOver;
-            if (run != null && !paused) settingsOpen = false;
-            Set(settingsPanel, settingsOpen);
+            bool survivalDriving = car != null && car.UsesGarageDriving;
+            bool drivingHud = VehicleModularTacticalHud.Instance != null && VehicleModularTacticalHud.Instance.OwnsDrivingHud;
+            if (legacyPauseButton == null && hudPanel != null)
+                legacyPauseButton = hudPanel.transform.parent.Find("PauseButton")?.gameObject;
+            Set(legacyPauseButton, !drivingHud && !paused && !ended);
+            if (bannerText != null) bannerText.gameObject.SetActive(!drivingHud);
+            if (xpText != null) xpText.gameObject.SetActive(!survivalDriving);
+            if (xpBar != null) xpBar.gameObject.SetActive(!survivalDriving);
+            if (comboText != null) comboText.gameObject.SetActive(!survivalDriving);
+            if (!IsMainMenu && run != null && !paused) settingsOpen = false;
+            if (!settingsOpen && graphicsSettingsPanel != null && graphicsSettingsPanel.IsOpen) graphicsSettingsPanel.Close();
+            Set(settingsPanel, settingsOpen && graphicsSettingsPanel == null);
             Set(aboutPanel, aboutOpen);
             Set(campaignPanel, campaignOpen);
+            if (IsMainMenu)
+            {
+                Set(mainPanel, !BlocksBackgroundInput);
+                Set(newJourneyPanel, newJourneyOpen);
+                if (continueJourneyButton != null) continueJourneyButton.interactable = canContinueJourney && !journeyLoading;
+                if (prepareJourneyButton != null) prepareJourneyButton.interactable = canPrepareJourney && !journeyLoading;
+            }
             Set(pausePanel, paused && !settingsOpen && !choosing && !gambling && !ended);
             Set(resultsPanel, ended && !campaignOpen);
+            if (ended && resultsPanel != null && (RogueDrive.Gameplay.Hub.GarageDepartureCheckpoint.OwnsCurrentRun||RogueDrive.Gameplay.Hub.JourneyCheckpoint.OwnsCurrentRun))
+                foreach (var label in resultsPanel.GetComponentsInChildren<Text>(true))
+                    if (label.text.ToUpperInvariant().Contains("ГАРАЖ")) label.text = "ИЗМЕНИТЬ ПОДГОТОВКУ";
             Set(levelPanel, choosing && !ended);
-            Set(hudPanel, run != null && !ended && !choosing && !gambling && !paused);
+            Set(hudPanel, run != null && !drivingHud && !ended && !choosing && !gambling && !paused);
             if (wallet != null && progress != null) wallet.text = $"МОНЕТЫ  {progress.Coins}     РЕКОРД  {progress.Data.BestEndlessDistance:0} м";
+            if (IsMainMenu && wallet != null) wallet.text = journeyLoading ? "ЗАГРУЗКА…" : canContinueJourney
+                  ? (RogueDrive.Gameplay.Hub.JourneyCheckpoint.CanContinue?"КОНТРОЛЬНАЯ ТОЧКА СОХРАНЕНА • СТО":"КОНТРОЛЬНАЯ ТОЧКА СОХРАНЕНА • БУНКЕР 07")
+                : "НАЧНИТЕ НОВУЮ ИГРУ • БУНКЕР 07";
             if (settingsValues != null && masterSlider != null)
                 settingsValues.text = $"{masterSlider.value:P0}\n{musicSlider.value:P0}\n{effectsSlider.value:P0}\n{steeringSlider.value:0.0}×";
             if (sectorButtons != null && progress != null)
@@ -84,17 +139,21 @@ namespace RogueDrive.UI
             RefreshGarage();
             if (run != null)
             {
-                Fill(healthBar, run.Health, run.MaxHealth); Fill(fuelBar, run.Fuel, run.MaxFuel); Fill(nitroBar, run.Nitro, run.MaxNitro);
+                // Vehicle condition belongs to individual modules; the tactical HUD owns fuel.
+                if (healthBar != null) healthBar.gameObject.SetActive(false);
+                if (nitroBar != null) nitroBar.gameObject.SetActive(false);
+                if (fuelBar != null) fuelBar.gameObject.SetActive(false);
                 float targetDist = run.StageTargetDistance;
                 float stageProgress = Mathf.Clamp01(run.Distance / targetDist);
                 string stageTitle = $"ЭТАП {run.CurrentStageIndex}: {run.Distance:0} / {targetDist:0} м ({stageProgress * 100:0}%)";
-                if (hudText != null) hudText.text = $"{stageTitle}\nHP {run.Health:0}/{run.MaxHealth:0}    ТОПЛИВО {run.Fuel:0}/{run.MaxFuel:0}    НИТРО {run.Nitro:0}%\n+{run.CoinsCollected} монет     {(car != null ? car.SpeedKmh : 0):0} км/ч" + (run.IsOutOfFuel ? "\nБак пуст — движение по инерции" : "");
+                if (hudText != null) hudText.text = $"{stageTitle}\n+{run.CoinsCollected} монет" + (run.IsOutOfFuel ? "\nБак пуст — движение по инерции" : "");
 
                 if (resultText != null)
                 {
                     if (run.IsStageVictory)
                     {
-                        string nextInfo = run.CurrentStageIndex < 4
+                        string nextInfo = survivalDriving ? "\n\nБезопасная СТО достигнута."
+                            : run.CurrentStageIndex < 4
                             ? $"\n\n★ ОТКРЫТ ЭТАП {run.CurrentStageIndex + 1} И НОВЫЙ АВТОМОБИЛЬ В ГАРАЖЕ! ★"
                             : "\n\n★ ВСЯ КАМПАНИЯ ПРОЙДЕНА! ОТКРЫТ РЕЖИМ ENDLESS! ★";
                         resultText.text = $"🏆 ЭТАП {run.CurrentStageIndex} ПРОЙДЕН!\n\n{run.EndReason}\nДистанция: {run.Distance:0} м\nЗаработано за этап: +{run.CoinsCollected} монет\nБаланс: {progress?.Coins ?? 0}{nextInfo}";
@@ -102,7 +161,10 @@ namespace RogueDrive.UI
                     else
                     {
                         float pct = Mathf.Clamp01(run.Distance / run.StageTargetDistance) * 100f;
-                        resultText.text = $"ЗАЕЗД ЗАВЕРШЁН\n\n{run.EndReason}\nПройдено: {run.Distance:0} м из {run.StageTargetDistance:0} м ({pct:0}%)\nЗаработано: +{run.CoinsCollected} монет\nБаланс: {progress?.Coins ?? 0}";
+                        string rewards = (RogueDrive.Gameplay.Hub.GarageDepartureCheckpoint.OwnsCurrentRun||RogueDrive.Gameplay.Hub.JourneyCheckpoint.OwnsCurrentRun)
+                            ? "Добыча этой попытки потеряна. Припасы восстановятся при повторе."
+                            : $"Заработано: +{run.CoinsCollected} монет";
+                        resultText.text = $"ЗАЕЗД ЗАВЕРШЁН\n\n{run.EndReason}\nПройдено: {run.Distance:0} м из {run.StageTargetDistance:0} м ({pct:0}%)\n{rewards}\nБаланс: {progress?.Coins ?? 0}";
                     }
                 }
             }
@@ -217,11 +279,33 @@ namespace RogueDrive.UI
         // Persistent Button.onClick targets remain visible and editable in Inspector.
         public void Navigate(int action)
         {
+            if (IsMainMenu && HandleJourneyAction(action)) { Refresh(); FocusMainMenu(); return; }
             switch (action)
             {
-                case 0: Time.timeScale = 1f; if (garage != null) garage.StartRun(); else LoadStage(CampaignMapModal.SelectedStartSector); break;
-                case 1: Time.timeScale = 1f; SceneTransitionManager.SwitchScene("GarageScene"); break;
-                case 2: settingsOpen = true; LoadSettings(); break;
+                case 0:
+                    Time.timeScale = 1f;
+                    if (garage != null)
+                    {
+                        garage.StartRun();
+                    }
+                    else
+                    {
+                        int sector = CampaignMapModal.SelectedStartSector;
+                        if (sector <= 1)
+                        {
+                            StartBunkerPrologue();
+                        }
+                        else
+                        {
+                            LoadStage(sector);
+                        }
+                    }
+                    break;
+                case 1:
+                    if (run != null && (RogueDrive.Gameplay.Hub.GarageDepartureCheckpoint.OwnsCurrentRun||RogueDrive.Gameplay.Hub.JourneyCheckpoint.OwnsCurrentRun)) run.LoadGarage();
+                    else { Time.timeScale = 1f; SceneTransitionManager.SwitchScene("GarageScene"); }
+                    break;
+                case 2: settingsOpen = true; LoadSettings(); graphicsSettingsPanel?.Open(); break;
                 case 3: aboutOpen = true; break;
                 case 4:
 #if UNITY_EDITOR
@@ -232,8 +316,8 @@ namespace RogueDrive.UI
                     break;
                 case 5: Time.timeScale = 1f; SceneTransitionManager.SwitchScene("MainMenuScene"); break;
                 case 6: campaignOpen = true; break;
-                case 7: settingsOpen = aboutOpen = campaignOpen = false; break;
-                case 8: SaveSettings(); settingsOpen = false; break;
+                case 7: settingsOpen = aboutOpen = campaignOpen = false; graphicsSettingsPanel?.Close(); break;
+                case 8: SaveSettings(); settingsOpen = false; graphicsSettingsPanel?.Close(); break;
                 case 9: pause?.PauseGame(); break;
                 case 10: pause?.ResumeGame(); break;
                 case 11: run?.Restart(); break;
@@ -241,6 +325,42 @@ namespace RogueDrive.UI
                 case 13: NextStage(); break;
             }
             Refresh();
+            FocusMainMenu();
+        }
+
+        bool HandleJourneyAction(int action)
+        {
+            if (journeyLoading) return true;
+            switch (action)
+            {
+                case 0:
+                    newJourneyOpen = true;
+                    return true;
+                case 1:
+                    if (canPrepareJourney) journeyLoading = RogueDrive.Gameplay.Hub.GarageDepartureCheckpoint.RequestRestore(false);
+                    return true;
+                case 6:
+                    if (canContinueJourney) journeyLoading = RogueDrive.Gameplay.Hub.GarageDepartureCheckpoint.ContinueJourney();
+                    return true;
+                case 7:
+                    newJourneyOpen = false;
+                    return false;
+                case 14:
+                    if (!newJourneyOpen || !Application.CanStreamedLevelBeLoaded("GarageScene")) return true;
+                    journeyLoading = true;
+                    RogueDrive.Gameplay.Hub.GarageDepartureCheckpoint.ClearJourney();
+                    SaveService.ResetToNew(catalog != null ? catalog.Upgrades : null, catalog != null ? catalog.Cars : null);
+                    CampaignMapModal.SelectedStartSector = 1;
+                    StartBunkerPrologue();
+                    return true;
+                case 15:
+                    if (coopLobbyModal != null)
+                    {
+                        coopLobbyModal.Open();
+                    }
+                    return true;
+                default: return false;
+            }
         }
 
         public void NextStage()
@@ -250,6 +370,16 @@ namespace RogueDrive.UI
             if (nextStage > 4) nextStage = 1;
             CampaignMapModal.SelectedStartSector = nextStage;
             LoadStage(nextStage);
+        }
+
+        public static void StartBunkerPrologue()
+        {
+            Time.timeScale = 1f;
+            RogueDrive.Gameplay.Hub.GaragePrologueManager.ForcePrologueAwakening = true;
+            PlayerPrefs.DeleteKey("BunkerPrologueSeen_V1");
+            PlayerPrefs.DeleteKey("GaragePrologueDone");
+            PlayerPrefs.Save();
+            SceneTransitionManager.SwitchScene("GarageScene");
         }
 
         public static void LoadStage(int sector)
@@ -295,6 +425,16 @@ namespace RogueDrive.UI
             PlayerPrefs.SetFloat("MasterVolume", masterSlider.value); PlayerPrefs.SetFloat("MusicVolume", musicSlider.value);
             PlayerPrefs.SetFloat("SfxVolume", effectsSlider.value); PlayerPrefs.SetFloat("SteerSensitivity", steeringSlider.value);
             PlayerPrefs.Save(); AudioListener.volume = masterSlider.value;
+        }
+        private void CreateGraphicsSettingsControls()
+        {
+            if (settingsPanel == null || graphicsSettingsPanel != null) return;
+            graphicsSettingsPanel = GraphicsSettingsPanel.Create(settingsPanel, () =>
+            {
+                settingsOpen = false;
+                Refresh();
+                FocusMainMenu();
+            });
         }
         static void Fill(Slider slider, float value, float max) { if (slider != null) slider.SetValueWithoutNotify(max > 0 ? Mathf.Clamp01(value / max) : 0); }
         static void Set(GameObject target, bool visible) { if (target != null && target.activeSelf != visible) target.SetActive(visible); }

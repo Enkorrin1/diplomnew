@@ -100,6 +100,12 @@ namespace RogueDrive.Gameplay
                 if (healthRepairRatio > 0f) run.Heal(run.MaxHealth * healthRepairRatio);
             }
 
+            if (VehicleModularState.Instance != null)
+            {
+                VehicleModularState.Instance.AddFuel(15f);
+                VehicleModularState.Instance.AddRadiatorWater(5f);
+            }
+
             RogueDrive.Audio.AudioManager.Instance?.PlayGateOpen();
             ArcadeCameraFollow.Instance?.TriggerShake(0.3f, 0.25f);
 

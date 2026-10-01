@@ -1,0 +1,31 @@
+Welcome!
+To ensure maximum compatibility and ease of use, we’ve included prepared scenes for each render pipeline in this project.
+Different render pipelines often require different scene settings — lighting, post-processing, materials, and more.
+That’s why we’ve created dedicated versions of scenes for Built-In, URP, and HDRP pipelines.
+
+Scenes Location
+Inside the main Scenes folder, you will find three subfolders:
+
+— Built-In_Scenes
+Contains all scenes prepared specifically for the Built-In Render Pipeline.
+These scenes include proper lighting settings, camera configurations, and standard shaders.
+
+— HDRP_Scenes
+Contains all scenes configured for High Definition Render Pipeline.
+Includes HDRP-specific lighting setups, volumes, post-processing, and materials.
+
+— URP_Scenes
+Contains scenes set up for Universal Render Pipeline.
+Includes optimized lighting, URP materials, and rendering volumes.
+
+How to Use
+— Make sure your project is using the correct render pipeline (Built-In, URP, or HDRP).
+— Open the corresponding folder inside Scenes.
+— Use the provided scenes as-is, or modify them to suit your project.
+
+These scenes are a great starting point for using our assets immediately, without the need to reconfigure lighting or materials for your render pipeline.
+
+Conclusion
+We hope these prepared scenes help you save time and focus on creating, not configuring.
+If you have questions or need help, we’re always available on Discord:
+https://discord.com/invite/jxrQM8hXnd

@@ -1,0 +1,6 @@
+Assets/Content/SeamlessJourney/Link0_Connector_Terrain.asset: vertices=56 maxEdge=136,4642
+Assets/Content/SeamlessJourney/Link0_Seamless_Connector_Road.asset: vertices=16 maxEdge=93,90658
+Assets/Content/SeamlessJourney/Link1_Connector_Terrain.asset: vertices=56 maxEdge=136,4643
+Assets/Content/SeamlessJourney/Link1_Seamless_Connector_Road.asset: vertices=16 maxEdge=93,90688
+Assets/Content/SeamlessJourney/Link2_Connector_Terrain.asset: vertices=56 maxEdge=136,4643
+Assets/Content/SeamlessJourney/Link2_Seamless_Connector_Road.asset: vertices=16 maxEdge=93,90688

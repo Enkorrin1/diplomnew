@@ -19,7 +19,12 @@ namespace RogueDrive.EditorTools
             "Assets/Scenes/Stage1_Outskirts.unity",
             "Assets/Scenes/Stage2_Wasteland.unity",
             "Assets/Scenes/Stage3_Industrial.unity",
-            "Assets/Scenes/Stage4_Citadel.unity"
+            "Assets/Scenes/Stage4_Citadel.unity",
+            "Assets/Scenes/Coop_Outskirts.unity",
+            "Assets/Scenes/Journey/Route01_World.unity",
+            "Assets/Scenes/Journey/Route02_World.unity",
+            "Assets/Scenes/Journey/Route03_World.unity",
+            "Assets/Scenes/Journey/Route04_World.unity"
         };
 
         static BuildSettingsAutoSync()

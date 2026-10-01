@@ -1,0 +1,35 @@
+Rogue Drive: Survival - reliability upgrade, 2026-09-30
+
+Implemented:
+- Non-recursive Unity serialization of workshop parts, preserving old internals JSON.
+- Atomic meta-progress writes; corrupt primary no longer overwrites a valid backup.
+- Checkpoint inventory validation and cleanup after failed restore.
+- Exact pistol magazine restoration; starter loadout issued only once; safe reload bounds.
+- PhysicsProp moved to a matching script filename; repaired pistol and 20 loot prefabs.
+- AudioManager survives scene reload as a root object.
+- Car teleport respects original kinematic state and resets momentum.
+- Six connector collision meshes tessellated; maximum triangle edge below 137 metres.
+- Co-op verification captures hidden-window camera frames and retries IPC write contention.
+
+Validation:
+24/24 deterministic data/save checks: Artifacts/Upgrade/reliability-editmode.txt
+77/77 Play Mode checks: Artifacts/JourneyStations/playmode.txt
+29/29 two-process co-op checks: Temp/CoopDeparture/20260930-152921/results.txt
+Co-op tested with client driving and host navigating, preparation, late join,
+departure restriction, actual road transition and identity/resource preservation.
+Station UI, bunker and co-op road camera screenshots visually inspected.
+
+Windows development build:
+Builds/Upgrade/RogueDrive.exe
+Build job build-13066f5b58 succeeded, 0 errors, 5 warnings, 747.45 MB.
+Warnings are recorded in Artifacts/Upgrade/build-warnings.txt:
+optional Pipeline runtime configuration, editor import/recompile notice,
+and three pre-existing unused-field warnings.
+
+Limits:
+This is an initial reliability upgrade, not a claim that the entire game is bug-free.
+Station acceptance teleports between stations; includes an actual drive through gates.
+The full 44 km route was not driven continuously, and disconnect-during-transition
+variants and host-driver variant were not run in this upgrade.
+Broad visual redesign, new encounter content and co-op expedition loot are further work.
+Pre-existing working tree changes were preserved; no commit or release deployment made.

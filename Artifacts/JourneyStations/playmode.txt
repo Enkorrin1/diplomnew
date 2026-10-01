@@ -1,0 +1,80 @@
+START
+OK Audio service is a persistent root
+OK Starter pistol available
+OK Re-enabling player cannot refill ammo or duplicate pistol
+OK Pistol has no missing components
+OK Failed restore clears pending state and preserves physics/control
+OK Station world 1 loaded
+OK Safe hangar 1 connected
+OK Station 1 stock/equipment
+OK Main road outside safe shelter
+OK Filtration and arrival checkpoint 1
+OK Shelter protects during service; timeScale=1
+OK Physical fuel purchase: Канистра в багажнике. Заправьте машину через её заливную горловину.
+OK Cargo has room for install
+OK Install brought engine: Работа началась. Автомобиль заблокирован до завершения или отмены.
+OK Pay labor only, original engine returned
+OK Removed engine remains cargo
+OK Sale of returned engine
+OK Paid full repair starts
+OK Full repair commits once
+OK Emergency aid: Минимальный ремонт и 8 л в баке обеспечены. Полный ремонт и улучшения остаются платными.
+OK Aid restores only minimum
+OK Repeated emergency aid denied
+OK Departure allowed after filtration: Ворота открываются. Подготовленный выезд сохранится при выезде вперёд.
+OK Prepared departure checkpoint active
+OK Fresh wave after departure
+OK Actual defeat before retry
+OK Retry button uses station checkpoint
+OK Prepared retry loaded
+OK Retry restores exact supplies, money and cargo; no farming
+OK Retry restores pistol and exact ammo without free refill
+OK Same audio service survives checkpoint scene reload
+OK Authored physical loot restored once, world original suppressed
+OK Prepared checkpoint retains used emergency aid
+OK Change preparation accepted
+OK Arrival state loaded
+OK Arrival rolls back purchases and engine fitting
+OK Station world 2 loaded
+OK Safe hangar 2 connected
+OK Station 2 stock/equipment
+OK Main road outside safe shelter
+OK Filtration and arrival checkpoint 2
+OK Shelter protects during service; timeScale=1
+OK Physical fuel purchase: Канистра в багажнике. Заправьте машину через её заливную горловину.
+OK Cargo has room for install
+OK Install brought engine: Работа началась. Автомобиль заблокирован до завершения или отмены.
+OK Pay labor only, original engine returned
+OK Removed engine remains cargo
+OK Sale of returned engine
+OK Paid full repair starts
+OK Full repair commits once
+OK Emergency aid: Минимальный ремонт и 8 л в баке обеспечены. Полный ремонт и улучшения остаются платными.
+OK Aid restores only minimum
+OK Repeated emergency aid denied
+OK Departure allowed after filtration: Ворота открываются. Подготовленный выезд сохранится при выезде вперёд.
+OK Prepared departure checkpoint active
+OK Fresh wave after departure
+OK Station world 3 loaded
+OK Safe hangar 3 connected
+OK Station 3 stock/equipment
+OK Main road outside safe shelter
+OK Filtration and arrival checkpoint 3
+OK Shelter protects during service; timeScale=1
+OK Physical fuel purchase: Канистра в багажнике. Заправьте машину через её заливную горловину.
+OK Cargo has room for install
+OK Install brought engine: Работа началась. Автомобиль заблокирован до завершения или отмены.
+OK Pay labor only, original engine returned
+OK Removed engine remains cargo
+OK Sale of returned engine
+OK Paid full repair starts
+OK Full repair commits once
+OK Emergency aid: Минимальный ремонт и 8 л в баке обеспечены. Полный ремонт и улучшения остаются платными.
+OK Aid restores only minimum
+OK Repeated emergency aid denied
+OK Departure allowed after filtration: Ворота открываются. Подготовленный выезд сохранится при выезде вперёд.
+OK Prepared departure checkpoint active
+OK Fresh wave after departure
+OK Physical drive through hangar entrance and open exit gate
+PASS: service/checkpoint/physical-driving acceptance complete.
+PASS: 3 service stations, economy, aid, shelter, departure and both checkpoints.

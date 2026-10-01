@@ -14,21 +14,8 @@ namespace RogueDrive.Editor
     /// Объекты сохраняются прямо в файл сцены GarageScene.unity — пользователь может свободно
     /// перемещать их в окне Scene и заменять на свои модели из Blender!
     /// </summary>
-    [InitializeOnLoad]
     public static class BunkerSceneAuthoring
     {
-        [InitializeOnLoadMethod]
-        private static void AutoBakeOnLoad()
-        {
-            EditorApplication.delayCall += () =>
-            {
-                if (!EditorApplication.isPlayingOrWillChangePlaymode)
-                {
-                    BakeBunkerLayout(forceSave: true);
-                }
-            };
-        }
-
         [MenuItem("RogueDrive/Расставить объекты бункера в сцену (Bake Layout)")]
         public static void BakeBunkerLayoutMenu()
         {
@@ -236,14 +223,35 @@ namespace RogueDrive.Editor
                 console.GetComponent<Renderer>().sharedMaterial = hazardMat;
 
                 var gateInter = console.AddComponent<GarageGateSwitchInteractable>();
-                gateInter.Configure(gateCtrl);
+            }
+            else
+            {
+                Transform terminal = gateGroup.Find("Gate_Control_Terminal");
+                if (terminal != null)
+                {
+                    var gateCtrl = gateGroup.GetComponent<GarageSwingGateController>();
+                    var gateInter = terminal.GetComponent<GarageGateSwitchInteractable>();
+                    if (gateInter == null)
+                    {
+                        GameObjectUtility.RemoveMonoBehavioursWithMissingScript(terminal.gameObject);
+                        gateInter = terminal.gameObject.AddComponent<GarageGateSwitchInteractable>();
+                    }
+                    if (gateCtrl != null) gateInter.Configure(gateCtrl);
+                }
             }
 
             // =========================================================================
             // 4. ПЕРСОНАЖ ОТ 1-ГО ЛИЦА (Garage_FP_Player)
             // =========================================================================
             var existingPlayer = GameObject.FindFirstObjectByType<GaragePlayerController>();
-            if (existingPlayer == null)
+            if (existingPlayer != null)
+            {
+                if (existingPlayer.GetComponent<PlayerPocketInventory>() == null)
+                {
+                    existingPlayer.gameObject.AddComponent<PlayerPocketInventory>();
+                }
+            }
+            else
             {
                 GameObject playerObj = new GameObject("Garage_FP_Player");
                 playerObj.transform.position = new Vector3(-8.5f, 0.05f, -7.0f);
@@ -256,6 +264,8 @@ namespace RogueDrive.Editor
 
                 playerObj.AddComponent<GaragePlayerController>();
                 playerObj.AddComponent<GarageInteractionRaycaster>();
+                playerObj.AddComponent<BunkerPlayerInventory>();
+                playerObj.AddComponent<PlayerPocketInventory>();
 
                 GameObject camObj = new GameObject("PlayerCamera");
                 camObj.transform.SetParent(playerObj.transform, false);
@@ -270,7 +280,7 @@ namespace RogueDrive.Editor
             }
 
             // =========================================================================
-            // 5. МАШИННОЕ МЕСТО И 3D ХОТСПАТЫ
+            // 5. МАШИННОЕ МЕСТО, СТАРТОВАЯ СБОРКА И 3D ХОТСПАТЫ
             // =========================================================================
             Transform podiumAnchor = GameObject.Find("PodiumAnchor")?.transform;
             if (podiumAnchor != null)
@@ -279,8 +289,30 @@ namespace RogueDrive.Editor
                 if (rig == null) rig = podiumAnchor.gameObject.AddComponent<CarInspectionRig>();
                 rig.SetupHotspots();
 
-                var boarding = podiumAnchor.GetComponent<GarageVehicleBoarding>();
-                if (boarding == null) podiumAnchor.gameObject.AddComponent<GarageVehicleBoarding>();
+                // Убеждаемся, что зона посадки расположена у водительской двери
+                Transform boardingZone = podiumAnchor.Find("VehicleBoardingZone");
+                if (boardingZone == null)
+                {
+                    var bObj = new GameObject("VehicleBoardingZone");
+                    bObj.transform.SetParent(podiumAnchor, false);
+                    bObj.transform.localPosition = new Vector3(-1.3f, 0.8f, 0.15f);
+                    boardingZone = bObj.transform;
+                }
+                var bCol = boardingZone.GetComponent<BoxCollider>();
+                if (bCol == null) bCol = boardingZone.gameObject.AddComponent<BoxCollider>();
+                bCol.isTrigger = true;
+                bCol.size = new Vector3(1.2f, 1.8f, 1.8f);
+                bCol.center = Vector3.zero;
+
+                if (boardingZone.GetComponent<GarageVehicleBoarding>() == null)
+                {
+                    boardingZone.gameObject.AddComponent<GarageVehicleBoarding>();
+                }
+
+                var podiumBoarding = podiumAnchor.GetComponent<GarageVehicleBoarding>();
+                if (podiumBoarding != null) UnityEngine.Object.DestroyImmediate(podiumBoarding);
+
+                SetupStarterCarAssemblyAuthoring(podiumAnchor, steelMat, hazardMat, darkPlasticMat);
             }
 
             // =========================================================================
@@ -342,22 +374,19 @@ namespace RogueDrive.Editor
             var bladeCol = blade.GetComponent<Collider>();
             if (bladeCol != null) UnityEngine.Object.DestroyImmediate(bladeCol);
 
-            GameObject lightObj = new GameObject("ItemGlowLight");
-            lightObj.transform.SetParent(keysObj.transform, false);
-            lightObj.transform.localPosition = new Vector3(0f, 0.18f, 0f);
-            var glowLight = lightObj.AddComponent<Light>();
-            glowLight.type = LightType.Point;
-            glowLight.color = new Color(1f, 0.85f, 0.25f);
-            glowLight.intensity = 1.2f;
-            glowLight.range = 1.5f;
+            Transform oldGlow = keysObj.transform.Find("ItemGlowLight");
+            if (oldGlow != null) UnityEngine.Object.DestroyImmediate(oldGlow.gameObject);
 
             var carKeys = keysObj.AddComponent<GarageCarKeys>();
             var keysSo = new SerializedObject(carKeys);
             var visualProp = keysSo.FindProperty("visualModel");
             if (visualProp != null) visualProp.objectReferenceValue = keysVisual;
-            var lightProp = keysSo.FindProperty("itemHighlightLight");
-            if (lightProp != null) lightProp.objectReferenceValue = glowLight;
             keysSo.ApplyModifiedProperties();
+
+            // =========================================================================
+            // 7. СТЕЛЛАЖ И ПРЕДМЕТЫ ДЛЯ СБОРКИ АВТОМОБИЛЯ В БУНКЕРЕ
+            // =========================================================================
+            SetupAssemblyPickupsAuthoring(hubRoot, workshopProps, steelMat, armyGreenMat);
 
             // Отключаем дубликаты процедурного генератора
             var envSetup = hubRoot.GetComponent<BunkerEnvironmentSetup>();
@@ -372,6 +401,307 @@ namespace RogueDrive.Editor
                 EditorSceneManager.MarkSceneDirty(activeScene);
                 EditorSceneManager.SaveScene(activeScene);
                 Debug.Log("[BunkerSceneAuthoring] ✔ Все объекты бункера успешно расставлены и сохранены в GarageScene.unity!");
+            }
+        }
+
+        private static void SetupStarterCarAssemblyAuthoring(Transform car, Material steelMat, Material hazardMat, Material darkMat)
+        {
+            var assembly = car.GetComponent<BunkerStarterCarAssembly>();
+            if (assembly == null) assembly = car.gameObject.AddComponent<BunkerStarterCarAssembly>();
+
+            // 0. Размещаем 3D-модель кузова автомобиля Classic Car_9 под PodiumAnchor
+            Transform carBodyTransform = car.Find("Classic Car_9");
+            GameObject carBody = carBodyTransform != null ? carBodyTransform.gameObject : null;
+
+            if (carBody == null)
+            {
+                string carPrefabPath = "Assets/Downloads/Awbmecreations/Mobile Optimize-Free Low Poly Cars/Prefabs/Classic Car_9.prefab";
+                GameObject carPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(carPrefabPath);
+                if (carPrefab != null)
+                {
+                    carBody = (GameObject)PrefabUtility.InstantiatePrefab(carPrefab, car);
+                    carBody.name = "Classic Car_9";
+                    carBody.transform.localPosition = Vector3.zero;
+                    carBody.transform.localRotation = Quaternion.identity;
+                    carBody.transform.localScale = Vector3.one;
+                    Undo.RegisterCreatedObjectUndo(carBody, "Instantiate Classic Car_9");
+                }
+                else
+                {
+                    Debug.LogWarning("[BunkerSceneAuthoring] Префаб Classic Car_9 не найден по пути " + carPrefabPath);
+                }
+            }
+
+            if (carBody != null)
+            {
+                // Физический коллайдер кузова, чтобы игрок мог осматривать авто и садиться в него
+                var bodyCol = carBody.GetComponent<BoxCollider>();
+                if (bodyCol == null) bodyCol = carBody.AddComponent<BoxCollider>();
+                bodyCol.center = new Vector3(0f, 0.72f, 0f);
+                bodyCol.size = new Vector3(1.75f, 1.25f, 4.3f);
+            }
+
+            // 1. Переднее левое колесо на модели кузова (снято в прологе)
+            Transform flTire = carBody != null ? carBody.transform.Find("Classic Car_9 FL Tire") : null;
+            if (flTire != null)
+            {
+                int runs = PlayerPrefs.GetInt("GaragePrologueDone", 0);
+                bool prologueDone = runs > 0 && !GaragePrologueManager.ForcePrologueAwakening;
+                flTire.gameObject.SetActive(prologueDone);
+            }
+
+            // 2. Домкрат под передней левой ступицей
+            Transform jackStand = car.Find("Placeholder_JackStand");
+            if (jackStand == null)
+            {
+                Transform oldJack = car.Find("Hotspot_Wheel_FL/Placeholder_JackStand");
+                if (oldJack != null)
+                {
+                    oldJack.SetParent(car, true);
+                    jackStand = oldJack;
+                }
+                else
+                {
+                    GameObject jackObj = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                    jackObj.name = "Placeholder_JackStand";
+                    jackObj.transform.SetParent(car, false);
+                    jackStand = jackObj.transform;
+                }
+            }
+            jackStand.localPosition = new Vector3(-0.78f, 0.18f, 1.38f);
+            jackStand.localScale = new Vector3(0.26f, 0.36f, 0.26f);
+            var jackRen = jackStand.GetComponent<Renderer>();
+            if (jackRen != null) jackRen.sharedMaterial = hazardMat;
+
+            // 3. Хотспот переднего левого колеса
+            Transform wheelSpot = car.Find("Hotspot_Wheel_FL");
+            if (wheelSpot == null)
+            {
+                var spotObj = new GameObject("Hotspot_Wheel_FL");
+                spotObj.transform.SetParent(car, false);
+                wheelSpot = spotObj.transform;
+            }
+            wheelSpot.localPosition = new Vector3(-0.95f, 0.39f, 1.38f);
+
+            var wheelBox = wheelSpot.GetComponent<BoxCollider>();
+            if (wheelBox == null) wheelBox = wheelSpot.gameObject.AddComponent<BoxCollider>();
+            wheelBox.isTrigger = true;
+            wheelBox.size = new Vector3(0.85f, 0.85f, 0.85f);
+            wheelBox.center = Vector3.zero;
+
+            // Удаляем старый примитив-колесо Placeholder_MountedWheel если был
+            Transform oldWheelPrim = wheelSpot.Find("Placeholder_MountedWheel");
+            if (oldWheelPrim != null) UnityEngine.Object.DestroyImmediate(oldWheelPrim.gameObject);
+
+            var wheelHotspot = wheelSpot.GetComponent<BunkerCarAssemblyHotspot>();
+            if (wheelHotspot == null) wheelHotspot = wheelSpot.gameObject.AddComponent<BunkerCarAssemblyHotspot>();
+            wheelHotspot.Configure(BunkerAssemblyItemType.Wheel, "Передняя левая ступица", "на стеллаже у стены");
+
+            // 4. Хотспот аккумулятора под капотом
+            Transform battSpot = car.Find("Hotspot_Battery_EngineBay");
+            if (battSpot == null)
+            {
+                var spotObj = new GameObject("Hotspot_Battery_EngineBay");
+                spotObj.transform.SetParent(car, false);
+                battSpot = spotObj.transform;
+            }
+            battSpot.localPosition = new Vector3(0.35f, 0.85f, 1.55f);
+
+            var battBox = battSpot.GetComponent<BoxCollider>();
+            if (battBox == null) battBox = battSpot.gameObject.AddComponent<BoxCollider>();
+            battBox.isTrigger = true;
+            battBox.size = new Vector3(0.7f, 0.6f, 0.7f);
+            battBox.center = Vector3.zero;
+
+            var battHotspot = battSpot.GetComponent<BunkerCarAssemblyHotspot>();
+            if (battHotspot == null) battHotspot = battSpot.gameObject.AddComponent<BunkerCarAssemblyHotspot>();
+            battHotspot.Configure(BunkerAssemblyItemType.Battery, "Гнездо аккумулятора под капотом", "на верстаке в жилой зоне");
+
+            Transform battVisual = battSpot.Find("Placeholder_MountedBattery");
+            if (battVisual == null)
+            {
+                GameObject batt = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                batt.name = "Placeholder_MountedBattery";
+                batt.transform.SetParent(battSpot, false);
+                batt.transform.localPosition = Vector3.zero;
+                batt.transform.localScale = new Vector3(0.28f, 0.22f, 0.2f);
+                var bRen = batt.GetComponent<Renderer>();
+                if (bRen != null) bRen.sharedMaterial = steelMat;
+                var bCol = batt.GetComponent<Collider>();
+                if (bCol != null) UnityEngine.Object.DestroyImmediate(bCol);
+                battVisual = batt.transform;
+            }
+            battVisual.gameObject.SetActive(false);
+
+            // 5. Хотспот горловины бензобака
+            Transform fuelSpot = car.Find("Hotspot_FuelTank_Inlet");
+            if (fuelSpot == null)
+            {
+                var spotObj = new GameObject("Hotspot_FuelTank_Inlet");
+                spotObj.transform.SetParent(car, false);
+                fuelSpot = spotObj.transform;
+            }
+            fuelSpot.localPosition = new Vector3(-0.95f, 0.72f, -1.25f);
+
+            var fuelBox = fuelSpot.GetComponent<BoxCollider>();
+            if (fuelBox == null) fuelBox = fuelSpot.gameObject.AddComponent<BoxCollider>();
+            fuelBox.isTrigger = true;
+            fuelBox.size = new Vector3(0.6f, 0.6f, 0.6f);
+            fuelBox.center = Vector3.zero;
+
+            var fuelHotspot = fuelSpot.GetComponent<BunkerCarAssemblyHotspot>();
+            if (fuelHotspot == null) fuelHotspot = fuelSpot.gameObject.AddComponent<BunkerCarAssemblyHotspot>();
+            fuelHotspot.Configure(BunkerAssemblyItemType.FuelCanister, "Горловина бензобака", "рядом с дизель-генератором");
+
+            // 6. Фары автомобиля
+            Transform headlightsGroup = car.Find("Car_Headlights");
+            if (headlightsGroup == null)
+            {
+                headlightsGroup = new GameObject("Car_Headlights").transform;
+                headlightsGroup.SetParent(car, false);
+                headlightsGroup.localPosition = Vector3.zero;
+            }
+
+            Light leftLight = null;
+            Transform lLightTr = headlightsGroup.Find("Headlight_L");
+            if (lLightTr == null)
+            {
+                GameObject lObj = new GameObject("Headlight_L");
+                lObj.transform.SetParent(headlightsGroup, false);
+                lObj.transform.localPosition = new Vector3(-0.62f, 0.65f, 2.15f);
+                leftLight = lObj.AddComponent<Light>();
+                leftLight.type = LightType.Spot;
+                leftLight.range = 18f;
+                leftLight.spotAngle = 60f;
+                leftLight.color = new Color(1f, 0.95f, 0.8f);
+                leftLight.intensity = 2.5f;
+                leftLight.enabled = false;
+            }
+            else
+            {
+                leftLight = lLightTr.GetComponent<Light>();
+            }
+
+            Light rightLight = null;
+            Transform rLightTr = headlightsGroup.Find("Headlight_R");
+            if (rLightTr == null)
+            {
+                GameObject rObj = new GameObject("Headlight_R");
+                rObj.transform.SetParent(headlightsGroup, false);
+                rObj.transform.localPosition = new Vector3(0.62f, 0.65f, 2.15f);
+                rightLight = rObj.AddComponent<Light>();
+                rightLight.type = LightType.Spot;
+                rightLight.range = 18f;
+                rightLight.spotAngle = 60f;
+                rightLight.color = new Color(1f, 0.95f, 0.8f);
+                rightLight.intensity = 2.5f;
+                rightLight.enabled = false;
+            }
+            else
+            {
+                rightLight = rLightTr.GetComponent<Light>();
+            }
+
+            // 7. Зона посадки водителя (водительская дверь)
+            Transform boardingZone = car.Find("VehicleBoardingZone");
+            if (boardingZone == null)
+            {
+                GameObject bzObj = new GameObject("VehicleBoardingZone");
+                bzObj.transform.SetParent(car, false);
+                boardingZone = bzObj.transform;
+            }
+            boardingZone.localPosition = new Vector3(-1.30f, 0.80f, 0.15f);
+            var bzBox = boardingZone.GetComponent<BoxCollider>();
+            if (bzBox == null) bzBox = boardingZone.gameObject.AddComponent<BoxCollider>();
+            bzBox.isTrigger = true;
+            bzBox.size = new Vector3(0.9f, 1.5f, 1.2f);
+            bzBox.center = Vector3.zero;
+
+            // 8. Связывание SerializedObject
+            SerializedObject assemblySo = new SerializedObject(assembly);
+            var propWheel = assemblySo.FindProperty("wheelHotspot");
+            if (propWheel != null) propWheel.objectReferenceValue = wheelHotspot;
+            var propBatt = assemblySo.FindProperty("batteryHotspot");
+            if (propBatt != null) propBatt.objectReferenceValue = battHotspot;
+            var propFuel = assemblySo.FindProperty("fuelHotspot");
+            if (propFuel != null) propFuel.objectReferenceValue = fuelHotspot;
+            var propJack = assemblySo.FindProperty("jackStandObject");
+            if (propJack != null) propJack.objectReferenceValue = jackStand.gameObject;
+            var propFLTire = assemblySo.FindProperty("assembledWheelVisual");
+            if (propFLTire != null) propFLTire.objectReferenceValue = flTire != null ? flTire.gameObject : null;
+            var propBattVis = assemblySo.FindProperty("batteryInBayVisual");
+            if (propBattVis != null) propBattVis.objectReferenceValue = battVisual.gameObject;
+
+            var propLights = assemblySo.FindProperty("carHeadlights");
+            if (propLights != null)
+            {
+                propLights.arraySize = 2;
+                propLights.GetArrayElementAtIndex(0).objectReferenceValue = leftLight;
+                propLights.GetArrayElementAtIndex(1).objectReferenceValue = rightLight;
+            }
+            assemblySo.ApplyModifiedProperties();
+
+            assembly.BindHotspots();
+        }
+
+        private static void SetupAssemblyPickupsAuthoring(Transform hubRoot, Transform workshopProps, Material steelMat, Material armyGreenMat)
+        {
+            // 1. Аккумулятор на верстаке
+            if (workshopProps.Find("Pickup_Battery") == null)
+            {
+                GameObject battObj = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                battObj.name = "Pickup_Battery";
+                battObj.transform.SetParent(workshopProps, false);
+                battObj.transform.localPosition = new Vector3(-4.4f, 1.05f, 2.8f);
+                battObj.transform.localScale = new Vector3(0.35f, 0.25f, 0.25f);
+                battObj.GetComponent<Renderer>().sharedMaterial = steelMat;
+
+                var boxCol = battObj.GetComponent<BoxCollider>();
+                if (boxCol != null) boxCol.isTrigger = true;
+
+                var battItem = battObj.AddComponent<BunkerAssemblyItem>();
+                battItem.Configure(BunkerAssemblyItemType.Battery, "Силовой аккумулятор 12V");
+            }
+
+            // 2. Колесо на полу у стены
+            Transform tireRack = hubRoot.Find("Tire_Rack_Spot");
+            if (tireRack == null)
+            {
+                tireRack = new GameObject("Tire_Rack_Spot").transform;
+                tireRack.SetParent(hubRoot, false);
+                tireRack.localPosition = new Vector3(-7.5f, 0f, 2.5f);
+
+                GameObject wheelObj = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                wheelObj.name = "Pickup_SpareWheel";
+                wheelObj.transform.SetParent(tireRack, false);
+                wheelObj.transform.localPosition = new Vector3(0f, 0.45f, 0f);
+                wheelObj.transform.localRotation = Quaternion.Euler(0f, 0f, 90f);
+                wheelObj.transform.localScale = new Vector3(0.75f, 0.28f, 0.75f);
+                wheelObj.GetComponent<Renderer>().sharedMaterial = steelMat;
+
+                var cylCol = wheelObj.GetComponent<Collider>();
+                if (cylCol != null) cylCol.isTrigger = true;
+
+                var wheelItem = wheelObj.AddComponent<BunkerAssemblyItem>();
+                wheelItem.Configure(BunkerAssemblyItemType.Wheel, "Колесо со ступичным креплением");
+            }
+
+            // 3. Канистра топлива возле генератора
+            Transform genCorner = hubRoot.Find("Power_Corner") ?? hubRoot.Find("Generator_Corner") ?? hubRoot.Find("Living_Corner");
+            if (genCorner != null && genCorner.Find("Pickup_FuelCanister") == null)
+            {
+                GameObject canObj = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                canObj.name = "Pickup_FuelCanister";
+                canObj.transform.SetParent(genCorner, false);
+                canObj.transform.localPosition = new Vector3(1.2f, 0.35f, 0f);
+                canObj.transform.localScale = new Vector3(0.35f, 0.55f, 0.45f);
+                canObj.GetComponent<Renderer>().sharedMaterial = armyGreenMat;
+
+                var canCol = canObj.GetComponent<BoxCollider>();
+                if (canCol != null) canCol.isTrigger = true;
+
+                var canItem = canObj.AddComponent<BunkerAssemblyItem>();
+                canItem.Configure(BunkerAssemblyItemType.FuelCanister, "Канистра бензина (15 л)");
             }
         }
 

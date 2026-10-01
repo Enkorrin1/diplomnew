@@ -1,0 +1,252 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &111303634145365475
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5942786627927509771}
+  - component: {fileID: 8587954666811776663}
+  - component: {fileID: 2647425228425890680}
+  - component: {fileID: 8524269696050343832}
+  - component: {fileID: 5375601180524169898}
+  - component: {fileID: 8599906794644126006}
+  - component: {fileID: 2691453108767428604}
+  m_Layer: 0
+  m_Name: WaterCanister
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &5942786627927509771
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 111303634145365475}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 535598177933961446}
+  - {fileID: 7506743284863572565}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!65 &8587954666811776663
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 111303634145365475}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 0.38644734, y: 0.39999998, z: 0.29197118}
+  m_Center: {x: 0.000000074505806, y: 0.043151423, z: -0.000000044703484}
+--- !u!54 &2647425228425890680
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 111303634145365475}
+  serializedVersion: 4
+  m_Mass: 6.8
+  m_Drag: 0
+  m_AngularDrag: 0.05
+  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ImplicitCom: 1
+  m_ImplicitTensor: 1
+  m_UseGravity: 1
+  m_IsKinematic: 0
+  m_Interpolate: 1
+  m_Constraints: 0
+  m_CollisionDetection: 1
+--- !u!114 &8524269696050343832
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 111303634145365475}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cdcb2a794d2665e468c54b7bfa2b7bce, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  itemType: 4
+  customDisplayName: "\u0417\u0430\u043F\u0430\u0441 \u0432\u043E\u0434\u044B \u0434\u043B\u044F
+    \u0440\u0430\u0434\u0438\u0430\u0442\u043E\u0440\u0430 \xB7 5 \u043B"
+  holdOffset: {x: 0, y: 0, z: 0}
+  holdEuler: {x: 0, y: 0, z: 0}
+  visualRoot: {fileID: 0}
+  minImpactVelocity: 1.2
+--- !u!114 &5375601180524169898
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 111303634145365475}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a5f9f4ddc4e1b04dad8c7b18ae2d8ff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  fluidType: 1
+  maxCapacityLiters: 20
+  currentLiters: 5
+  emptyMassKg: 1.8
+  fluidDensity: 1
+  keepEmptyCanisterInHand: 1
+--- !u!114 &8599906794644126006
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 111303634145365475}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 13fe2af059231a94abea8c7eb3b96801, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  kind: 3
+  beam: {fileID: 0}
+--- !u!114 &2691453108767428604
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 111303634145365475}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b087753a8877f4e42a731ebfd330fa96, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  propName: "\u041A\u0430\u043D\u0438\u0441\u0442\u0440\u0430 \u0441 \u0432\u043E\u0434\u043E\u0439"
+  pocketSized: 0
+  inventoryIcon: {fileID: 0}
+  throwForceMultiplier: 1
+  holdOffset: {x: 0, y: 0, z: 0}
+  holdEuler: {x: 0, y: 0, z: 0}
+  minImpactVelocity: 1.2
+--- !u!1 &6440646453085196623
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 535598177933961446}
+  m_Layer: 0
+  m_Name: Jerrycan
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &535598177933961446
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6440646453085196623}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0.69540536, y: -0.12810725, z: -0.12810725, w: 0.69540536}
+  m_LocalPosition: {x: 0.024957657, y: -0.15684858, z: 0.009795189}
+  m_LocalScale: {x: 121.03544, y: 121.03541, z: 121.035416}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 5942786627927509771}
+  m_LocalEulerAnglesHint: {x: -90, y: -180, z: 69.124}
+--- !u!1001 &3053597741762305936
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 5942786627927509771}
+    m_Modifications:
+    - target: {fileID: 4458415817939730441, guid: 76ad0d01bef3bc540a8e94d7604ed52c, type: 3}
+      propertyPath: m_Name
+      value: Canonical_WaterCanister
+      objectReference: {fileID: 0}
+    - target: {fileID: 4777687850604479941, guid: 76ad0d01bef3bc540a8e94d7604ed52c, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0.00000008940697
+      objectReference: {fileID: 0}
+    - target: {fileID: 4777687850604479941, guid: 76ad0d01bef3bc540a8e94d7604ed52c, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.043151423
+      objectReference: {fileID: 0}
+    - target: {fileID: 4777687850604479941, guid: 76ad0d01bef3bc540a8e94d7604ed52c, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -0.000000067055225
+      objectReference: {fileID: 0}
+    - target: {fileID: 4777687850604479941, guid: 76ad0d01bef3bc540a8e94d7604ed52c, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0.18117101
+      objectReference: {fileID: 0}
+    - target: {fileID: 4777687850604479941, guid: 76ad0d01bef3bc540a8e94d7604ed52c, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4777687850604479941, guid: 76ad0d01bef3bc540a8e94d7604ed52c, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0.98345166
+      objectReference: {fileID: 0}
+    - target: {fileID: 4777687850604479941, guid: 76ad0d01bef3bc540a8e94d7604ed52c, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4777687850604479941, guid: 76ad0d01bef3bc540a8e94d7604ed52c, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4777687850604479941, guid: 76ad0d01bef3bc540a8e94d7604ed52c, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4777687850604479941, guid: 76ad0d01bef3bc540a8e94d7604ed52c, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 76ad0d01bef3bc540a8e94d7604ed52c, type: 3}
+--- !u!4 &7506743284863572565 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 4777687850604479941, guid: 76ad0d01bef3bc540a8e94d7604ed52c, type: 3}
+  m_PrefabInstance: {fileID: 3053597741762305936}
+  m_PrefabAsset: {fileID: 0}

@@ -1,0 +1,59 @@
+Rogue Drive: Survival - roadside supply upgrade, 2026-09-30
+
+Playable additions in the first region of the single-player expedition:
+1. Patrol stash, 1.4 km: search 10 seconds; 28 pistol rounds, 1 medkit, 4 repair bolts.
+2. Medical reserve, 3.2 km: search 6 seconds; 2 medkits, 14 pistol rounds, 1 battery.
+3. Repair reserve, 9.6 km: search 14 seconds; 8 repair bolts, 1 wrench, 7 pistol rounds.
+
+E starts or cancels a search. Walking away, being downed or losing player control
+cancels it. Pause freezes the timer. Searching alerts actual local encounter guards;
+the storm continues to move. Open lids and signs communicate state and exact remaining
+supplies. Full pockets do not consume rewards; claimed rewards cannot be claimed again.
+
+Cache histories are saved with the station checkpoint, including partial collection.
+Stable identities preserve the same cache through streamed world unload/reload.
+New caches are hidden during network co-op until shared server-authoritative loot exists.
+
+Existing scavenge fixes:
+- Backpacks, cardboard boxes and tool cabinets retain unclaimed rewards with full pockets.
+- Partial claims track each granted reward and cannot replenish consumed items on retry.
+- Abandoned trunk reward rolls remain stable; a trunk is only marked looted after transfer.
+- Failed transfers do not play a completion sound.
+
+Validation completed:
+- 48 Play Mode supply checks: Artifacts/RoadsideSupply/playmode.txt
+  Includes actual checkpoint scene reload, partial/full inventory, cancellation,
+  pause, storm pressure, local guard alert and carved navigation footprint.
+- 24 deterministic data/save checks: Artifacts/Upgrade/reliability-editmode.txt
+- 77 station regressions: Artifacts/JourneyStations/playmode.txt
+- 29 two-process co-op regressions: Temp/CoopDeparture/20260930-163537/results.txt
+  Client drove; host navigated. Late join, preparation, departure restriction and
+  vehicle/player identity, fuel and health across actual road transition passed.
+- Final closed/open presentations visually inspected in Play Mode at 1280x720.
+  Gameplay prompt also inspected in the Game View capture.
+
+Windows development build:
+Builds/Upgrade/RogueDrive.exe
+Job build-b644d0367c succeeded, 0 errors, 4 existing warnings, 747.52 MB.
+Warnings: optional Pipeline runtime configuration and three unused fields;
+see Artifacts/RoadsideSupply/build-warnings.txt.
+
+Important source files:
+Assets/Scripts/Gameplay/Hub/RoadsideSupplyCache.cs
+Assets/Scripts/Gameplay/Hub/RoadsideScavengePoint.cs
+Assets/Scripts/Gameplay/Hub/JourneyCheckpoint.cs
+Assets/Scripts/Gameplay/Track/SeamlessJourneyStream.cs
+Assets/Editor/RoadsideSupplyAuthoring.cs
+Assets/Scripts/Diagnostics/RoadsideSupplyValidationRunner.cs (Editor only)
+
+Authored scenes: Stage1_Outskirts and Journey/Route01_World.
+Before-authoring scene backups: Temp/RoadsideSupplyBackup.
+Existing working tree changes preserved; no commit or external deployment made.
+
+Limits:
+This phase adds three optional searches to existing encounters; it is not a full
+visual redesign or a claim that the entire game is bug-free. Supply acceptance
+teleports between sites; the 44 km journey was not driven end to end.
+New cache checkpoint history is tested. Legacy scavenge partial claims were tested
+within a run, not across a station reload. Shared co-op loot and broader crew roles
+remain further work; disconnect-during-transition variants were not run in this phase.

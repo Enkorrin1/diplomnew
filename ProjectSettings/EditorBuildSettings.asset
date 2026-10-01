@@ -23,5 +23,20 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/Stage4_Citadel.unity
     guid: a4444444222233334444555566667774
+  - enabled: 1
+    path: Assets/Scenes/Coop_Outskirts.unity
+    guid: 4aedededa69fd284ca335729921555eb
+  - enabled: 1
+    path: Assets/Scenes/Journey/Route01_World.unity
+    guid: 4c741fa411181114eb270aa32bb8866a
+  - enabled: 1
+    path: Assets/Scenes/Journey/Route02_World.unity
+    guid: efbd20fe229017e4b8c73f5494fcfa14
+  - enabled: 1
+    path: Assets/Scenes/Journey/Route03_World.unity
+    guid: d94354dd601ec344aa78e3bba0ff797a
+  - enabled: 1
+    path: Assets/Scenes/Journey/Route04_World.unity
+    guid: 93381fac7aa77934a9cb07614e6d3a26
   m_configObjects: {}
   m_UseUCBPForAssetBundles: 0

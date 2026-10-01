@@ -1,0 +1,23 @@
+PASS: starter crowbar in hotbar
+PASS: movement lock blocks attack
+PASS: empty hand cannot deal crowbar damage
+PASS: out-of-range swing starts
+PASS: out-of-range swing misses
+PASS: enemy behind player is not hit
+PASS: solid wall blocks melee
+PASS: switching slot during windup cancels impact
+PASS: shove starts
+PASS: cannot queue duplicate shove
+PASS: shove interrupts enemy into stagger
+PASS: shove displaces without damage
+PASS: shove cooldown persists after recovery
+PASS: shove recovers after cooldown
+PASS: shove cannot push walker through solid wall
+PASS: crowbar attack starts
+PASS: cannot queue duplicate strike
+PASS: one swing deals exactly twenty damage
+PASS: second strike leaves five health
+PASS: third strike kills walker
+PASS: reactivation does not duplicate starter weapon
+PASS: paused game blocks combat
+PASS: all melee checks

@@ -1,0 +1,4 @@
+STO 1: floor rays=774, missing=0, blocked driving samples=0
+STO 2: floor rays=771, missing=0, blocked driving samples=0
+STO 3: floor rays=774, missing=0, blocked driving samples=0
+PASS

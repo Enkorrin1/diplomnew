@@ -198,7 +198,7 @@ namespace RogueDrive.Gameplay.VFX
 
         private void OnRenderImage(RenderTexture src, RenderTexture dest)
         {
-            if (postProcessMaterial == null)
+            if (postProcessMaterial == null || (Application.isPlaying && !RogueDrive.UI.GraphicsQualitySettings.PostEffectsEnabled))
             {
                 Graphics.Blit(src, dest);
                 return;

@@ -52,6 +52,9 @@ namespace RogueDrive.Audio
             }
 
             Instance = this;
+            // Authored route scenes may nest this service under their runtime root.
+            // Unity only persists root objects across scene unloads.
+            if (transform.parent != null) transform.SetParent(null, true);
             DontDestroyOnLoad(gameObject);
 
             InitializeAudioClips();
@@ -168,6 +171,17 @@ namespace RogueDrive.Audio
                 float targetNitroVol = isNitro ? (0.8f * sfxVolume) : 0f;
                 nitroSource.volume = Mathf.MoveTowards(nitroSource.volume, targetNitroVol, Time.deltaTime * 6f);
             }
+        }
+
+        public void UpdateJourneyEngineSound(float speedMps, float throttle, bool running)
+        {
+            if (engineSource == null) return;
+            float speed = Mathf.Clamp01(Mathf.Abs(speedMps) / 22f);
+            float load = Mathf.Clamp01(Mathf.Abs(throttle));
+            float targetPitch = .78f + speed * .62f + load * .18f;
+            engineSource.pitch = Mathf.MoveTowards(engineSource.pitch, targetPitch, Time.deltaTime * 1.6f);
+            float targetVolume = running ? (.27f + speed * .12f + load * .13f) * masterVolume * PlayerPrefs.GetFloat("SfxVolume", .9f) : 0;
+            engineSource.volume = Mathf.MoveTowards(engineSource.volume, targetVolume, Time.deltaTime * .8f);
         }
 
         public void PlayShoot(float pitchVariation = 0.12f)

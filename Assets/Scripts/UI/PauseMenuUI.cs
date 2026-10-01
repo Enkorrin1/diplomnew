@@ -42,6 +42,11 @@ namespace RogueDrive.UI
             useSceneUI = true;
             if (run == null) run = FindFirstObjectByType<GameRunController>();
 
+            ReloadSettings();
+        }
+
+        public void ReloadSettings()
+        {
             masterVolume = PlayerPrefs.GetFloat("MasterVolume", 0.85f);
             musicVolume = PlayerPrefs.GetFloat("MusicVolume", 0.75f);
             sfxVolume = PlayerPrefs.GetFloat("SfxVolume", 0.9f);
@@ -64,6 +69,11 @@ namespace RogueDrive.UI
 
             if (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.P))
             {
+                if (GraphicsSettingsPanel.TryCloseOpen()) return;
+                var service=VehicleDashboardPanelsUI.Instance;
+                if(service!=null&&(service.IsAnyPanelOpen||service.LastInteractionFrame==Time.frameCount))return;
+                var station=JourneyStationExperienceUI.Instance;
+                if(station!=null&&(station.IsOpen||station.LastInteractionFrame==Time.frameCount))return;
                 TogglePause();
             }
         }

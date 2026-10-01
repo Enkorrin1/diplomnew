@@ -1,0 +1,29 @@
+PASS host application ready
+PASS host connected
+PASS client application ready
+PASS client connected
+PASS shared quest spawned on both peers
+PASS one crew canvas per peer
+PASS remote generator request rejected at distance
+PASS station generator replicated
+PASS station wheel replicated
+PASS station battery replicated
+PASS station fuel replicated
+PASS fuel capped at 15 liters on both peers
+PASS station keys replicated
+PASS station gates replicated
+PASS client leaves prepared bunker
+PASS late join restores preparation
+PASS host approaches car
+PASS host tests departure without passenger
+PASS departure blocked while teammate is on foot
+PASS host selected role seated
+PASS client approaches car
+PASS client selected role seated
+PASS host health set before departure
+PASS both peers arrive on road
+PASS same vehicle and players survive transition
+PASS roles fuel and health preserved
+PASS one vehicle camera listener and HUD on both peers
+PASS no runtime exceptions
+RESULT PASS

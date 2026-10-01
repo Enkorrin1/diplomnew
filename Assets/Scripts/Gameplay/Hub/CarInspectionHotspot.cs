@@ -83,6 +83,12 @@ namespace RogueDrive.Gameplay.Hub
 
         public string GetPromptText()
         {
+            var assembly = BunkerStarterCarAssembly.Instance;
+            if (assembly != null && !assembly.IsAssemblyComplete)
+            {
+                return string.Empty;
+            }
+
             if (metaProgress == null) InitData();
             if (cachedTrack == null) FindTrack();
 
@@ -110,6 +116,12 @@ namespace RogueDrive.Gameplay.Hub
 
         public bool CanInteract()
         {
+            var assembly = BunkerStarterCarAssembly.Instance;
+            if (assembly != null && !assembly.IsAssemblyComplete)
+            {
+                return false;
+            }
+
             if (metaProgress == null) InitData();
             if (cachedTrack == null) FindTrack();
             if (cachedTrack == null) return false;

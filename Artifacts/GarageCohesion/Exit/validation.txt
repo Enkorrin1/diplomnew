@@ -1,0 +1,1 @@
+PASS=True; phase=Complete; shots=True/True; identity=True; scenes=True; singleCar=True; controls=True; resources=True; rolling=True; gameplay=True; exit=True; reboard=True; position=(0.00, 0.20, 18.72); fuel=37,00->36,99

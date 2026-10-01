@@ -37,17 +37,48 @@ namespace RogueDrive.Gameplay.VFX
         float spin;
         float steeringAngle;
 
+        private float cinematicSlipSpin;
         private void LateUpdate()
         {
+            float speedMps = 0f;
+            float targetSteeringAngle = 0f;
+
             var car = GetComponent<ArcadeCarController>();
-            if (car == null) return;
-            steeringAngle = Mathf.MoveTowards(steeringAngle, car.SteeringAngle, 140f * Time.deltaTime);
-            spin = (spin + car.SpeedMps * Time.deltaTime / 0.35f * Mathf.Rad2Deg) % 360f;
+            var drivingVehicle = GetComponent<RogueDrive.Gameplay.Hub.GarageDriveOutVehicle>();
+            if (drivingVehicle != null && drivingVehicle.IsDrivingEnabled)
+            {
+                speedMps = drivingVehicle.SpeedMps;
+                targetSteeringAngle = drivingVehicle.SteeringAngle;
+            }
+            else if (car != null)
+            {
+                speedMps = car.SpeedMps;
+                targetSteeringAngle = car.SteeringAngle;
+            }
+            else
+            {
+                var garageCar = GetComponent<RogueDrive.Gameplay.Hub.GarageDriveOutVehicle>();
+                if (garageCar != null && garageCar.IsDrivingEnabled)
+                {
+                    speedMps = garageCar.SpeedMps;
+                    targetSteeringAngle = garageCar.SteeringAngle;
+                }
+                else
+                {
+                    return;
+                }
+            }
+
+            steeringAngle = Mathf.MoveTowards(steeringAngle, targetSteeringAngle, 140f * Time.deltaTime);
+            spin = (spin + speedMps * Time.deltaTime / 0.35f * Mathf.Rad2Deg) % 360f;
+            if (drivingVehicle != null && drivingVehicle.CinematicControl)
+                cinematicSlipSpin = (cinematicSlipSpin + drivingVehicle.CinematicWheelSlip * Time.deltaTime / .35f * Mathf.Rad2Deg) % 360f;
             foreach (var pose in wheelPoses)
             {
                 if (pose.Visual == null || !pose.Visual.gameObject.activeSelf) continue;
                 Quaternion steer = Quaternion.AngleAxis(pose.Front ? steeringAngle : 0f, pose.SteeringAxis);
-                Quaternion rotation = steer * Quaternion.AngleAxis(spin, pose.Axle) * pose.Rotation;
+                float slip = !pose.Front ? cinematicSlipSpin : 0f;
+                Quaternion rotation = steer * Quaternion.AngleAxis(spin + slip, pose.Axle) * pose.Rotation;
                 pose.Visual.localRotation = rotation;
                 pose.Visual.localPosition = pose.Center + pose.SuspensionOffset - rotation * pose.MeshCenter;
             }
@@ -150,6 +181,17 @@ namespace RogueDrive.Gameplay.VFX
 
         public void ApplyLevel(int upgradeLevel)
         {
+            if (tierPrefabs == null || tierPrefabs.Length == 0)
+            {
+#if UNITY_EDITOR
+                var catalog = UnityEditor.AssetDatabase.LoadAssetAtPath<GarageCatalog>("Assets/Content/GarageCatalog.asset");
+                if (catalog != null && catalog.WheelUpgradePrefabs != null && catalog.WheelUpgradePrefabs.Length > 0)
+                {
+                    tierPrefabs = catalog.WheelUpgradePrefabs;
+                }
+#endif
+            }
+
             if (tierPrefabs == null || tierPrefabs.Length == 0)
                 return;
 
