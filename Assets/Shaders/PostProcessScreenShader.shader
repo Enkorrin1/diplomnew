@@ -101,8 +101,11 @@ Shader "Hidden/RogueDrive/PostProcessScreenShader"
                 d.x = pow(d.x, _VignetteRoundness);
                 d.y = pow(d.y, _VignetteRoundness);
                 float vFactor = length(d);
-                float vignette = smoothstep(_VignetteIntensity, _VignetteIntensity - _VignetteSmoothness, vFactor);
-                col.rgb = lerp(_VignetteColor.rgb, col.rgb, saturate(vignette));
+                // Сила сдвигает начало затемнения к центру, мягкость растягивает переход к углам (vFactor до ~1.41).
+                float inner = 1.15 - _VignetteIntensity * 0.6;
+                float outer = inner + max(_VignetteSmoothness, 0.01) * 1.2;
+                float darkness = smoothstep(inner, outer, vFactor) * saturate(_VignetteIntensity * 1.3);
+                col.rgb = lerp(col.rgb, _VignetteColor.rgb, darkness);
 
                 // 5. Вспышка урона (Damage Flash)
                 if (_DamageFlash > 0.01)

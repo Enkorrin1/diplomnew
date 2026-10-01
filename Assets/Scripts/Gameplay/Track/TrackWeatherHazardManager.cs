@@ -62,6 +62,13 @@ namespace RogueDrive.Gameplay.Track
         public float NitroBonusMultiplier => nitroBonusMultiplier;
         public float AcidDamagePerSec => acidDamagePerSec;
         public bool IsEMPActive => isEMPActive;
+        /// <summary>0..1 — насколько текущее погодное событие проявилось (для атмосферы маршрута).</summary>
+        public float HazardBlend => hazardBlend;
+        public Color HazardFogColor => targetFogColor;
+        /// <summary>Дальность линейного тумана, эквивалентная плотности события.</summary>
+        public float HazardFogEnd => 5.2f / Mathf.Max(targetFogDensity, 0.001f);
+
+        private float hazardBlend;
 
         private void Awake()
         {
@@ -117,9 +124,14 @@ namespace RogueDrive.Gameplay.Track
                 if (run == null) return;
             }
 
-            // Плавный переход цвета и плотности тумана
-            RenderSettings.fogColor = Color.Lerp(RenderSettings.fogColor, targetFogColor, Time.deltaTime * 1.5f);
-            RenderSettings.fogDensity = Mathf.Lerp(RenderSettings.fogDensity, targetFogDensity, Time.deltaTime * 1.5f);
+            // Плавный переход тумана. На непрерывном маршруте туманом владеет JourneyPresentation,
+            // здесь только нарастает сила события, которую он подмешивает.
+            hazardBlend = Mathf.MoveTowards(hazardBlend, currentWeather == WeatherType.Clear ? 0f : 1f, Time.deltaTime * 0.35f);
+            if (JourneyPresentation.Instance == null)
+            {
+                RenderSettings.fogColor = Color.Lerp(RenderSettings.fogColor, targetFogColor, Time.deltaTime * 1.5f);
+                RenderSettings.fogDensity = Mathf.Lerp(RenderSettings.fogDensity, targetFogDensity, Time.deltaTime * 1.5f);
+            }
 
             // Кислотный дождь разъедает корпус машины при открытом движении
             if (acidDamagePerSec > 0f && run != null && !run.IsGameOver)

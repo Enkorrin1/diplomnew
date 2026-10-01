@@ -16,6 +16,8 @@ namespace RogueDrive.Gameplay
         float started, nextRefresh, atmosphere;
         int announced = -1;
         static readonly string[] Titles = { "ПОСЛЕДНИЕ КВАРТАЛЫ", "БЕРЁЗОВАЯ РОЩА", "ТИХИЙ ПРИГОРОД", "СОСНОВЫЙ БОР", "ПОЛЯ И ГРУЗОВОЙ ДВОР", "КАМЕНИСТЫЕ ХОЛМЫ", "СЕВЕРНЫЙ ВЫЕЗД" };
+        /// <summary>0 — ясный вечер, 1 — буря рядом.</summary>
+        public float Atmosphere => atmosphere;
         void OnEnable() => Instance = this;
         void OnDisable() { if (Instance == this) Instance = null; }
         public void Configure(GameObject[] authoredDistricts) => districts = authoredDistricts;
@@ -42,6 +44,15 @@ namespace RogueDrive.Gameplay
             RenderSettings.fogColor = Color.Lerp(new Color(.64f,.68f,.67f), new Color(.43f,.51f,.55f), strength);
             RenderSettings.fogStartDistance = Mathf.Lerp(150,100,strength);
             RenderSettings.fogEndDistance = Mathf.Lerp(1150,680,strength);
+            // Погодное событие подмешивается в атмосферу, а не перезаписывает её.
+            var weather = TrackWeatherHazardManager.Instance;
+            if (weather != null && weather.HazardBlend > 0)
+            {
+                float h = weather.HazardBlend;
+                RenderSettings.fogColor = Color.Lerp(RenderSettings.fogColor, weather.HazardFogColor, h * .75f);
+                RenderSettings.fogStartDistance = Mathf.Lerp(RenderSettings.fogStartDistance, 15, h);
+                RenderSettings.fogEndDistance = Mathf.Lerp(RenderSettings.fogEndDistance, weather.HazardFogEnd, h);
+            }
             if (sunlight != null)
             {
                 RenderSettings.sun = sunlight;

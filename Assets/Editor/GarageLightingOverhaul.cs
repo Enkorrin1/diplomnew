@@ -171,22 +171,8 @@ public static class GarageLightingOverhaul
         pr.maxParticleSize = .02f;
     }
 
-    // GUI/Text Shader рисует TextMesh поверх всего: наружная табличка «07» просвечивала сквозь стену
-    // зеркально. Надписи гаража получают материал с проверкой глубины и отсечением обратной стороны.
-    static void WorldText()
-    {
-        var shader = Shader.Find("RogueDrive/WorldText");
-        var scene = root.gameObject.scene;
-        foreach(var text in Object.FindObjectsByType<TextMesh>(FindObjectsInactive.Include, FindObjectsSortMode.None))
-        {
-            if(text.gameObject.scene != scene || text.font == null) continue;
-            var font = text.font;
-            var mat = AssetOrCreate(Dir + "Garage_WorldText_" + font.name + ".mat", () => new Material(shader));
-            mat.mainTexture = font.material.mainTexture;
-            EditorUtility.SetDirty(mat);
-            text.GetComponent<MeshRenderer>().sharedMaterial = mat;
-        }
-    }
+    // Наружная табличка «07» просвечивала сквозь стену зеркально: см. WorldTextMaterials.
+    static void WorldText() => WorldTextMaterials.Apply(root.gameObject.scene);
 
     static void PostFx()
     {
