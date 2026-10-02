@@ -130,8 +130,6 @@ public sealed class JourneyStationsRunner:MonoBehaviour
         }
         yield return DriveGate();
         File.AppendAllText(Report,"PASS: service/checkpoint/physical-driving acceptance complete.\n");
-        var mapObject=new GameObject("Validation_Map",typeof(BoxCollider));var map=mapObject.AddComponent<BunkerEvacuationMap>();map.OpenMap();yield return null;
-        ScreenCapture.CaptureScreenshot("Artifacts/JourneyStations/map.png");yield return new WaitForEndOfFrame();yield return null;map.CloseMap();Object.Destroy(mapObject);
         File.AppendAllText(Report,"PASS: 3 service stations, economy, aid, shelter, departure and both checkpoints.\n");EditorApplication.isPaused=true;
     }
     IEnumerator DriveGate()

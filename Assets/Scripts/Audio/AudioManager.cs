@@ -260,7 +260,7 @@ namespace RogueDrive.Audio
             PlaySfx(crashClip, 0.75f, 0.6f);
         }
 
-        void PlaySfx(AudioClip clip, float volume, float pitch)
+        public void PlaySfx(AudioClip clip, float volume, float pitch)
         {
             if (clip == null) return;
 

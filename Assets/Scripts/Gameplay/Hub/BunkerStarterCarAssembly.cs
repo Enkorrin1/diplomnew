@@ -210,21 +210,7 @@ namespace RogueDrive.Gameplay.Hub
                 pickup.Configure("weapon_axe", "Пожарный топор", 1);
             }
 
-            // 7. Интерактивная карта эвакуации Map
-            GameObject mapObj = GameObject.Find("Map");
-            if (mapObj != null)
-            {
-                var col = mapObj.GetComponent<Collider>();
-                if (col == null)
-                {
-                    var box = mapObj.AddComponent<BoxCollider>();
-                    box.size = new Vector3(1.4f, 1.1f, 0.3f);
-                }
-                if (mapObj.GetComponent<BunkerEvacuationMap>() == null)
-                {
-                    mapObj.AddComponent<BunkerEvacuationMap>();
-                }
-            }
+            // 7. Карта эвакуации — объект сцены (Evacuation_Map), см. BunkerScenesAuthoring.
 
             // 8. Запасная канистра воды для радиатора
             EnsureSpareWaterCanister();

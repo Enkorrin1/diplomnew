@@ -61,7 +61,6 @@ public static class GaragePolishAuthoring
         }
         var intro=Object.FindFirstObjectByType<BunkerPrologueCutscene>();
         var introSO=new SerializedObject(intro);
-        introSO.FindProperty("bedLyingOffset").vector3Value=new Vector3(0,.7f,0);
         introSO.FindProperty("radioStaticDuration").floatValue=1.4f;
         introSO.ApplyModifiedPropertiesWithoutUndo();
         EditorSceneManager.MarkSceneDirty(scene); EditorSceneManager.SaveScene(scene); AssetDatabase.SaveAssets();

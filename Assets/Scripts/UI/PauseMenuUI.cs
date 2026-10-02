@@ -74,6 +74,10 @@ namespace RogueDrive.UI
                 if(service!=null&&(service.IsAnyPanelOpen||service.LastInteractionFrame==Time.frameCount))return;
                 var station=JourneyStationExperienceUI.Instance;
                 if(station!=null&&(station.IsOpen||station.LastInteractionFrame==Time.frameCount))return;
+                var map=RogueDrive.Gameplay.Hub.BunkerEvacuationMap.Instance;
+                if(map!=null&&(map.IsOpen||map.LastInteractionFrame==Time.frameCount))return;
+                var prologue=RogueDrive.Gameplay.Hub.BunkerPrologueCutscene.Instance;
+                if(prologue!=null&&(prologue.IsRunning||prologue.LastSkipFrame==Time.frameCount))return;
                 TogglePause();
             }
         }
