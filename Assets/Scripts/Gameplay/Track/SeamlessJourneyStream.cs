@@ -168,6 +168,29 @@ namespace RogueDrive.Gameplay
             }
         }
 
+        // Регион из тысяч объектов, включённый одной строкой, просыпается в одном кадре (рывок 0,1–0,7 с).
+        // Группы второго уровня включаются порциями в пределах бюджета кадра; загрузка начинается
+        // за 2,6 км до границы, поэтому к подъезду машины регион уже полностью активен.
+        const float ActivationBudgetMs = 3f;
+
+        IEnumerator ActivateGradually(GameObject world)
+        {
+            var pending = new List<GameObject>();
+            foreach (Transform group in world.transform)
+                foreach (Transform part in group)
+                    if (part.gameObject.activeSelf) { part.gameObject.SetActive(false); pending.Add(part.gameObject); }
+            world.SetActive(true);
+            var clock = System.Diagnostics.Stopwatch.StartNew();
+            foreach (var part in pending)
+            {
+                if (part == null) continue;
+                part.SetActive(true);
+                if (clock.Elapsed.TotalMilliseconds < ActivationBudgetMs) continue;
+                yield return null;
+                clock.Restart();
+            }
+        }
+
         IEnumerator LoadWorld(int index)
         {
             busy = true;
@@ -200,7 +223,7 @@ namespace RogueDrive.Gameplay
                 yield return SceneManager.UnloadSceneAsync(scene); busy = false; nextRetry = Time.unscaledTime + 5; yield break;
             }
             AdoptState(marker.World);
-            marker.World.SetActive(true);
+            yield return ActivateGradually(marker.World);
             loaded[index] = scene;
             Physics.SyncTransforms();
             LastError = null; busy = false;

@@ -113,7 +113,8 @@ namespace RogueDrive.UI
 
         private static void SetPresetValues(int tier)
         {
-            antiAliasing = tier;
+            // Постобработка и так сглаживает через SMAA; 8× MSAA остаётся ручным выбором.
+            antiAliasing = Mathf.Min(tier, 2);
             shadows = tier == 0 ? 0 : tier == 1 ? 1 : 2;
             shadowDistance = tier;
             textures = tier == 0 ? 1 : 0;
@@ -143,10 +144,38 @@ namespace RogueDrive.UI
             QualitySettings.anisotropicFiltering = baseTier >= 2 ? AnisotropicFiltering.ForceEnable : AnisotropicFiltering.Disable;
             QualitySettings.pixelLightCount = baseTier == 0 ? 0 : baseTier == 1 ? 2 : baseTier == 2 ? 4 : 8;
             QualitySettings.vSyncCount = vSync ? 1 : 0;
+            ApplyPostProcessing();
 
             if (!applyDisplay || Application.isEditor || Application.isMobilePlatform) return;
             FullScreenMode mode = displayMode == 0 ? FullScreenMode.Windowed : displayMode == 1 ? FullScreenMode.FullScreenWindow : FullScreenMode.ExclusiveFullScreen;
             Screen.SetResolution(resolutionWidth, resolutionHeight, mode);
+        }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        private static void FollowSceneLoads()
+        {
+            UnityEngine.SceneManagement.SceneManager.sceneLoaded -= ReapplyPostProcessing;
+            UnityEngine.SceneManagement.SceneManager.sceneLoaded += ReapplyPostProcessing;
+            ApplyPostProcessing();
+        }
+
+        private static void ReapplyPostProcessing(UnityEngine.SceneManagement.Scene scene, UnityEngine.SceneManagement.LoadSceneMode mode) => ApplyPostProcessing();
+
+        // Постобработка подчиняется переключателю «Эффекты»; затенение углов (самый дорогой эффект)
+        // остаётся только на высоком и ультра. profile — копия объёма, ассет профиля не меняется.
+        private static void ApplyPostProcessing()
+        {
+            if (!Application.isPlaying) return;
+            foreach (var layer in Object.FindObjectsByType<UnityEngine.Rendering.PostProcessing.PostProcessLayer>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                layer.enabled = effects;
+            bool ambientOcclusion = effects && baseTier >= 2;
+            foreach (var volume in Object.FindObjectsByType<UnityEngine.Rendering.PostProcessing.PostProcessVolume>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            {
+                if (volume.sharedProfile == null || !volume.sharedProfile.HasSettings<UnityEngine.Rendering.PostProcessing.AmbientOcclusion>()) continue;
+                // Копию профиля создаём только когда AO нужно выключить или копия уже есть.
+                if (ambientOcclusion && !volume.HasInstantiatedProfile()) continue;
+                volume.profile.GetSetting<UnityEngine.Rendering.PostProcessing.AmbientOcclusion>().enabled.Override(ambientOcclusion);
+            }
         }
 
         private static void Save()

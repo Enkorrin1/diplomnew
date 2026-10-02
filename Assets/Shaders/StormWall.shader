@@ -54,10 +54,10 @@ Shader "RogueDrive/StormWall"
                                  lerp(hash(i + float3(0, 1, 1)), hash(i + float3(1, 1, 1)), f.x), f.y), f.z);
             }
 
-            float fbm(float3 p)
+            float fbm(float3 p, int octaves)
             {
                 float v = 0, a = 0.5;
-                for (int i = 0; i < 5; i++) { v += a * noise(p); p = p * 2.03 + 17.1; a *= 0.5; }
+                for (int i = 0; i < octaves; i++) { v += a * noise(p); p = p * 2.03 + 17.1; a *= 0.5; }
                 return v;
             }
 
@@ -75,9 +75,10 @@ Shader "RogueDrive/StormWall"
             {
                 // Клубы «закреплены» за стеной и прокручиваются во времени: подъём и накат вперёд.
                 float3 p = (i.local - _Scroll.xyz * _Time.y) * _NoiseScale + _Seed;
-                float n = fbm(p);
-                float toLight = fbm(p + float3(0, 0.35, 0.15));          // шаг к свету сверху
-                float detail = fbm(p * 2.7 + 3.3);
+                // Силуэт — 4 октавы; освещение и мелкая деталь — по 3 (стена почти во весь экран, считаем экономно).
+                float n = fbm(p, 4);
+                float toLight = fbm(p + float3(0, 0.35, 0.15), 3);       // шаг к свету сверху
+                float detail = fbm(p * 2.7 + 3.3, 3);
                 float v = i.uv.y;
 
                 // Порог растёт с высотой: верх стены рвётся на отдельные кучевые клубы,
