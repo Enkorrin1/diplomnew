@@ -31,15 +31,15 @@ namespace RogueDrive.Gameplay.Hub
         [SerializeField] private float broadcastDuration = 6.0f;
         [SerializeField] private float riseDuration = 2.5f;
 
+        [Header("Cutscene UI (объекты сцены, Canvas выключен до начала пролога)")]
+        [SerializeField] private Canvas cutsceneCanvas;
+        [SerializeField] private RectTransform topEyelid;
+        [SerializeField] private RectTransform bottomEyelid;
+        [SerializeField] private Text subtitleText;
+        [SerializeField] private GameObject subtitlePanel;
+
         private bool isCutsceneRunning = false;
         private float eyeBlinkProgress = 0f; // 0 = закрыты (черный), 1 = открыты
-
-        // UGUI Elements
-        private Canvas cutsceneCanvas;
-        private RectTransform topEyelid;
-        private RectTransform bottomEyelid;
-        private Text subtitleText;
-        private GameObject subtitlePanel;
 
         private Vector3 cutsceneStandingPos;
         private Quaternion cutsceneStandingRot;
@@ -81,7 +81,7 @@ namespace RogueDrive.Gameplay.Hub
         {
             isCutsceneRunning = true;
             eyeBlinkProgress = 0f;
-            CreateCutsceneUI();
+            ShowCutsceneUI();
 
             Vector3 bedPos = bedHeadTransform != null ? bedHeadTransform.position : new Vector3(-8.5f, 0.4f, -8.5f);
             cutsceneStandingPos = new Vector3(bedPos.x + 1.2f, 0.1f, bedPos.z);
@@ -179,10 +179,7 @@ namespace RogueDrive.Gameplay.Hub
             isCutsceneRunning = false;
             eyeBlinkProgress = 1f;
 
-            if (cutsceneCanvas != null)
-            {
-                Destroy(cutsceneCanvas.gameObject);
-            }
+            if (cutsceneCanvas != null) cutsceneCanvas.gameObject.SetActive(false);
 
             RestoreGameplayUI();
             if (GaragePrologueManager.Instance == null || !GaragePrologueManager.Instance.IsPreviewRun)
@@ -272,88 +269,11 @@ namespace RogueDrive.Gameplay.Hub
             bottomEyelid.anchorMax = new Vector2(1f, closedFraction);
         }
 
-        private void CreateCutsceneUI()
+        private void ShowCutsceneUI()
         {
-            if (cutsceneCanvas != null) return;
-
-            GameObject canvasObj = new GameObject("Cutscene_Canvas");
-            cutsceneCanvas = canvasObj.AddComponent<Canvas>();
-            cutsceneCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            cutsceneCanvas.sortingOrder = 999;
-
-            var scaler = canvasObj.AddComponent<CanvasScaler>();
-            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920, 1080);
-            scaler.matchWidthOrHeight = 0.5f;
-
-            // Верхнее веко
-            GameObject topObj = new GameObject("TopEyelid");
-            topObj.transform.SetParent(canvasObj.transform, false);
-            var topImg = topObj.AddComponent<Image>();
-            topImg.color = Color.black;
-            topImg.raycastTarget = false;
-            topEyelid = topObj.GetComponent<RectTransform>();
-
-            // Нижнее веко
-            GameObject bottomObj = new GameObject("BottomEyelid");
-            bottomObj.transform.SetParent(canvasObj.transform, false);
-            var bottomImg = bottomObj.AddComponent<Image>();
-            bottomImg.color = Color.black;
-            bottomImg.raycastTarget = false;
-            bottomEyelid = bottomObj.GetComponent<RectTransform>();
-
+            if (cutsceneCanvas == null) return;
+            cutsceneCanvas.gameObject.SetActive(true);
             UpdateEyelids();
-
-            Font standardFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf") ?? 
-                               Resources.GetBuiltinResource<Font>("Arial.ttf");
-
-            // Субтитры
-            subtitlePanel = new GameObject("SubtitlePanel");
-            subtitlePanel.transform.SetParent(canvasObj.transform, false);
-            var subImg = subtitlePanel.AddComponent<Image>();
-            subImg.color = new Color(0.04f, 0.05f, 0.08f, 0.88f);
-            subImg.raycastTarget = false;
-
-            var subRect = subtitlePanel.GetComponent<RectTransform>();
-            subRect.anchorMin = new Vector2(0.5f, 0f);
-            subRect.anchorMax = new Vector2(0.5f, 0f);
-            subRect.pivot = new Vector2(0.5f, 0f);
-            subRect.anchoredPosition = new Vector2(0f, 45f);
-            subRect.sizeDelta = new Vector2(980f, 84f);
-
-            GameObject textObj = new GameObject("SubtitleText");
-            textObj.transform.SetParent(subtitlePanel.transform, false);
-            subtitleText = textObj.AddComponent<Text>();
-            if (standardFont != null) subtitleText.font = standardFont;
-            subtitleText.fontSize = 20;
-            subtitleText.fontStyle = FontStyle.Bold;
-            subtitleText.alignment = TextAnchor.MiddleCenter;
-            subtitleText.color = new Color(0.95f, 0.90f, 0.70f, 0.95f);
-            subtitleText.raycastTarget = false;
-
-            var tRect = textObj.GetComponent<RectTransform>();
-            tRect.anchorMin = Vector2.zero;
-            tRect.anchorMax = Vector2.one;
-            tRect.offsetMin = new Vector2(24f, 8f);
-            tRect.offsetMax = new Vector2(-24f, -8f);
-
-            // Подсказка о пропуске
-            GameObject skipObj = new GameObject("SkipPrompt");
-            skipObj.transform.SetParent(canvasObj.transform, false);
-            var skipText = skipObj.AddComponent<Text>();
-            if (standardFont != null) skipText.font = standardFont;
-            skipText.fontSize = 14;
-            skipText.alignment = TextAnchor.MiddleRight;
-            skipText.color = new Color(1f, 1f, 1f, 0.5f);
-            skipText.text = "[Пробел / ESC] Пропустить";
-            skipText.raycastTarget = false;
-
-            var sRect = skipObj.GetComponent<RectTransform>();
-            sRect.anchorMin = new Vector2(1f, 1f);
-            sRect.anchorMax = new Vector2(1f, 1f);
-            sRect.pivot = new Vector2(1f, 1f);
-            sRect.anchoredPosition = new Vector2(-30f, -20f);
-            sRect.sizeDelta = new Vector2(300f, 35f);
         }
     }
 }

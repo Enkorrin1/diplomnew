@@ -87,18 +87,17 @@ namespace RogueDrive.Gameplay.Track
                 return;
             }
 
-            BuildStormRadarUI();
         }
 
         private void OnDestroy()
         {
-            if (stormRadarRoot != null) Destroy(stormRadarRoot);
             if (Instance == this)
                 Instance = null;
         }
 
         private void Start()
         {
+            BindStormRadarUI();
             playerCar = FindFirstObjectByType<ArcadeCarController>();
             run = FindFirstObjectByType<GameRunController>();
             pedestrian=FindFirstObjectByType<Hub.GaragePlayerController>(FindObjectsInactive.Include);
@@ -251,42 +250,14 @@ namespace RogueDrive.Gameplay.Track
             }
         }
 
-        private void BuildStormRadarUI()
+        // Панель лежит в сцене (Storm_Front); барьер добавляется кодом и только находит её.
+        private void BindStormRadarUI()
         {
             if (stormRadarRoot != null) return;
-
-            Canvas canvas = FindFirstObjectByType<Canvas>();
-            if (canvas == null) return;
-
-            stormRadarRoot = new GameObject("StormRadarPanel", typeof(RectTransform), typeof(Image));
-            stormRadarRoot.transform.SetParent(canvas.transform, false);
-
-            RectTransform rt = stormRadarRoot.GetComponent<RectTransform>();
-            // Под зеркалом заднего вида (StormRearMirror занимает верх экрана по центру).
-            rt.anchorMin = new Vector2(0.33f, 0.795f);
-            rt.anchorMax = new Vector2(0.67f, 0.85f);
-            rt.offsetMin = Vector2.zero;
-            rt.offsetMax = Vector2.zero;
-
-            Image bg = stormRadarRoot.GetComponent<Image>();
-            bg.color = new Color(0.12f, 0.05f, 0.05f, 0.90f);
-
-            GameObject textObj = new GameObject("DistanceText", typeof(RectTransform), typeof(Text));
-            textObj.transform.SetParent(stormRadarRoot.transform, false);
-
-            RectTransform textRt = textObj.GetComponent<RectTransform>();
-            textRt.anchorMin = Vector2.zero;
-            textRt.anchorMax = Vector2.one;
-            textRt.offsetMin = new Vector2(10f, 2f);
-            textRt.offsetMax = new Vector2(-10f, -2f);
-
-            stormDistanceText = textObj.GetComponent<Text>();
-            stormDistanceText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf") ?? Resources.GetBuiltinResource<Font>("Arial.ttf");
-            stormDistanceText.fontSize = 20;
-            stormDistanceText.alignment = TextAnchor.MiddleCenter;
-            stormDistanceText.color = Color.yellow;
-            stormDistanceText.fontStyle = FontStyle.Bold;
-
+            var radar = FindFirstObjectByType<StormRadarPanel>(FindObjectsInactive.Include);
+            if (radar == null) return;
+            stormRadarRoot = radar.Panel;
+            stormDistanceText = radar.DistanceText;
             stormRadarRoot.SetActive(false);
         }
     }

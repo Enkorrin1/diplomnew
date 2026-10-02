@@ -220,6 +220,24 @@ public static class StormFrontAuthoring
         var raw = view.gameObject.AddComponent<RawImage>();
         raw.texture = rt; raw.uvRect = new Rect(1, 0, -1, 1); raw.raycastTarget = false;   // зеркальное отражение
 
+        // Предупреждение о близкой буре под зеркалом; показывает CreepingStormBarrier.
+        var radar = UiChild(canvasGo.transform, "Storm_Radar");
+        radar.anchorMin = new Vector2(.33f, .795f); radar.anchorMax = new Vector2(.67f, .85f); radar.offsetMin = radar.offsetMax = Vector2.zero;
+        var radarImage = radar.gameObject.AddComponent<Image>();
+        radarImage.sprite = frameImage.sprite; radarImage.type = Image.Type.Sliced;
+        radarImage.color = new Color(.12f, .05f, .05f, .9f); radarImage.raycastTarget = false;
+        var radarTextRect = UiChild(radar, "Distance_Text");
+        radarTextRect.anchorMin = Vector2.zero; radarTextRect.anchorMax = Vector2.one;
+        radarTextRect.offsetMin = new Vector2(10, 2); radarTextRect.offsetMax = new Vector2(-10, -2);
+        var radarText = radarTextRect.gameObject.AddComponent<Text>();
+        radarText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"); radarText.fontSize = 20; radarText.fontStyle = FontStyle.Bold;
+        radarText.alignment = TextAnchor.MiddleCenter; radarText.color = Color.yellow; radarText.raycastTarget = false;
+        var radarPanel = new SerializedObject(canvasGo.AddComponent<StormRadarPanel>());
+        radarPanel.FindProperty("panel").objectReferenceValue = radar.gameObject;
+        radarPanel.FindProperty("distanceText").objectReferenceValue = radarText;
+        radarPanel.ApplyModifiedPropertiesWithoutUndo();
+        radar.gameObject.SetActive(false);
+
         var mirror = root.AddComponent<StormRearMirror>();
         var so = new SerializedObject(mirror);
         so.FindProperty("mirrorCamera").objectReferenceValue = cam;

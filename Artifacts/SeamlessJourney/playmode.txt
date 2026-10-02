@@ -3,35 +3,35 @@ OK Stream and car ready
 OK Original garage driving/inventory rig
 OK World loot and free cargo slot
 OK World 2 loaded ahead
-OK Physical crossing 2; max frame displacement=0,83
+OK Physical crossing 2; max frame displacement=1,03
 OK Actor and camera identities unchanged
 OK Fuel retained with normal consumption
 OK Coolant retained
 OK No transition pause or slow motion
-Worlds loaded: 2, global progress 15959,3
+Worlds loaded: 2, global progress 15959,6
 OK Stage index advanced without victory
 OK Run, coins and progression preserved
 OK Health preserved
 OK Same physical cargo instance
 OK World 3 loaded ahead
-OK Physical crossing 3; max frame displacement=2,97
+OK Physical crossing 3; max frame displacement=4,45
 OK Actor and camera identities unchanged
 OK Fuel retained with normal consumption
 OK Coolant retained
 OK No transition pause or slow motion
-Worlds loaded: 2, global progress 25613,0
+Worlds loaded: 2, global progress 25613,1
 OK Stage index advanced without victory
 OK Run, coins and progression preserved
 OK Health preserved
 OK Same physical cargo instance
 OK First world unloaded behind the car
 OK World 4 loaded ahead
-OK Physical crossing 4; max frame displacement=1,44
+OK Physical crossing 4; max frame displacement=0,76
 OK Actor and camera identities unchanged
 OK Fuel retained with normal consumption
 OK Coolant retained
 OK No transition pause or slow motion
-Worlds loaded: 2, global progress 35768,3
+Worlds loaded: 2, global progress 35768,4
 OK Stage index advanced without victory
 OK Run, coins and progression preserved
 OK Health preserved
@@ -41,12 +41,12 @@ OK Final finish remains active
 OK Intermediate completion cannot end continuous run
 OK World 1 loaded ahead
 OK World 2 loaded ahead
-OK Physical crossing back to 1; max frame displacement=1,23
+OK Physical crossing back to 1; max frame displacement=0,73
 OK Actor and camera identities unchanged
 OK Fuel retained with normal consumption
 OK Coolant retained
 OK No transition pause or slow motion
-Worlds loaded: 2, global progress 15920,1
+Worlds loaded: 2, global progress 15920,0
 OK Reload preserves collected item without respawn
 OK Consumed/destroyed object stays removed after reload
 OK Reverse crossing restores sector index, without resetting run
