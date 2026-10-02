@@ -41,7 +41,11 @@ namespace RogueDrive.UI
         Font bodyFont, numberFont;
         float refreshTimer;
         bool driving;
+        bool modeResolved;
+        float resolveTimer;
         public bool OwnsDrivingHud => isActiveAndEnabled && driving;
+        /// <summary>False until the first Update has found the vehicle and decided whether we are driving.</summary>
+        public bool HasResolvedMode => !isActiveAndEnabled || modeResolved;
 
         void Awake()
         {
@@ -70,9 +74,12 @@ namespace RogueDrive.UI
         {
             if(Instance==null)Instance=this;
             referenceTimer-=Time.unscaledDeltaTime;
-            if(referenceTimer<=0){FindReferences();referenceTimer=.5f;}
+            // Пока машина не найдена (первые кадры после загрузки), ищем каждый кадр, иначе старый HUD успевает мелькнуть.
+            if(referenceTimer<=0 || (car==null && hubVehicle==null)){FindReferences();referenceTimer=.5f;}
             bool garageDrive=hubVehicle!=null && hubVehicle.isActiveAndEnabled && hubVehicle.IsDrivingEnabled;
             driving=garageDrive || (car!=null && car.isActiveAndEnabled && !car.UsesGarageDriving);
+            // Машина может появиться на несколько кадров позже HUD; секунда без машины — значит, её в сцене нет.
+            if(!modeResolved){resolveTimer+=Time.unscaledDeltaTime; modeResolved=car!=null || hubVehicle!=null || resolveTimer>1f;}
             if(interactionUI!=null)interactionUI.SetCrosshairVisible(!driving);
             bool blocked=(VehicleDashboardPanelsUI.Instance?.IsAnyPanelOpen??false)
                 || (LevelUpView.Instance?.IsVisible??false) || (BuffCasinoView.Instance?.IsVisible??false);

@@ -22,7 +22,8 @@ namespace RogueDrive.Gameplay.Coop
 
         [SerializeField] private Transform avatar;
         private CharacterController controller;
-        private Camera localCamera;
+        // Камера с пост-обработкой лежит в префабе выключенной; владелец забирает её себе, у чужих игроков она удаляется.
+        [SerializeField] private Camera localCamera;
         private Vector2 movement;
         private bool brake, sprint;
         private float yaw, pitch, verticalVelocity, receivedAt, nextSend, nextSeatRequest;
@@ -48,15 +49,16 @@ namespace RogueDrive.Gameplay.Coop
         {
             controller.enabled = IsServer;
             NetworkObject.DestroyWithScene = false;
-            if (!IsOwner) return;
+            if (!IsOwner)
+            {
+                if (localCamera != null) Destroy(localCamera.gameObject);
+                localCamera = null;
+                return;
+            }
             Local = this;
-            var cameraObject = new GameObject("Coop local camera", typeof(Camera), typeof(AudioListener));
-            localCamera = cameraObject.GetComponent<Camera>();
-            localCamera.nearClipPlane = .08f;
-            localCamera.farClipPlane = 1500;
-            localCamera.fieldOfView = 68;
-            cameraObject.tag = "MainCamera";
-            DontDestroyOnLoad(cameraObject);
+            localCamera.transform.SetParent(null, true);
+            localCamera.gameObject.SetActive(true);
+            DontDestroyOnLoad(localCamera.gameObject);
             yaw = transform.eulerAngles.y;
             CoopSession.Instance.SetMenu(false);
         }

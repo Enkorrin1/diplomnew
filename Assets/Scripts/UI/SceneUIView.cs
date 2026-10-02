@@ -101,7 +101,9 @@ namespace RogueDrive.UI
             bool paused = pause != null && pause.IsPaused;
             bool ended = run != null && run.IsGameOver;
             bool survivalDriving = car != null && car.UsesGarageDriving;
-            bool drivingHud = VehicleModularTacticalHud.Instance != null && VehicleModularTacticalHud.Instance.OwnsDrivingHud;
+            // Пока тактический HUD не определил режим (первые кадры сцены), старую панель этапа не показываем.
+            var tactical = VehicleModularTacticalHud.Instance;
+            bool drivingHud = tactical != null && (tactical.OwnsDrivingHud || !tactical.HasResolvedMode);
             if (legacyPauseButton == null && hudPanel != null)
                 legacyPauseButton = hudPanel.transform.parent.Find("PauseButton")?.gameObject;
             Set(legacyPauseButton, !drivingHud && !paused && !ended);
